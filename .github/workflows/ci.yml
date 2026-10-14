@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  linux:
+    name: Linux build and test (AT-13)
+    runs-on: ubuntu-latest
+    container: swift:6.1-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: swift build
+      - name: Test
+        run: swift test
+
+  macos:
+    name: macOS build and test
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app || true
+      - name: Build
+        run: swift build
+      - name: Test
+        run: swift test
+
+  # The Keynote oracle (AT-10, AT-27) needs a logged-in GUI session with Keynote installed and
+  # runs on the M4 under the `oracle` label, not on hosted runners.
