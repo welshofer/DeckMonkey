@@ -24,9 +24,11 @@ import SwiftProtobuf
 /// Keynote registers a duplicate: owner-ID map twins under fresh internal identifiers, copies of
 /// the family's dependency records and tiles with those identifiers, and its UUID-map entries.
 ///
-/// Refused rather than guessed: slides holding charts or builds (they register with the
-/// calculation engine and the build system in ways not yet learned), and trees Phase 3a does not
-/// edit.
+/// Charts are copied like any drawable: Keynote's own duplicate of a chart slide registers
+/// nothing with the calculation engine (charts.key), and neither does this.
+///
+/// Refused rather than guessed: slides holding builds (they name their targets to the build
+/// system in ways not yet learned), and trees Phase 3a does not edit.
 extension KeynoteDocument {
     public struct SlideCloneReport: Equatable, Sendable {
         public var source: UInt64
@@ -46,7 +48,7 @@ extension KeynoteDocument {
 
         public var description: String {
             switch self {
-            case .unsupportedContent(let slide, let type): return "slide \(slide) holds \(type); Phase 3a clones slides without charts or builds"
+            case .unsupportedContent(let slide, let type): return "slide \(slide) holds \(type); Phase 3a clones slides without builds"
             case .noComponentInfo(let name): return "no ComponentInfo for \(name)"
             case .unsafeLocator(let locator): return "the source deck names a component \"\(locator)\", which is not a safe name"
             case .ownerIdentifiersExhausted: return "the calculation engine has no internal owner identifiers left"
@@ -74,7 +76,7 @@ extension KeynoteDocument {
             guard let record = store.record(for: id) else { continue }
             for info in record.info.messageInfos where info.baseMessageIndex == nil {
                 let name = registry?.name(for: info.type) ?? ""
-                if name.hasPrefix("TSCH.") || (name.hasPrefix("TSCE.") && name != "TSCE.TrackedReferenceStoreArchive") || name.contains("Build") {
+                if (name.hasPrefix("TSCE.") && name != "TSCE.TrackedReferenceStoreArchive") || name.contains("Build") {
                     throw SlideCloneFailure.unsupportedContent(slide: entry.slide, type: name)
                 }
             }
