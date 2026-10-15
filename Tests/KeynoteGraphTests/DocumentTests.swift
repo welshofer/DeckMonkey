@@ -430,7 +430,8 @@ struct CorpusTests {
     ///   object_references set (references held only in mixed fields are exempt and counted);
     /// - AT-07, older decks: stored ⊆ derived, and the edit rule never drops a stored reference;
     ///   how far each list sits from the 15.4 rule is reported (records an older Keynote archived);
-    /// - AT-08: data_references are exactly the derived DataReference ids minus 0 (null sentinel);
+    /// - AT-08: data_references are the derived DataReference occurrences minus 0 (null sentinel), as
+    ///   a multiset in decks 15.4 alone saved, as a set in older ones;
     /// - AT-06: every listed reference resolves; unlisted ones may dangle, as in Keynote's own files.
     @Test("AT-06/07/08: the strong-reference rule against Keynote's stored lists", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus: set DECKMONKEY_CORPUS, write .deckmonkey-corpus, or add decks under Corpus/"))
     func corpusReferences() throws {
@@ -459,8 +460,10 @@ struct CorpusTests {
                         }
                         if pinned { pinnedPayloads += 1 } else { olderPayloads += 1 }
                         if derived.hasUnknownFields { fail("\(label): unknown fields under the pinned schema") }
-                        // AT-08
-                        if Set(info.dataReferences) != Set(derived.data).subtracting([0]) {
+                        // AT-08: Keynote 15.4 lists one entry per occurrence (minus the null id 0);
+                        // records older Keynotes archived may list each id once.
+                        let occurrences = derived.data.filter { $0 != 0 }
+                        if pinned ? info.dataReferences.sorted() != occurrences.sorted() : Set(info.dataReferences) != Set(occurrences) {
                             fail("\(label): data_references \(info.dataReferences), derived \(derived.data)")
                         }
                         let stored = Set(info.objectReferences)
@@ -723,6 +726,7 @@ struct CorpusTests {
                     case .unknownType: kind = "unknownType"
                     case .missingDataFile: kind = "missingDataFile"
                     case .textOffset: kind = "textOffset"
+                    case .danglingDataReference: kind = "danglingDataReference"
                     }
                     kinds[kind, default: 0] += 1
                 }

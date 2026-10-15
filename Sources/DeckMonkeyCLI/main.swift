@@ -33,7 +33,14 @@ enum CLI {
                                      replace every occurrence (Phase 1: within a paragraph; the new
                                      text takes the style in force at the first replaced character;
                                      overlapping hyperlinks and smart fields are removed and listed)
-      locate <file> --storage <id>   a text storage's shape, PDF page and frame, as JSON
+      locate <file> --storage <id> | --object <id>
+                                     a text storage's (or image's, shape's) PDF page and frame, as JSON
+      data <file>                    every DataInfo: identifier, file in Data/, size, digest, the
+                                     objects that refer to it, and any Data/ file nothing describes
+      image <file> --list            every image object: identifier, its file, page
+      image <file> --object <id> --with <path> -o <out.key>
+                                     replace an image's pixels (PNG, JPEG, GIF, TIFF); the frame is
+                                     kept; data nothing refers to any more is removed with its file
       version
 
     Exit codes: 0 pass, 1 fail, 2 usage, 3 refused (Keynote '09 APXL, out of scope).
@@ -353,18 +360,77 @@ func runReplace(_ args: [String]) throws {
 }
 
 func runLocate(_ args: [String]) throws {
-    guard let path = args.first, !path.hasPrefix("-"), let value = option("--storage", in: args), let id = UInt64(value) else {
-        fail(CLI.usage, code: 2)
-    }
+    guard let path = args.first, !path.hasPrefix("-") else { fail(CLI.usage, code: 2) }
     let document = try DeckMonkey.open(url(path))
+    func num(_ v: Double) -> String { v == v.rounded() ? String(Int(v)) : String(format: "%.2f", v) }
+    if let value = option("--object", in: args), let id = UInt64(value) {
+        guard let at = document.location(ofDrawable: id) else { fail("error: \(id) is not an image or shape") }
+        let frame = at.frame.map { "{\"x\":\(num($0.x)),\"y\":\(num($0.y)),\"width\":\(num($0.width)),\"height\":\(num($0.height)),\"angle\":\(num($0.angle))}" } ?? "null"
+        print("{\"object\":\(id),\"slide\":\(at.slide.map(String.init) ?? "null"),\"page\":\(at.page.map(String.init) ?? "null"),\"frame\":\(frame)}")
+        return
+    }
+    guard let value = option("--storage", in: args), let id = UInt64(value) else { fail(CLI.usage, code: 2) }
     // Text no slide shape owns (presenter notes, table cells, masters) is not on a page by itself.
     guard let at = document.location(of: id) else {
         print("{\"storage\":\(id),\"shape\":null,\"slide\":null,\"page\":null,\"frame\":null}")
         return
     }
-    func num(_ v: Double) -> String { v == v.rounded() ? String(Int(v)) : String(format: "%.2f", v) }
     let frame = at.frame.map { "{\"x\":\(num($0.x)),\"y\":\(num($0.y)),\"width\":\(num($0.width)),\"height\":\(num($0.height)),\"angle\":\(num($0.angle))}" } ?? "null"
     print("{\"storage\":\(id),\"shape\":\(at.shape),\"slide\":\(at.slide.map(String.init) ?? "null"),\"page\":\(at.page.map(String.init) ?? "null"),\"frame\":\(frame)}")
+}
+
+func runData(_ args: [String]) throws {
+    guard let path = args.first else { fail(CLI.usage, code: 2) }
+    let document = try DeckMonkey.open(url(path))
+    guard let metadata = document.packageMetadata else { fail("error: no PackageMetadata") }
+    var referrers = [UInt64: [UInt64]]()
+    for component in document.store.components {
+        for record in component.records {
+            for info in record.info.messageInfos {
+                for id in info.dataReferences { referrers[id, default: []].append(record.identifier) }
+            }
+        }
+    }
+    var described = Set<String>()
+    for d in metadata.datas.sorted(by: { $0.identifier < $1.identifier }) {
+        let name = d.storedFileName ?? d.preferredFileName
+        described.insert("Data/" + name)
+        let bytes = document.package.data("Data/" + name)
+        let digest = d.digest.map { String(format: "%02x", $0) }.joined()
+        let attrs = d.hasAttributes ? " attributes \(d.attributes.textFormatString().replacingOccurrences(of: "\n", with: " "))" : ""
+        print("\(d.identifier)\t\(name)\t\(bytes.map { "\($0.count) bytes" } ?? "MISSING")\tdigest \(digest) (\(d.digest.count) bytes)\tpreferred \(d.preferredFileName)\treferrers \(referrers[d.identifier]?.map(String.init).joined(separator: ",") ?? "none")\(attrs)")
+    }
+    for name in document.package.dataNames.sorted() where !described.contains(name) {
+        print("UNDESCRIBED\t\(name)")
+    }
+}
+
+func runImage(_ args: [String]) throws {
+    guard let path = args.first, !path.hasPrefix("-") else { fail(CLI.usage, code: 2) }
+    var document = try DeckMonkey.open(url(path))
+    if args.contains("--list") {
+        let datas = Dictionary(uniqueKeysWithValues: (document.packageMetadata?.datas ?? []).map { ($0.identifier, $0) })
+        let pages = document.pageOfSlide
+        for id in document.images {
+            guard let image = try? TSD_ImageArchive(serializedBytes: document.store.record(for: id)!.payloads[0], extensions: Schema.extensions, partial: true) else { continue }
+            let data = image.hasData ? datas[image.data.identifier] : nil
+            let name = data.map { $0.storedFileName ?? "(app resource) " + $0.preferredFileName } ?? "-"
+            let parent = image.super.hasParent ? image.super.parent.identifier : 0
+            print("\(id)\t\(name)\tpage \(pages[parent].map(String.init) ?? "-")")
+        }
+        return
+    }
+    guard let value = option("--object", in: args), let id = UInt64(value), let with = option("--with", in: args),
+          let out = option("-o", in: args) else { fail(CLI.usage, code: 2) }
+    let bytes = try Data(contentsOf: url(with))
+    let report = try document.replaceImage(id, with: bytes, preferredFileName: url(with).lastPathComponent)
+    try FileManager.default.createDirectory(at: url(out).deletingLastPathComponent(), withIntermediateDirectories: true)
+    try document.save(to: url(out))
+    print("replaced image \(id): Data/\(report.fileName) (data \(report.newData))")
+    if !report.removedData.isEmpty {
+        print("removed data \(report.removedData.map(String.init).joined(separator: ", ")) and files \(report.removedFiles.joined(separator: ", "))")
+    }
+    print("output: \(url(out).path)")
 }
 
 let arguments = Array(CommandLine.arguments.dropFirst())
@@ -382,6 +448,8 @@ do {
     case "text": try runText(rest)
     case "replace": try runReplace(rest)
     case "locate": try runLocate(rest)
+    case "data": try runData(rest)
+    case "image": try runImage(rest)
     case "corpus":
         switch rest.first {
         case "add": try runCorpusAdd(Array(rest.dropFirst()))

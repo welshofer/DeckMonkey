@@ -56,7 +56,7 @@ extension KeynoteError: CustomStringConvertible {
 /// the typed graph (`Show`, `Slide`, `Drawable`, `TextStorage`) arrives with `IWASchema`'s first
 /// generated module. Everything that works today works without one (invariants 1 and 2).
 public struct KeynoteDocument: Sendable {
-    public private(set) var package: IWAPackage
+    public internal(set) var package: IWAPackage
     public private(set) var store: ObjectStore
     public let registry: TypeRegistry?
 
@@ -158,7 +158,10 @@ public struct KeynoteDocument: Sendable {
         }
         info.setLength(UInt32(payload.count))
         info.setObjectReferences(Self.stableOrder(listed, stored: info.objectReferences, traversal: new.objects))
-        info.setDataReferences(Self.stableOrder(Set(new.data).subtracting([0]), stored: info.dataReferences, traversal: new.data))
+        // data_references: one entry per occurrence, as Keynote 15.4 writes them (all 141,941 lists in
+        // the decks it alone saved); an unchanged multiset keeps its stored order.
+        let occurrences = new.data.filter { $0 != 0 }
+        if occurrences.sorted() != info.dataReferences.sorted() { info.setDataReferences(occurrences) }
         record.info.messageInfos[index] = info
         record.payloads[index] = payload
         store.replaceRecord(for: identifier, with: record)
@@ -189,11 +192,18 @@ public struct KeynoteDocument: Sendable {
     // MARK: Save
 
     /// Writes the document. Every component is re-joined from the store; untouched records are
-    /// emitted from their original bytes. Refuses on any validation issue.
+    /// emitted from their original bytes. The component data index is brought up to date for every
+    /// changed object first (invariant 4). Refuses on any validation issue.
     public func save(to url: URL, as form: IWAPackage.Form? = nil) throws {
         if let newer = writtenByNewerKeynote {
             throw KeynoteError.schemaNewerThanLibrary(fileBuild: newer, pinned: "\(TypeRegistry.pinnedVersion) (\(TypeRegistry.pinnedBuild))")
         }
+        var document = self
+        try document.refreshComponentDataIndex()
+        try document.write(to: url, as: form)
+    }
+
+    private func write(to url: URL, as form: IWAPackage.Form?) throws {
         let issues = validate().filter { $0.severity == .error }
         guard issues.isEmpty else { throw KeynoteError.validationFailed(issues) }
         var out = package
@@ -201,6 +211,49 @@ public struct KeynoteDocument: Sendable {
             out.set(name, try IWAChunking.compress(decompressed))
         }
         try out.write(to: url, as: form)
+    }
+
+    /// `PackageMetadata.components[].data_references` indexes, per component, which objects use
+    /// which data and how often; Keynote trusts it when loading data, and a stale entry makes it ask
+    /// for data that is gone. For every changed (dirty) object, its entries are rebuilt from its
+    /// payload's occurrences; entries for untouched objects stay as Keynote wrote them. In the decks
+    /// 15.4 alone saved, every component's index equals this derivation.
+    mutating func refreshComponentDataIndex() throws {
+        var dirty = [String: [UInt64: [UInt64: UInt32]]]()      // locator → object → data → count
+        for component in store.components {
+            let locator = String(component.name.dropFirst("Index/".count).dropLast(".iwa".count))
+            for record in component.records where record.isDirty {
+                var counts = [UInt64: UInt32]()
+                for (i, info) in record.info.messageInfos.enumerated() where info.baseMessageIndex == nil {
+                    guard let d = try? ReferenceDerivation.derive(type: info.type, payload: record.payloads[i]) else { continue }
+                    for id in d.data where id != 0 { counts[id, default: 0] += 1 }
+                }
+                dirty[locator, default: [:]][record.identifier] = counts
+            }
+        }
+        guard !dirty.isEmpty, var metadata = packageMetadata else { return }
+        let before = metadata
+        for c in metadata.components.indices {
+            let locator = metadata.components[c].locator.isEmpty ? metadata.components[c].preferredLocator : metadata.components[c].locator
+            guard let objects = dirty[locator] else { continue }
+            var entries = metadata.components[c].dataReferences
+            for e in entries.indices {
+                entries[e].objectReferenceList.removeAll { objects[$0.objectIdentifier] != nil }
+            }
+            for (object, counts) in objects.sorted(by: { $0.key < $1.key }) {
+                for (data, count) in counts.sorted(by: { $0.key < $1.key }) {
+                    let reference = TSP_ComponentDataReference.ObjectReference.with { $0.objectIdentifier = object; $0.count = count }
+                    if let e = entries.firstIndex(where: { $0.dataIdentifier == data }) {
+                        entries[e].objectReferenceList.append(reference)
+                    } else {
+                        entries.append(TSP_ComponentDataReference.with { $0.dataIdentifier = data; $0.objectReferenceList = [reference] })
+                    }
+                }
+            }
+            entries.removeAll { $0.objectReferenceList.isEmpty }
+            metadata.components[c].dataReferences = entries
+        }
+        if metadata != before { try replacePayload(of: 2, with: try metadata.serializedData(partial: true)) }
     }
 
     // MARK: Inspection

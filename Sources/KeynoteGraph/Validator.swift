@@ -17,6 +17,8 @@ public struct ValidationIssue: Equatable, Sendable, CustomStringConvertible {
         case missingDataFile(String)
         /// A TSWP.StorageArchive offset table out of order or past its text (invariant 8).
         case textOffset(identifier: UInt64, TextOffsets.Problem)
+        /// A header data reference with no DataInfo in PackageMetadata (invariant 8).
+        case danglingDataReference(from: UInt64, to: UInt64)
     }
 
     public let severity: Severity
@@ -34,13 +36,14 @@ public struct ValidationIssue: Equatable, Sendable, CustomStringConvertible {
             return "\(severity.rawValue): Data/ entry \(name) is missing"
         case .textOffset(let id, let problem):
             return "\(severity.rawValue): text storage \(id): \(problem)"
+        case .danglingDataReference(let from, let to):
+            return "\(severity.rawValue): object \(from) references data \(to), which has no DataInfo"
         }
     }
 }
 
 /// The pre-write checks of invariant 8: duplicate identifiers, dangling strong (listed) references,
-/// unknown types, and text offset tables. `DataReference` → `DataInfo` → file arrives with image
-/// replace (Phase 2), the first operation that can break it.
+/// unknown types, text offset tables, and data references → DataInfo → file in Data/.
 public enum Validator {
     public static func validate(_ document: KeynoteDocument) -> [ValidationIssue] {
         var issues = [ValidationIssue]()
@@ -79,6 +82,25 @@ public enum Validator {
                     for problem in TextOffsets.problems(in: storage) {
                         issues.append(ValidationIssue(severity: .error, kind: .textOffset(identifier: record.identifier, problem)))
                     }
+                }
+            }
+        }
+        // Invariant 8 for data: every data reference resolves to a DataInfo, and every DataInfo that
+        // names a file has it in Data/ (no or an empty file name: an app resource).
+        if let metadata = document.packageMetadata {
+            let known = Set(metadata.datas.map(\.identifier))
+            for component in document.store.components {
+                for record in component.records {
+                    for info in record.info.messageInfos {
+                        for id in info.dataReferences where !known.contains(id) {
+                            issues.append(ValidationIssue(severity: .error, kind: .danglingDataReference(from: record.identifier, to: id)))
+                        }
+                    }
+                }
+            }
+            for d in metadata.datas {
+                if let name = d.storedFileName, document.package.data("Data/" + name) == nil {
+                    issues.append(ValidationIssue(severity: .error, kind: .missingDataFile("Data/" + name)))
                 }
             }
         }
