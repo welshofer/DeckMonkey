@@ -1,12 +1,17 @@
 # Handoff to Claude Code — DeckMonkey Phase 0
 
-Open a terminal in the repo and run `claude`. Paste the prompt below as the first message.
-`CLAUDE.md` is loaded automatically and carries the conventions; this prompt carries the first
-day's work. Set `DECKMONKEY_CORPUS` first so the corpus suite has something to chew on.
+The working copy on the M4 at `~/Developer/DeckMonkey` was written file-by-file before the
+GitHub repo existed, so turn it into a real clone once (keeps the `.build` cache and the
+git-ignored `.deckmonkey-corpus` pointer), then open Claude Code in it and paste the prompt below
+as the first message. `CLAUDE.md` is loaded automatically and carries the conventions; this
+prompt carries the first day's work.
 
 ```
 cd ~/Developer/DeckMonkey
+git init -q && git remote add origin https://github.com/welshofer/DeckMonkey
+git fetch -q origin && git reset -q --hard origin/main && git branch -q -M main && git branch -u origin/main
 echo ~/Developer/DeckMonkey-corpus > .deckmonkey-corpus   # git-ignored pointer to the private decks
+git status --short                                        # expect: nothing
 claude
 ```
 
