@@ -13,7 +13,11 @@ public struct ReferenceRewriter: Sendable {
         public init(lower: UInt64, upper: UInt64) { self.lower = lower; self.upper = upper }
     }
 
-    public enum Failure: Error, Equatable, Sendable { case malformed(at: Int), groups }
+    public enum Failure: Error, Equatable, Sendable { case malformed(at: Int), groups, tooDeep }
+
+    /// Deeper nesting than any Keynote payload uses is refused, so hostile input cannot exhaust the
+    /// stack (the deepest corpus payload is far shallower).
+    public static let maximumDepth = 64
 
     public let index: FieldIndex
     public var identifiers: [UInt64: UInt64]
@@ -28,12 +32,13 @@ public struct ReferenceRewriter: Sendable {
     /// The payload of a `message` (full proto name) with references and UUIDs rewritten.
     public func rewrite(_ payload: Data, message: String) throws -> Data {
         let bytes = [UInt8](payload)
-        let out = try rewrite(bytes[...], message: message)
+        let out = try rewrite(bytes[...], message: message, depth: 0)
         return out.map { Data($0) } ?? payload
     }
 
     /// Nil when nothing changed (the caller keeps the original bytes).
-    func rewrite(_ b: ArraySlice<UInt8>, message: String) throws -> [UInt8]? {
+    func rewrite(_ b: ArraySlice<UInt8>, message: String, depth: Int) throws -> [UInt8]? {
+        guard depth <= Self.maximumDepth else { throw Failure.tooDeep }
         if message == "TSP.Reference" { return rewriteReference(b) }
         if message == "TSP.UUID" { return rewriteUUID(b) }
         var out = [UInt8](), changed = false, i = b.startIndex
@@ -53,11 +58,12 @@ public struct ReferenceRewriter: Sendable {
                 guard afterTag + 4 <= b.endIndex else { throw Failure.malformed(at: afterTag - b.startIndex) }
                 out += b[start..<(afterTag + 4)]; i = afterTag + 4
             case 2:
-                guard let (length, bodyStart) = Self.varint(b, afterTag), bodyStart + Int(length) <= b.endIndex else {
+                // Compare as UInt64 before converting: a hostile length must not trap.
+                guard let (length, bodyStart) = Self.varint(b, afterTag), length <= UInt64(b.endIndex - bodyStart) else {
                     throw Failure.malformed(at: afterTag - b.startIndex)
                 }
                 let body = b[bodyStart..<(bodyStart + Int(length))]
-                if let sub = index.subMessage(of: message, field: number), let rewritten = try rewrite(body, message: sub) {
+                if let sub = index.subMessage(of: message, field: number), let rewritten = try rewrite(body, message: sub, depth: depth + 1) {
                     out += b[start..<afterTag]
                     Self.appendVarint(UInt64(rewritten.count), to: &out)
                     out += rewritten
@@ -113,7 +119,7 @@ public struct ReferenceRewriter: Sendable {
         case 1: return afterTag + 8 <= b.endIndex ? afterTag + 8 : nil
         case 5: return afterTag + 4 <= b.endIndex ? afterTag + 4 : nil
         case 2:
-            guard let (n, start) = varint(b, afterTag), start + Int(n) <= b.endIndex else { return nil }
+            guard let (n, start) = varint(b, afterTag), n <= UInt64(b.endIndex - start) else { return nil }
             return start + Int(n)
         default: return nil
         }

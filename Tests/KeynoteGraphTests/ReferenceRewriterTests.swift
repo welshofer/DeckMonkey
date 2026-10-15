@@ -61,3 +61,44 @@ struct ReferenceRewriterTests {
         #expect(failures.isEmpty)
     }
 }
+
+/// Hostile input: parsers of untrusted bytes refuse, never trap (house rule: fail loud, typed).
+@Suite("Hostile input")
+struct HostileInputTests {
+    @Test("the rewriter refuses absurd lengths and deep nesting with typed errors")
+    func rewriter() throws {
+        let index = try FieldIndex.load(version: TypeRegistry.pinnedVersion)
+        let rewriter = ReferenceRewriter(index: index, identifiers: [1: 2])
+        // Field 2 of KN.SlideNodeArchive (a TSP.Reference) with a length near UInt64.max.
+        let huge = Data([0x12, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01])
+        #expect(throws: ReferenceRewriter.Failure.self) { try rewriter.rewrite(huge, message: "KN.SlideNodeArchive") }
+        // A message type with a field of its own type, nested deeper than the limit.
+        let recursive = index.messageFields.lazy.compactMap { entry -> (String, Int)? in
+            entry.value.first(where: { $0.value == entry.key }).map { (entry.key, $0.key) }
+        }.first
+        #expect(recursive != nil, "the schema has a self-recursive message")
+        if let (name, field) = recursive {
+            var bytes = Data()
+            for _ in 0..<(ReferenceRewriter.maximumDepth + 8) {
+                var wrapped = Data([UInt8(field << 3 | 2)])
+                var n = bytes.count
+                while n >= 0x80 { wrapped.append(UInt8(n & 0x7F) | 0x80); n >>= 7 }
+                wrapped.append(UInt8(n))
+                bytes = wrapped + bytes
+            }
+            if field < 16 { #expect(throws: ReferenceRewriter.Failure.tooDeep) { try rewriter.rewrite(bytes, message: name) } }
+        }
+    }
+
+    @Test("MediaFile refuses a 64-bit box size past Int, an empty mvhd, and truncation")
+    func media() {
+        // A box claiming size 1 (64-bit size follows) of 0xFFFF_FFFF_FFFF_FFFF.
+        let huge = Data([0, 0, 0, 1] + Array("moov".utf8) + [UInt8](repeating: 0xFF, count: 8) + [UInt8](repeating: 0, count: 32))
+        #expect(MediaFile(huge) == nil)
+        // moov holding an mvhd with no payload.
+        let empty = Data([0, 0, 0, 16] + Array("moov".utf8) + [0, 0, 0, 8] + Array("mvhd".utf8))
+        #expect(MediaFile(empty) == nil)
+        #expect(MediaFile(Data([0, 0, 0])) == nil)
+        #expect(ImageFile(Data([0x89, 0x50, 0x4E, 0x47])) == nil)
+    }
+}
