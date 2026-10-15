@@ -6,7 +6,7 @@ CORPUS ?= $(shell if [ -n "$$DECKMONKEY_CORPUS" ]; then echo "$$DECKMONKEY_CORPU
 
 PYTHON ?= .venv/bin/python
 
-.PHONY: build test gate roundtrip-corpus oracle-corpus snappy-reference snappy-check snappy-vectors schema schema-tools schema-diff clean
+.PHONY: reference-strength build test gate roundtrip-corpus oracle-corpus snappy-reference snappy-check snappy-vectors schema schema-tools schema-diff clean
 
 build:
 	$(SWIFT) build
@@ -89,6 +89,13 @@ schema: schema-tools
 	  $(SCHEMA_TOOLS)/protodump generate $(SCHEMA_PROTO)/descriptors.pb --plugin $(SCHEMA_TOOLS)/protoc-gen-swift --out $(SCHEMA_SWIFT) && \
 	  python3 -I Scripts/schema/registry-dump.py "$$app" $(SCHEMA_PROTO)/descriptors.pb --out $(SCHEMA_REGISTRY) && \
 	  $(SCHEMA_TOOLS)/protodump dispatch $(SCHEMA_PROTO)/descriptors.pb $(SCHEMA_REGISTRY) $(SCHEMA_SWIFT) --out $(SCHEMA_SWIFT)/Dispatch.swift
+
+## Learn which reference fields Keynote lists (invariant 4) from every Keynote-authored deck under
+## $(CORPUS) and Corpus/; deterministic, so a re-run on the same corpus leaves git clean. Holds field
+## names and counts only, never deck content.
+reference-strength:
+	@$(SWIFT) build --product deckmonkey >/dev/null
+	.build/debug/deckmonkey reference-strength --out Sources/IWASchema/Registry/reference-strength-$(SCHEMA_VERSION).json $(CORPUS) Corpus
 
 ## Re-extract from the installed Keynote into a scratch dir and diff against the pinned tree. Fails on
 ## any difference; a new Keynote needs a new SCHEMA_VERSION and a dated note in docs/schema-changes.md.

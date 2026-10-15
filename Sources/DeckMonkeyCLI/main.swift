@@ -17,6 +17,9 @@ enum CLI {
                                      AT-01: re-derive every chunk hash in a reference manifest
                                      (Scripts/snappy-crosscheck.py hash) with our decoder; with
                                      --emit, also write our re-compression for verify-ours
+      reference-strength --out <json> <deck or dir>...
+                                     learn which reference fields Keynote lists (invariant 4)
+                                     from Keynote-authored decks; `make reference-strength`
       version
 
     Exit codes: 0 pass, 1 fail, 2 usage, 3 refused (Keynote '09 APXL, out of scope).
@@ -147,6 +150,57 @@ func runSnappyCheck(_ args: [String]) throws {
     if !report.isClean { exit(1) }
 }
 
+/// Every `.key` under the given paths (a `.key` may itself be a package directory).
+func keyFiles(_ paths: [String]) -> [URL] {
+    var files = [URL]()
+    for path in paths {
+        let root = url(path)
+        if root.pathExtension.lowercased() == "key" { files.append(root); continue }
+        guard let walker = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil) else { continue }
+        for case let file as URL in walker where file.pathExtension.lowercased() == "key" {
+            files.append(file)
+            walker.skipDescendants()
+        }
+    }
+    return files.sorted { $0.path < $1.path }
+}
+
+func runReferenceStrength(_ args: [String]) throws {
+    guard let out = option("--out", in: args) else { fail(CLI.usage, code: 2) }
+    var paths = args
+    if let i = paths.firstIndex(of: "--out") { paths.removeSubrange(i...(i + 1)) }
+    let files = keyFiles(paths)
+    guard !files.isEmpty else { fail("error: no .key files under \(paths.joined(separator: ", "))", code: 2) }
+    var learner = ReferenceStrengthLearner()
+    var refused = 0
+    for file in files {
+        let document: KeynoteDocument
+        do {
+            document = try DeckMonkey.open(file)
+        } catch IWAPackageError.unsupportedLegacyFormat {
+            refused += 1
+            continue
+        }
+        learner.observeDeck()
+        for component in document.store.components {
+            for record in component.records {
+                for (i, info) in record.info.messageInfos.enumerated() where info.baseMessageIndex == nil {
+                    guard let derived = try? ReferenceDerivation.derive(type: info.type, payload: record.payloads[i]) else { continue }
+                    learner.observe(derived, stored: info.objectReferences)
+                }
+            }
+        }
+    }
+    let result = learner.result(source: "deckmonkey reference-strength over \(learner.decks) Keynote-authored deck(s)")
+    try result.encoded().write(to: url(out))
+    let counts = Dictionary(grouping: result.fields.values, by: \.strength).mapValues(\.count)
+    print("reference-strength: \(result.fields.count) fields from \(result.payloads) payloads in \(result.decks) deck(s) (\(refused) refused): "
+        + "\(counts[.strong] ?? 0) strong, \(counts[.weak] ?? 0) weak, \(counts[.mixed] ?? 0) mixed -> \(out)")
+    for (name, field) in result.fields.sorted(by: { $0.key < $1.key }) where field.strength == .mixed {
+        print("  mixed \(name): \(field.occurrences) seen, \(field.unlisted) unlisted, \(field.unexplainedListed) listed without a strong twin")
+    }
+}
+
 let arguments = Array(CommandLine.arguments.dropFirst())
 guard let command = arguments.first else { fail(usage, code: 2) }
 let rest = Array(arguments.dropFirst())
@@ -158,6 +212,7 @@ do {
     case "roundtrip": try runRoundtrip(rest)
     case "verify": try runVerify(rest)
     case "snappy-check": try runSnappyCheck(rest)
+    case "reference-strength": try runReferenceStrength(rest)
     case "version": print("deckmonkey \(DeckMonkey.version)")
     case "-h", "--help", "help": print(usage)
     default: fail(usage, code: 2)

@@ -29,6 +29,8 @@ acceptance oracle. The full spec is `docs/spec.md`; sections 5 (invariants), 9 (
    `last_object_identifier` and the store's high-water mark, written back on save.
 4. Reference lists are derived, never typed: `object_references`, `data_references`,
    `PackageMetadata.components` and `.datas` are recomputed from serialized payloads before save.
+   `object_references` = strong references only, per `reference-strength-<version>.json`
+   (`make reference-strength`); mixed fields keep stored membership; unknown fields are refused.
 5. Versions are inherited from the template; the library never bumps one.
 6. Styles by reference; no style-creating API through Phase 4.
 7. Keynote is the oracle: correct means no sheet on open and the expected PDF.
@@ -116,20 +118,20 @@ registry recovered statically from the registration calls (Frida/lldb cannot att
 errors (invariant 8); merge diff descriptors (type 0) and deprecated types are skipped.
 
 References (2026-10-14): `ReferenceDerivation` decodes every payload (54,348, all clean, no unknown
-fields) and collects `TSP.Reference` / `TSP.DataReference`. AT-08 holds exactly (minus the null
-id 0). Object lists do **not** equal the derived set: Keynote lists strong references only
-(stored ⊆ derived always; 179 fields always listed, 17 never, 5 mixed), every listed reference
-resolves, and all 807 dangling references in Keynote's own files are unlisted weak ones.
-**Open design decision (needs Jay):** AT-07 as written cannot pass and AT-06 holds for strong
-references only; decide how mutated records get their `object_references` (invariant 4) before
-Phase 1 relies on derived lists.
+fields) and collects `TSP.Reference` / `TSP.DataReference` with their fields. Keynote lists strong
+references only. Decided: invariant 4 lists references from fields the learned strength table
+(`make reference-strength`, deterministic: 179 strong, 21 weak, 1 mixed) marks strong; a mixed
+field keeps the stored membership of references already held and lists new ones; an unknown field
+is refused. AT-07 (the rule reproduces all 54,348 stored lists), AT-08 (minus null id 0) and
+AT-06 (strong references resolve; 807 weak ones dangle in Keynote's own files) pass. Open: settle
+`KN.BuildArchive.1` (mixed) with the oracle before Phase 3 edits builds.
 
 Remaining, in order:
 
-1. Decide AT-06/AT-07 (above) and amend docs/spec.md §5/§14 accordingly.
-2. `Scripts/corpus-gen` (AppleScript): one deck per built-in theme × two sizes → `Corpus/templates`;
-   hand-author `Corpus/features`; `deckmonkey corpus add` records version + golden PDF.
-3. `Corpus/hostile` files and AT-26; AT-11, AT-12, AT-25.
-4. `make oracle-corpus` 40/40 on the synthetic corpus (AT-10).
+1. `Scripts/corpus-gen` (AppleScript): one deck per built-in theme × two sizes → `Corpus/templates`;
+   hand-author `Corpus/features`; `deckmonkey corpus add` records version + golden PDF; then rerun
+   `make reference-strength` over the larger corpus (new fields must be classified before use).
+2. `Corpus/hostile` files and AT-26; AT-11, AT-12, AT-25.
+3. `make oracle-corpus` 40/40 on the synthetic corpus (AT-10).
 
 Do not start Phase 1 (text replace) on a partial Gate 0.

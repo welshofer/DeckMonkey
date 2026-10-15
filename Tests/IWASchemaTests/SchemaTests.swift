@@ -22,6 +22,18 @@ struct SchemaTests {
         #expect(!registry.resolves(999_999))
     }
 
+    @Test("the shipped reference-strength table loads and classifies what the corpus showed")
+    func referenceStrength() throws {
+        let strength = try ReferenceStrength.load(version: TypeRegistry.pinnedVersion)
+        #expect(strength.keynoteVersion == "15.4")
+        #expect(strength.fields.count == 201)
+        #expect(strength.strength(of: "KN.SlideNodeArchive.2") == .strong)   // the slide a node shows
+        #expect(strength.strength(of: "TSD.DrawableArchive.2") == .weak)    // parent back-pointer
+        #expect(strength.strength(of: "TSS.StyleArchive.5") == .weak)       // stylesheet back-pointer
+        #expect(strength.strength(of: "KN.BuildArchive.1") == .mixed)
+        #expect(strength.fields.values.filter { $0 == .mixed }.count == 1)
+    }
+
     @Test("every registry type dispatches to a generated message whose proto name matches")
     func dispatchMatchesRegistry() throws {
         let registry = try TypeRegistry.load(version: TypeRegistry.pinnedVersion)

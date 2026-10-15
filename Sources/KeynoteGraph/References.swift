@@ -103,3 +103,113 @@ struct ReferenceCollector: Visitor {
     mutating func visitSingularBytesField(value: Data, fieldNumber: Int) throws {}
     mutating func visitSingularEnumField<E: Enum>(value: E, fieldNumber: Int) throws {}
 }
+
+// MARK: - Strong references (invariant 4)
+
+extension ReferenceDerivation {
+    public enum ListingFailure: Error, Equatable, Sendable, CustomStringConvertible {
+        /// A reference field the strength table has never seen: refuse rather than guess.
+        case unclassifiedField(String)
+
+        public var description: String {
+            switch self {
+            case .unclassifiedField(let field):
+                return "reference field \(field) has no strength in reference-strength-\(Schema.keynoteVersion).json; rerun `make reference-strength`"
+            }
+        }
+    }
+
+    /// The `object_references` a payload's header must list: the references found in strong
+    /// fields. A weak occurrence never removes a reference that is strong elsewhere. For a mixed
+    /// field, a reference the original payload already held keeps its stored membership; a new one
+    /// is listed, since an extra strong edge is harmless and a missing one loses objects.
+    public static func listedObjects(
+        _ derived: DerivedReferences,
+        strength: ReferenceStrength,
+        original: (derived: DerivedReferences, stored: [UInt64])? = nil
+    ) throws(ListingFailure) -> Set<UInt64> {
+        let originalRefs = Set(original?.derived.objects ?? [])
+        let originalListed = Set(original?.stored ?? [])
+        var listed = Set<UInt64>()
+        for (ref, field) in zip(derived.objects, derived.objectFields) {
+            switch strength.strength(of: field) {
+            case .strong:
+                listed.insert(ref)
+            case .weak:
+                break
+            case .mixed:
+                if !originalRefs.contains(ref) || originalListed.contains(ref) { listed.insert(ref) }
+            case nil:
+                throw .unclassifiedField(field)
+            }
+        }
+        return listed
+    }
+}
+
+/// Learns field strength from Keynote-authored payloads and their stored lists.
+///
+/// An unlisted occurrence proves a field is not strong. A field with unlisted occurrences is weak
+/// when every listed occurrence is explained by the same reference sitting in a strong-candidate
+/// field of the same payload (the reference was listed for that field's sake); otherwise it is
+/// mixed. Fields never seen unlisted are strong.
+public struct ReferenceStrengthLearner: Sendable {
+    private struct Occurrence: Sendable {
+        var field: Int
+        var ref: UInt64
+        var listed: Bool
+    }
+
+    private var fieldIndex: [String: Int] = [:]
+    private var fieldNames: [String] = []
+    private var payloadOccurrences: [[Occurrence]] = []
+    public private(set) var decks = 0
+
+    public init() {}
+
+    public var payloads: Int { payloadOccurrences.count }
+
+    public mutating func observeDeck() { decks += 1 }
+
+    public mutating func observe(_ derived: DerivedReferences, stored: [UInt64]) {
+        let listed = Set(stored)
+        var occurrences = [Occurrence]()
+        for (ref, field) in zip(derived.objects, derived.objectFields) {
+            let index: Int
+            if let i = fieldIndex[field] {
+                index = i
+            } else {
+                index = fieldNames.count
+                fieldIndex[field] = index
+                fieldNames.append(field)
+            }
+            occurrences.append(Occurrence(field: index, ref: ref, listed: listed.contains(ref)))
+        }
+        payloadOccurrences.append(occurrences)
+    }
+
+    public func result(source: String) -> ReferenceStrength.File {
+        var occurrences = [Int](repeating: 0, count: fieldNames.count)
+        var unlisted = [Int](repeating: 0, count: fieldNames.count)
+        for payload in payloadOccurrences {
+            for o in payload {
+                occurrences[o.field] += 1
+                if !o.listed { unlisted[o.field] += 1 }
+            }
+        }
+        let strongCandidate = (0..<fieldNames.count).map { unlisted[$0] == 0 }
+        var unexplained = [Int](repeating: 0, count: fieldNames.count)
+        for payload in payloadOccurrences {
+            let strongRefs = Set(payload.filter { strongCandidate[$0.field] }.map(\.ref))
+            for o in payload where !strongCandidate[o.field] && o.listed && !strongRefs.contains(o.ref) {
+                unexplained[o.field] += 1
+            }
+        }
+        var fields = [String: ReferenceStrength.File.Field]()
+        for (i, name) in fieldNames.enumerated() {
+            let strength: ReferenceStrength.Strength = strongCandidate[i] ? .strong : (unexplained[i] == 0 ? .weak : .mixed)
+            fields[name] = .init(strength: strength, occurrences: occurrences[i], unlisted: unlisted[i], unexplainedListed: unexplained[i])
+        }
+        return ReferenceStrength.File(keynoteVersion: Schema.keynoteVersion, source: source, decks: decks, payloads: payloads, fields: fields)
+    }
+}

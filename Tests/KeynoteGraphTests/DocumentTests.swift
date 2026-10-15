@@ -156,6 +156,37 @@ struct DocumentTests {
         }
     }
 
+    @Test("invariant 4: strong fields list, weak fields don't, mixed fields keep stored membership, unseen fields refuse")
+    func listingRule() throws {
+        let strength = ReferenceStrength(keynoteVersion: "test", fields: ["A.1": .strong, "A.2": .weak, "A.3": .mixed])
+        func refs(_ pairs: [(UInt64, String)]) -> DerivedReferences {
+            DerivedReferences(objects: pairs.map(\.0), objectFields: pairs.map(\.1))
+        }
+        // 10 strong; 20 only weak; 30 weak here but strong there: listed once.
+        #expect(try ReferenceDerivation.listedObjects(refs([(10, "A.1"), (20, "A.2"), (30, "A.2"), (30, "A.1")]), strength: strength) == [10, 30])
+        // Mixed: 40 was held and listed, 41 held and unlisted, 42 is new (listed: a missing strong edge loses objects).
+        let original = refs([(40, "A.3"), (41, "A.3")])
+        let edited = refs([(40, "A.3"), (41, "A.3"), (42, "A.3")])
+        #expect(try ReferenceDerivation.listedObjects(edited, strength: strength, original: (original, [40])) == [40, 42])
+        #expect(throws: ReferenceDerivation.ListingFailure.unclassifiedField("B.9")) {
+            try ReferenceDerivation.listedObjects(refs([(50, "B.9")]), strength: strength)
+        }
+    }
+
+    @Test("the learner: unlisted proves not-strong; listings explained by a strong twin make a field weak, not mixed")
+    func strengthLearner() throws {
+        var learner = ReferenceStrengthLearner()
+        learner.observeDeck()
+        // S.1 always listed; W.1 lists 7 only because S.1 also holds 7; M.1 lists 9 on its own.
+        learner.observe(DerivedReferences(objects: [7, 7, 8], objectFields: ["S.1", "W.1", "W.1"]), stored: [7])
+        learner.observe(DerivedReferences(objects: [9, 10], objectFields: ["M.1", "M.1"]), stored: [9])
+        let file = learner.result(source: "test")
+        #expect(file.fields.mapValues(\.strength) == ["S.1": .strong, "W.1": .weak, "M.1": .mixed])
+        #expect(file.fields["W.1"] == .init(strength: .weak, occurrences: 2, unlisted: 1, unexplainedListed: 0))
+        #expect(file.decks == 1 && file.payloads == 2)
+        #expect(try ReferenceStrength.load(from: file.encoded()).fields == file.fields.mapValues(\.strength))
+    }
+
     // First CLI contact: a truncated deck printed only `error: truncated(at: 4)`.
     @Test("a truncated .iwa names its component and the decompress stage")
     func truncatedComponentIsNamed() throws {
@@ -246,19 +277,16 @@ struct CorpusTests {
         #expect(unresolved.isEmpty)
     }
 
-    /// What the corpus proves about Keynote's reference lists (28 decks, 54,348 typed payloads):
-    /// - every payload with a message decodes under the 15.4 schema, with no unknown fields;
-    /// - data_references are exactly the set of derived TSP.DataReference ids, minus 0 (the null
-    ///   sentinel: six TSD image payloads carry one) — AT-08;
-    /// - object_references are always a subset of the derived TSP.Reference ids, never equal by
-    ///   rule: Keynote lists strong references only. 179 reference fields are always listed, 17 never
-    ///   (parent and owner back-pointers, UI state), 5 are mixed — so AT-07 as written in spec §14
-    ///   does not hold and its reformulation is an open design question (see CLAUDE.md);
-    /// - every listed reference resolves; every dangling one (807) is unlisted — AT-06 holds for the
-    ///   strong references, and Keynote's own files carry dangling weak ones.
-    @Test("AT-06/07/08: derived references against Keynote's stored lists", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus: set DECKMONKEY_CORPUS, write .deckmonkey-corpus, or add decks under Corpus/"))
+    /// AT-06/07/08 on the corpus (28 decks, 54,348 typed payloads), against the strength table
+    /// learned by `make reference-strength` (Registry/reference-strength-15.4.json):
+    /// - AT-07: the strong-reference rule reproduces every stored object_references set exactly;
+    ///   a reference field the table has never seen fails the test;
+    /// - AT-08: data_references are exactly the derived DataReference ids minus 0 (null sentinel);
+    /// - AT-06: every strong reference resolves; weak ones may dangle (807 do, in Keynote's files).
+    @Test("AT-06/07/08: strong references reproduce Keynote's stored lists", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus: set DECKMONKEY_CORPUS, write .deckmonkey-corpus, or add decks under Corpus/"))
     func corpusReferences() throws {
-        var payloads = 0, deprecated = 0, objectListsEqual = 0, danglingWeak = 0
+        let strength = try ReferenceStrength.load(version: TypeRegistry.pinnedVersion)
+        var payloads = 0, deprecated = 0, danglingWeak = 0, viaMixed = 0
         var failures = [String]()
         func fail(_ message: String) { if failures.count < 20 { failures.append(message) } }
         for url in CorpusTests.corpusFiles() {
@@ -283,22 +311,27 @@ struct CorpusTests {
                         if Set(info.dataReferences) != Set(derived.data).subtracting([0]) {
                             fail("\(label): data_references \(info.dataReferences), derived \(derived.data)")
                         }
-                        // AT-07 as measured: Keynote never lists a reference the payload does not hold.
-                        let listed = Set(info.objectReferences)
-                        if !listed.isSubset(of: derived.objects) {
-                            fail("\(label): lists \(listed.subtracting(derived.objects).sorted()) not in the payload")
+                        // AT-07
+                        let stored = Set(info.objectReferences)
+                        do {
+                            let listed = try ReferenceDerivation.listedObjects(derived, strength: strength, original: (derived, info.objectReferences))
+                            if listed != stored {
+                                fail("\(label): rule lists \(listed.subtracting(stored).sorted()) extra, \(stored.subtracting(listed).sorted()) missing")
+                            }
+                        } catch {
+                            fail("\(label): \(error)")
                         }
-                        if listed == Set(derived.objects) { objectListsEqual += 1 }
-                        // AT-06 for strong references; weak ones may dangle in Keynote's own files.
-                        for ref in derived.objects where document.store.entry(for: ref) == nil {
-                            if listed.contains(ref) { fail("\(label): listed reference \(ref) is dangling") } else { danglingWeak += 1 }
+                        viaMixed += zip(derived.objects, derived.objectFields).filter { strength.strength(of: $0.1) == .mixed }.count
+                        // AT-06
+                        for (ref, field) in zip(derived.objects, derived.objectFields) where document.store.entry(for: ref) == nil {
+                            if strength.strength(of: field) == .weak && !stored.contains(ref) { danglingWeak += 1 } else { fail("\(label): \(field) reference \(ref) is dangling") }
                         }
                     }
                 }
             }
         }
-        print("references: \(payloads) typed payloads (+\(deprecated) deprecated-type), object lists equal to the derived set: "
-            + "\(objectListsEqual), strict subset: \(payloads - objectListsEqual); dangling weak references: \(danglingWeak)")
+        print("references: \(payloads) typed payloads (+\(deprecated) deprecated-type) reproduce their stored lists; "
+            + "\(viaMixed) occurrences in mixed fields kept their stored membership; \(danglingWeak) dangling weak references")
         failures.forEach { print("  FAIL \($0)") }
         #expect(failures.isEmpty)
     }
