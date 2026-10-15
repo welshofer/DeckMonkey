@@ -13,6 +13,8 @@
 #   and every AppleScript step addresses only the document or window carrying that unique token.
 # - The script only opens, exports and closes (without saving) that copy. It never closes, saves,
 #   or inspects any other document.
+# - Don't type or paste into Keynote while it runs: Keynote is brought forward, so input lands in
+#   the oracle's copy. A copy that was edited is never exported; the verdict says so.
 # - Paths reach AppleScript through argv, never by interpolation into script source.
 #
 # The AppleScript lives in variables piped to `osascript -`: macOS's bash 3.2 misparses heredocs
@@ -96,16 +98,22 @@ on run argv
 end run
 APPLESCRIPT
 
-# argv: token, pdf path.
+# argv: token, pdf path. Refuses to export a copy someone edited while it was open: the oracle
+# runs on a live desktop and brings Keynote forward, so a stray paste lands in its document.
+# Prints "modified" instead of exporting in that case.
 read -r -d '' AS_EXPORT <<'APPLESCRIPT' || true
 on run argv
   set token to item 1 of argv
   set out to POSIX file (item 2 of argv)
   with timeout of 300 seconds
     tell application id "com.apple.Keynote"
-      export (first document whose name contains token) to out as PDF
+      set d to first document whose name contains token
+      if modified of d then return "modified"
+      export d to out as PDF
+      if modified of d then return "modified"
     end tell
   end timeout
+  return "exported"
 end run
 APPLESCRIPT
 
@@ -193,8 +201,13 @@ for i in $(seq 1 180); do
   # idempotent (an already-open document just comes forward).
   if [[ $i -eq 10 || $i -eq 30 ]]; then applescript "$AS_OPEN" "$COPY" >/dev/null || true; fi
   STATE=$(applescript "$AS_STATE" "$TOKEN" "$BEFORE" || true)
-  # A large deck shows Keynote's "Opening “<name>”…" progress window first: still loading.
-  if [[ "$STATE" == modal:Opening* && "$STATE" == *"$TOKEN"* ]]; then STATE=""; fi
+  # A large deck shows a progress window first ("Opening “<name>”…", or just the name): still
+  # loading. Anything that says more than that, like "… is damaged and can't be opened.", is not.
+  if [[ "$STATE" == modal:* && "$STATE" == *"$TOKEN"* ]]; then
+    rest="${STATE#modal:}"; rest="${rest//$(basename "$COPY")/}"; rest="${rest//$(basename "$COPY" .key)/}"
+    rest=$(printf '%s' "$rest" | tr -d '“”"…. |')
+    if [[ -z "$rest" || "$rest" == "Opening" ]]; then STATE=""; fi
+  fi
   [[ -z "$STATE" ]] || break
 done
 if [[ "$STATE" == "open" ]]; then
@@ -212,7 +225,11 @@ esac
 # --- 2. Export PDF (only a clean open is exported; the trap closes the copy without saving) ----
 
 if [[ "$OPENS" == true ]]; then
-  applescript "$AS_EXPORT" "$TOKEN" "$PDF" >/dev/null || true
+  EXPORTED=$(applescript "$AS_EXPORT" "$TOKEN" "$PDF" || true)
+  if [[ "$EXPORTED" == modified ]]; then
+    rm -f "$PDF"
+    SHEET=$(printf 'document changed during the oracle run (input reached Keynote); not exported' | json_string)
+  fi
 fi
 [[ -f "$PDF" ]] || PDF=""
 
@@ -222,7 +239,9 @@ fi
 # name it. A plain grep of Keynote's log is useless: every open of a pristine deck logs UI errors
 # (status HUD, collaboration toolbar, sandbox URL tracker) and routine TSPPersistenceLogCat
 # debug lines. `log` is /usr/bin/log explicitly: zsh has a `log` builtin.
-LOG_PREDICATE='process == "Keynote" AND subsystem == "com.apple.iwork" AND (messageType == error OR messageType == fault) AND (category BEGINSWITH "TSP" OR (category == "TSUAssertCat" AND composedMessage CONTAINS "TSP"))'
+# TSPViewStateLogCat is excluded: "Failed to resolve persistent bookmark data" is the view state
+# looking for the file's previous location, logged for an untouched original opened from a copy.
+LOG_PREDICATE='process == "Keynote" AND subsystem == "com.apple.iwork" AND (messageType == error OR messageType == fault) AND ((category BEGINSWITH "TSP" AND category != "TSPViewStateLogCat") OR (category == "TSUAssertCat" AND composedMessage CONTAINS "TSP"))'
 LOGHITS=$(/usr/bin/log show --style compact --start "$START" --predicate "$LOG_PREDICATE" 2>/dev/null \
   | grep -c -E '^[0-9]{4}-[0-9]{2}-[0-9]{2} ' || true)
 

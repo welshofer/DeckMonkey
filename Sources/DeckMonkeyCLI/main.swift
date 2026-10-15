@@ -27,6 +27,7 @@ enum CLI {
       corpus hostile --from <template.key> [--out Corpus/hostile]
                                      AT-26: one broken copy of a Keynote-authored template per
                                      validator rule, plus expected.json naming each one's error
+      text <file>                    every TSWP text storage: identifier and its text (read-only)
       version
 
     Exit codes: 0 pass, 1 fail, 2 usage, 3 refused (Keynote '09 APXL, out of scope).
@@ -270,7 +271,6 @@ func runCorpusAdd(_ args: [String]) throws {
         let key = "\(category)/\(deck.lastPathComponent)"
         manifest.decks[key] = CorpusManifest.Entry(
             sha256: try CorpusManifest.digest(of: deck),
-            goldenSHA256: SHA256.hex(try Data(contentsOf: golden)),
             savedBy: document.lastSavedBy ?? "-",
             fileFormatVersion: document.packageMetadata.map { $0.fileFormatVersion.map(String.init).joined(separator: ".") } ?? "-",
             oracleKeynote: parsed.keynoteVersion)
@@ -302,6 +302,21 @@ func runCorpusHostile(_ args: [String]) throws {
     try (encoder.encode(expected) + Data([0x0A])).write(to: out.appendingPathComponent("expected.json"))
 }
 
+func runText(_ args: [String]) throws {
+    guard let path = args.first else { fail(CLI.usage, code: 2) }
+    let document = try DeckMonkey.open(url(path))
+    for component in document.store.components {
+        for record in component.records {
+            for (i, info) in record.info.messageInfos.enumerated() where info.type == 2001 && info.baseMessageIndex == nil {
+                guard let storage = try? TSWP_StorageArchive(serializedBytes: record.payloads[i], extensions: Schema.extensions, partial: true) else { continue }
+                let text = storage.text.joined()
+                guard !text.isEmpty else { continue }
+                print("\(record.identifier)\t\(text.replacingOccurrences(of: "\n", with: "⏎").replacingOccurrences(of: "\u{2029}", with: "¶"))")
+            }
+        }
+    }
+}
+
 let arguments = Array(CommandLine.arguments.dropFirst())
 guard let command = arguments.first else { fail(usage, code: 2) }
 let rest = Array(arguments.dropFirst())
@@ -314,6 +329,7 @@ do {
     case "verify": try runVerify(rest)
     case "snappy-check": try runSnappyCheck(rest)
     case "reference-strength": try runReferenceStrength(rest)
+    case "text": try runText(rest)
     case "corpus":
         switch rest.first {
         case "add": try runCorpusAdd(Array(rest.dropFirst()))
