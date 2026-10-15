@@ -87,29 +87,30 @@ forms. The 7 Keynote '09 APXL decks are refused as designed. Facts learned from 
 `MessageInfo` fields 1/2/3/5/6 are as assumed and the reference lists are packed; package
 directories carry `Index.zip`, not `Index/`; `should_merge` records with no base are simply
 objects (stylesheet components are full of them) and in these decks every merge record is one;
+every merge archive carries two `MessageInfo`s, a payload and a diff descriptor with the sentinel
+version `65535.65535.4294967295` (spec §4, row 3a);
 `BuildVersionHistory` entries look like `M15.4-7051.0.79-2`, `T2.5.1 (1715)` (iOS), `G-r11-2A396`
 (iCloud).
 
 AT-01 (2026-10-14): `Tests/DeckMonkeyTests` decodes 33 cramjam-compressed vectors (literal-length
 escapes, 1/2-byte copy offsets at 2047/2048/65535, 64 KiB block edges, multi-block) and the
 synthetic deck's reference manifest; CI feeds our compression of the vectors back to the reference
-decoder (`make snappy-vectors`). The corpus half runs once `make snappy-reference` has been run on
-the M4 — it is part of `make gate` from now on.
+decoder (`make snappy-vectors`). The corpus half ran on the M4 the same day: 1302/1302 chunks MATCH, and
+the reference decodes all 1002 of our re-compressed components identically. `make gate` is green.
+The CLI exits 3 on a refused APXL file; the gates count that as skipped.
 
 Remaining, in order:
 
 1. The oracle, first run (step 4 of docs/HANDOFF.md): `Scripts/oracle.sh` on a round-trip output,
    repair the AppleScript until the verdict is trustworthy, then `make oracle-corpus`.
-2. AT-01 on the corpus: `make snappy-reference && make snappy-check` (needs python3; the venv is
-   created on first use). Expect MATCH on 28 decks; investigate any mismatch as a codec bug.
-3. Schema pipeline per `Scripts/schema/README.md`: protodump, render, `protoc`, registry dump,
+2. Schema pipeline per `Scripts/schema/README.md`: protodump, render, `protoc`, registry dump,
    dispatch generator. Commit `Generated/15.4` and `registry-15.4.json`. AT-05.
-4. AT-06, AT-07, AT-08 on the corpus (derive references with a SwiftProtobuf `Visitor` over the
+3. AT-06, AT-07, AT-08 on the corpus (derive references with a SwiftProtobuf `Visitor` over the
    decoded payloads and compare with the stored lists). Header-level dangling references are
    already errors; AT-06 extends that to payload-level `TSP.Reference`.
-5. `Scripts/corpus-gen` (AppleScript): one deck per built-in theme × two sizes → `Corpus/templates`;
+4. `Scripts/corpus-gen` (AppleScript): one deck per built-in theme × two sizes → `Corpus/templates`;
    hand-author `Corpus/features`; `deckmonkey corpus add` records version + golden PDF.
-6. `Corpus/hostile` files and AT-26; AT-11, AT-12, AT-25.
-7. Oracle harness verified end to end on the M4: `make oracle-corpus` 40/40.
+5. `Corpus/hostile` files and AT-26; AT-11, AT-12, AT-25.
+6. Oracle harness verified end to end on the M4: `make oracle-corpus` 40/40.
 
 Do not start Phase 1 (text replace) on a partial Gate 0.
