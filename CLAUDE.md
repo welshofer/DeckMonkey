@@ -80,7 +80,7 @@ schema at all. Generated protos arrive in `IWASchema` and are used only for payl
 Done and verified on the M4 (2026-10-14): Snappy codec + framing with AT-02 fuzz; wire reader;
 `ArchiveInfo` / `MessageInfo` with unknown-field preservation; archive split/join; `ObjectStore`
 two-pass load; container (zip, package directory, nested `Index.zip`); `KeynoteDocument` open /
-validate / save; `deckmonkey inspect | dump | roundtrip | verify`; oracle scripts (unverified); CI.
+validate / save; `deckmonkey inspect | dump | roundtrip | verify`; CI.
 First contact: **28/28 modern private decks round-trip CLEAN with zero validation issues** —
 saved by Keynote 6.5 through 15.4, by Keynote for iOS and Keynote for iCloud, in both container
 forms. The 7 Keynote '09 APXL decks are refused as designed. Facts learned from the bytes:
@@ -99,18 +99,37 @@ decoder (`make snappy-vectors`). The corpus half ran on the M4 the same day: 130
 the reference decodes all 1002 of our re-compressed components identically. `make gate` is green.
 The CLI exits 3 on a refused APXL file; the gates count that as skipped.
 
+Oracle (2026-10-14): `Scripts/oracle.sh` verified against Keynote 15.4 and safe beside the
+user's open documents (it touches only its `oracle-<token>-` copy). Keynote lives at
+"Keynote Creator Studio.app" on the M4: never hard-code the path, use `Scripts/keynote-app.sh`.
+Over the 28 modern private decks: 28/28 originals and 28/28 `deckmonkey roundtrip` outputs open
+with no sheet and no persistence log errors, every round-trip PDF at 0 mismatched pixels against
+its original's export; a cut `Document.iwa` fails with "… is damaged and can't be opened."
+(Goldens were made in a scratch dir; `make oracle-corpus` expects `<deck>.golden.pdf` beside each
+deck, which `deckmonkey corpus add` is meant to produce.)
+
+Schema (2026-10-14): `make schema` (deterministic) and `make schema-diff`. 34 descriptors →
+`Sources/IWASchema/Generated/15.4` (no protoc: descriptors go straight to protoc-gen-swift);
+registry recovered statically from the registration calls (Frida/lldb cannot attach), 625 types
++ 101 declared deprecated, every mapping cross-checked against surviving symbols. AT-05 passes
+(85 types with a message, 6219 declared deprecated, 0 unresolved). Unknown types are validator
+errors (invariant 8); merge diff descriptors (type 0) and deprecated types are skipped.
+
+References (2026-10-14): `ReferenceDerivation` decodes every payload (54,348, all clean, no unknown
+fields) and collects `TSP.Reference` / `TSP.DataReference`. AT-08 holds exactly (minus the null
+id 0). Object lists do **not** equal the derived set: Keynote lists strong references only
+(stored ⊆ derived always; 179 fields always listed, 17 never, 5 mixed), every listed reference
+resolves, and all 807 dangling references in Keynote's own files are unlisted weak ones.
+**Open design decision (needs Jay):** AT-07 as written cannot pass and AT-06 holds for strong
+references only; decide how mutated records get their `object_references` (invariant 4) before
+Phase 1 relies on derived lists.
+
 Remaining, in order:
 
-1. The oracle, first run (step 4 of docs/HANDOFF.md): `Scripts/oracle.sh` on a round-trip output,
-   repair the AppleScript until the verdict is trustworthy, then `make oracle-corpus`.
-2. Schema pipeline per `Scripts/schema/README.md`: protodump, render, `protoc`, registry dump,
-   dispatch generator. Commit `Generated/15.4` and `registry-15.4.json`. AT-05.
-3. AT-06, AT-07, AT-08 on the corpus (derive references with a SwiftProtobuf `Visitor` over the
-   decoded payloads and compare with the stored lists). Header-level dangling references are
-   already errors; AT-06 extends that to payload-level `TSP.Reference`.
-4. `Scripts/corpus-gen` (AppleScript): one deck per built-in theme × two sizes → `Corpus/templates`;
+1. Decide AT-06/AT-07 (above) and amend docs/spec.md §5/§14 accordingly.
+2. `Scripts/corpus-gen` (AppleScript): one deck per built-in theme × two sizes → `Corpus/templates`;
    hand-author `Corpus/features`; `deckmonkey corpus add` records version + golden PDF.
-5. `Corpus/hostile` files and AT-26; AT-11, AT-12, AT-25.
-6. Oracle harness verified end to end on the M4: `make oracle-corpus` 40/40.
+3. `Corpus/hostile` files and AT-26; AT-11, AT-12, AT-25.
+4. `make oracle-corpus` 40/40 on the synthetic corpus (AT-10).
 
 Do not start Phase 1 (text replace) on a partial Gate 0.
