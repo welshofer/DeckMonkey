@@ -187,12 +187,14 @@ trap 'applescript "$AS_CLOSE" "$TOKEN" "$BEFORE" >/dev/null || true' EXIT
 
 applescript "$AS_OPEN" "$COPY" >/dev/null || true
 STATE=""
-for i in $(seq 1 60); do
+for i in $(seq 1 180); do
   sleep 1
   # Right after another alert is dismissed Keynote can drop an open event. Re-sending it is
   # idempotent (an already-open document just comes forward).
   if [[ $i -eq 10 || $i -eq 30 ]]; then applescript "$AS_OPEN" "$COPY" >/dev/null || true; fi
   STATE=$(applescript "$AS_STATE" "$TOKEN" "$BEFORE" || true)
+  # A large deck shows Keynote's "Opening “<name>”…" progress window first: still loading.
+  if [[ "$STATE" == modal:Opening* && "$STATE" == *"$TOKEN"* ]]; then STATE=""; fi
   [[ -z "$STATE" ]] || break
 done
 if [[ "$STATE" == "open" ]]; then
@@ -204,7 +206,7 @@ fi
 case "$STATE" in
   open) OPENS=true ;;
   modal:*) SHEET=$(printf '%s' "${STATE#modal:}" | json_string) ;;
-  *) SHEET=$(printf 'timeout: no document window after 60 s' | json_string) ;;
+  *) SHEET=$(printf 'timeout: no document window after 180 s' | json_string) ;;
 esac
 
 # --- 2. Export PDF (only a clean open is exported; the trap closes the copy without saving) ----
