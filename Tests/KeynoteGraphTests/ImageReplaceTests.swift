@@ -135,3 +135,69 @@ struct ImageReplaceTests {
         return Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] + chunk("IHDR", ihdr) + chunk("IDAT", deflate) + chunk("IEND", []))
     }
 }
+
+@Suite("Media replace")
+struct MediaReplaceTests {
+    /// A minimal MPEG-4: ftyp, then moov with mvhd (timescale 600, duration 1200 = 2 s) and, for
+    /// video, a trak whose mdia/hdlr says "vide" and whose tkhd says 640×360.
+    static func mp4(video: Bool, version1: Bool = false) -> Data {
+        func box(_ type: String, _ body: [UInt8]) -> [UInt8] {
+            let n = body.count + 8
+            return [UInt8(n >> 24), UInt8(n >> 16 & 0xFF), UInt8(n >> 8 & 0xFF), UInt8(n & 0xFF)] + Array(type.utf8) + body
+        }
+        func u32(_ v: Int) -> [UInt8] { [UInt8(v >> 24 & 0xFF), UInt8(v >> 16 & 0xFF), UInt8(v >> 8 & 0xFF), UInt8(v & 0xFF)] }
+        let mvhd = version1
+            ? box("mvhd", [1, 0, 0, 0] + [UInt8](repeating: 0, count: 16) + u32(600) + u32(0) + u32(1200) + [UInt8](repeating: 0, count: 80))
+            : box("mvhd", [0, 0, 0, 0] + u32(0) + u32(0) + u32(600) + u32(1200) + [UInt8](repeating: 0, count: 80))
+        var moov = mvhd
+        if video {
+            let tkhd = box("tkhd", [0, 0, 0, 3] + [UInt8](repeating: 0, count: 72) + u32(640 << 16) + u32(360 << 16))
+            let hdlr = box("hdlr", [0, 0, 0, 0] + u32(0) + Array("vide".utf8) + [UInt8](repeating: 0, count: 13))
+            moov += box("trak", tkhd + box("mdia", hdlr))
+        }
+        return Data(box("ftyp", Array("isom".utf8) + u32(0)) + box("moov", moov))
+    }
+
+    @Test("MPEG-4 boxes: duration from mvhd (v0 and v1), video size from the vide track's tkhd")
+    func boxes() {
+        #expect(MediaFile(Self.mp4(video: true)) == MediaFile(duration: 2, videoSize: (640, 360)))
+        #expect(MediaFile(Self.mp4(video: false)) == MediaFile(duration: 2, videoSize: nil))
+        #expect(MediaFile(Self.mp4(video: false, version1: true))?.duration == 2)
+        #expect(MediaFile(Data("not a movie".utf8)) == nil)
+    }
+
+    /// The media feature deck: its movie and audio clip are replaced, the old media, poster and
+    /// audio dropped with their files, and nothing orphaned (AT-18/19 for media).
+    @Test("replacing the feature deck's movie and audio keeps data consistent", .enabled(if: FileManager.default.fileExists(atPath: CorpusTests.repoRoot.appendingPathComponent("Corpus/features/media.key").path), "no Corpus/features"))
+    func featureDeck() throws {
+        var document = try KeynoteDocument.open(CorpusTests.repoRoot.appendingPathComponent("Corpus/features/media.key"))
+        let movie = try #require(document.movies.first { document.decoded(TSD_MovieArchive.self, $0).map { !$0.audioOnly && $0.hasMovieData } ?? false })
+        let audio = try #require(document.movies.first { document.decoded(TSD_MovieArchive.self, $0)?.audioOnly ?? false })
+        #expect(throws: KeynoteDocument.MediaReplaceFailure.posterRequired) {
+            try document.replaceMedia(movie, with: Self.mp4(video: true), preferredFileName: "clip.mp4")
+        }
+        #expect(throws: KeynoteDocument.MediaReplaceFailure.kindMismatch(audio, wasAudio: true)) {
+            try document.replaceMedia(audio, with: Self.mp4(video: true), preferredFileName: "clip.mp4")
+        }
+        let poster = ImageReplaceTests.stripes()
+        let m = try document.replaceMedia(movie, with: Self.mp4(video: true), preferredFileName: "clip.mp4", poster: poster)
+        let a = try document.replaceMedia(audio, with: Self.mp4(video: false), preferredFileName: "sound.m4a")
+        #expect(m.fileName.hasPrefix("clip-") && m.posterFileName?.hasPrefix("posterImage-") == true && m.removedData.count == 2)
+        #expect(a.fileName.hasPrefix("sound-") && a.removedData.count == 1)
+        let out = FileManager.default.temporaryDirectory.appendingPathComponent("deckmonkey-media-\(UUID().uuidString).key")
+        defer { try? FileManager.default.removeItem(at: out) }
+        try document.save(to: out)
+        let reread = try KeynoteDocument.open(out)
+        #expect(reread.validate().filter { $0.severity == .error }.isEmpty)
+        let replaced = try #require(reread.decoded(TSD_MovieArchive.self, movie))
+        #expect(replaced.endTime == 2 && replaced.naturalSize.width == 640 && !replaced.hasFingerprint)
+        let metadata = try #require(reread.packageMetadata)
+        var referenced = Set<UInt64>()
+        for c in reread.store.components { for r in c.records { for i in r.info.messageInfos { referenced.formUnion(i.dataReferences) } } }
+        #expect(metadata.datas.allSatisfy { referenced.contains($0.identifier) })
+        let described = Set(metadata.datas.compactMap(\.storedFileName).map { "Data/" + $0 })
+        #expect(reread.package.dataNames.allSatisfy(described.contains))
+        let info = try #require(metadata.datas.first { $0.identifier == replaced.movieData.identifier })
+        #expect(info.digest == Data(SHA1.digest(Self.mp4(video: true))))
+    }
+}

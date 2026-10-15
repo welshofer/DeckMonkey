@@ -4,9 +4,10 @@
 usage: Scripts/gate1/gate2.py [cases.tsv ...] [--work DIR]
        (default: Scripts/gate1/images.tsv, plus Scripts/gate1/images.local.tsv when present)
 
-Each case: deck, image (an object identifier, or "page:N" for the first image on page N), the
-replacement (one of the generated test images: stripes.png, stripes.jpg, stripes.gif, stripes.tiff,
-tall.png, wide.jpg), kind. A case passes when `deckmonkey image` succeeds; the new DataInfo's
+Each case: deck, target (an object identifier, or "page:N" for the first image on page N), the
+replacement (a generated test image: stripes.png, stripes.jpg, stripes.gif, stripes.tiff, tall.png,
+wide.jpg; or media: clip.m4v, a QuickTime export of a template, replaced with stripes.png as its
+poster, and voice2.m4a, a `say` clip), kind. Media goes through `deckmonkey media`. A case passes when `deckmonkey image` succeeds; the new DataInfo's
 digest is the SHA-1 of the file and the image points at it (AT-18); no DataInfo is unreferenced
 and no Data/ file undescribed (AT-19); Keynote opens the output with no sheet and no persistence
 errors and the same page count; and every changed page is the image's page, the change inside the
@@ -33,6 +34,20 @@ def assets(d):
     for fmt, src, out in [("jpeg", "stripes.png", "stripes.jpg"), ("gif", "stripes.png", "stripes.gif"),
                           ("tiff", "stripes.png", "stripes.tiff"), ("jpeg", "wide-src.png", "wide.jpg")]:
         run("sips", "-s", "format", fmt, f"{d}/{src}", "--out", f"{d}/{out}")
+
+
+def media_assets(d):
+    script = """on run argv
+  tell application id "com.apple.Keynote"
+    set doc to open POSIX file (item 1 of argv)
+    export doc to POSIX file (item 2 of argv) as QuickTime movie with properties {movie format:format360p, movie codec:h264, movie framerate:FPS12}
+    close doc saving no
+  end tell
+end run"""
+    subprocess.run(["osascript", "-", os.path.abspath("Corpus/templates/basic-white_standard.key"), f"{d}/clip.m4v"],
+                   input=script, text=True, check=True, capture_output=True)
+    run("say", "-o", f"{d}/voice2.aiff", "A replacement audio clip from the Gate 2 harness.")
+    run("afconvert", "-f", "m4af", "-d", "aac", f"{d}/voice2.aiff", f"{d}/voice2.m4a")
 
 
 def painted_box(at):
@@ -72,6 +87,7 @@ def main():
             if line.strip() and not line.startswith("#"):
                 cases.append(line.rstrip("\n").split("\t"))
     assets(work)
+    if any(c[2].endswith((".m4v", ".m4a")) for c in cases): media_assets(work)
     root = corpus_root()
     dm = ".build/debug/deckmonkey"
     goldens, passed = {}, 0
@@ -89,7 +105,11 @@ def main():
                 target = ids[0]
             src = os.path.join(work, image)
             out = os.path.join(work, f"case{n}.key")
-            r = run(dm, "image", deck, "--object", target, "--with", src, "-o", out)
+            if image.endswith((".m4v", ".m4a")):
+                poster = ["--poster", os.path.join(work, "stripes.png")] if image.endswith(".m4v") else []
+                r = run(dm, "media", deck, "--object", target, "--with", src, *poster, "-o", out)
+            else:
+                r = run(dm, "image", deck, "--object", target, "--with", src, "-o", out)
             new_name = r.stdout.split("Data/", 1)[1].split(" ")[0]
             # AT-18: the digest is the SHA-1 of the bytes we gave, stored under the new name.
             sha1 = hashlib.sha1(open(src, "rb").read()).hexdigest()

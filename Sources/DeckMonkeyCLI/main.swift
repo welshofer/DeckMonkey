@@ -41,6 +41,10 @@ enum CLI {
       image <file> --object <id> --with <path> -o <out.key>
                                      replace an image's pixels (PNG, JPEG, GIF, TIFF); the frame is
                                      kept; data nothing refers to any more is removed with its file
+      media <file> --list            every movie and audio clip: identifier, its file, page
+      media <file> --object <id> --with <path> [--poster <image>] -o <out.key>
+                                     replace a movie's or audio clip's media (MPEG-4/QuickTime);
+                                     a movie needs a poster image; the frame is kept
       version
 
     Exit codes: 0 pass, 1 fail, 2 usage, 3 refused (Keynote '09 APXL, out of scope).
@@ -434,6 +438,33 @@ func runImage(_ args: [String]) throws {
     print("output: \(url(out).path)")
 }
 
+func runMedia(_ args: [String]) throws {
+    guard let path = args.first, !path.hasPrefix("-") else { fail(CLI.usage, code: 2) }
+    var document = try DeckMonkey.open(url(path))
+    if args.contains("--list") {
+        let datas = Dictionary(uniqueKeysWithValues: (document.packageMetadata?.datas ?? []).map { ($0.identifier, $0) })
+        let pages = document.pageOfSlide
+        for id in document.movies {
+            guard let m = try? TSD_MovieArchive(serializedBytes: document.store.record(for: id)!.payloads[0], extensions: Schema.extensions, partial: true) else { continue }
+            let name = m.hasMovieData ? (datas[m.movieData.identifier]?.storedFileName ?? "-") : (m.isLiveVideo ? "(live video placeholder)" : "-")
+            let parent = m.super.hasParent ? m.super.parent.identifier : 0
+            print("\(id)\t\(m.audioOnly ? "audio" : "movie")\t\(name)\t\(String(format: "%.2fs", m.endTime))\tpage \(pages[parent].map(String.init) ?? "-")")
+        }
+        return
+    }
+    guard let value = option("--object", in: args), let id = UInt64(value), let with = option("--with", in: args),
+          let out = option("-o", in: args) else { fail(CLI.usage, code: 2) }
+    let poster = try option("--poster", in: args).map { try Data(contentsOf: url($0)) }
+    let report = try document.replaceMedia(id, with: try Data(contentsOf: url(with)), preferredFileName: url(with).lastPathComponent, poster: poster)
+    try FileManager.default.createDirectory(at: url(out).deletingLastPathComponent(), withIntermediateDirectories: true)
+    try document.save(to: url(out))
+    print("replaced \(id): Data/\(report.fileName) (\(String(format: "%.2f", report.duration)) s)\(report.posterFileName.map { ", poster Data/\($0)" } ?? "")")
+    if !report.removedData.isEmpty {
+        print("removed data \(report.removedData.map(String.init).joined(separator: ", ")) and files \(report.removedFiles.joined(separator: ", "))")
+    }
+    print("output: \(url(out).path)")
+}
+
 let arguments = Array(CommandLine.arguments.dropFirst())
 guard let command = arguments.first else { fail(usage, code: 2) }
 let rest = Array(arguments.dropFirst())
@@ -451,6 +482,7 @@ do {
     case "locate": try runLocate(rest)
     case "data": try runData(rest)
     case "image": try runImage(rest)
+    case "media": try runMedia(rest)
     case "corpus":
         switch rest.first {
         case "add": try runCorpusAdd(Array(rest.dropFirst()))

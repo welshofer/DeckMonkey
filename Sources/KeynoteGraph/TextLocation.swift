@@ -59,13 +59,14 @@ extension KeynoteDocument {
         return pages
     }
 
-    /// The page and frame of a drawable placed directly on a slide: an image (`TSD.ImageArchive`)
-    /// or a shape (`TSWP.ShapeInfoArchive`, a placeholder). Nil for anything else.
+    /// The page and frame of a drawable placed directly on a slide: an image (`TSD.ImageArchive`), a
+    /// movie or audio clip (`TSD.MovieArchive`), or a shape (`TSWP.ShapeInfoArchive`, a placeholder).
     public func location(ofDrawable id: UInt64) -> (slide: UInt64?, page: Int?, frame: Frame?)? {
         guard let type = store.record(for: id)?.info.messageInfos.first?.type else { return nil }
         let drawable: TSD_DrawableArchive
         switch type {
         case Self.imageType: guard let i = decoded(TSD_ImageArchive.self, id) else { return nil }; drawable = i.super
+        case Self.movieType: guard let m = decoded(TSD_MovieArchive.self, id) else { return nil }; drawable = m.super
         case Self.shapeInfoType: guard let s = decoded(TSWP_ShapeInfoArchive.self, id) else { return nil }; drawable = s.super.super
         case Self.placeholderType: guard let p = decoded(KN_PlaceholderArchive.self, id) else { return nil }; drawable = p.super.super.super
         default: return nil

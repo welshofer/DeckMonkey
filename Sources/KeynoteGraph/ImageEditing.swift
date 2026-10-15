@@ -62,17 +62,9 @@ extension KeynoteDocument {
         guard var metadata = packageMetadata else { throw ImageReplaceFailure.noPackageMetadata }
 
         // The new DataInfo, shaped like the ones Keynote writes.
-        let newID = (metadata.datas.map(\.identifier).max() ?? 0) + 1
-        var stem = ((preferredFileName as NSString).lastPathComponent as NSString).deletingPathExtension
-            .replacingOccurrences(of: "/", with: "-").trimmingCharacters(in: .whitespaces)
-        if stem.isEmpty { stem = "image" }
-        let fileName = "\(stem)-\(newID).\(file.fileExtension)"
+        let stem = Self.fileStem(preferredFileName, fallback: "image")
         let previous = archive.hasData ? metadata.datas.first(where: { $0.identifier == archive.data.identifier }) : nil
-        var info = TSP_DataInfo()
-        info.identifier = newID
-        info.digest = Data(SHA1.digest(bytes))
-        info.preferredFileName = "\(stem).\(file.fileExtension)"
-        info.fileName = fileName
+        var info = Self.newDataInfo(bytes, stem: stem, extension: file.fileExtension, in: metadata)
         var attributes = previous?.attributes.TSD_ImageDataAttributes_imageDataAttributes ?? TSD_ImageDataAttributes()
         attributes.pixelSize = TSP_Size.with { $0.width = Float(file.width); $0.height = Float(file.height) }
         if !attributes.hasShouldBeInterpretedAsGenericIfUntagged { attributes.shouldBeInterpretedAsGenericIfUntagged = false }
@@ -81,38 +73,68 @@ extension KeynoteDocument {
         attributes.clearMediaLibraryAssetID()
         info.attributes = TSP_DataAttributes()
         info.attributes.TSD_ImageDataAttributes_imageDataAttributes = attributes
-        info.materializedLength = UInt64(bytes.count)
 
         // The image points at it, at its own size.
         let size = TSP_Size.with { $0.width = Float(file.width); $0.height = Float(file.height) }
         let oldData = [archive.hasData ? archive.data.identifier : nil, archive.hasThumbnailData ? archive.thumbnailData.identifier : nil].compactMap { $0 }
-        archive.data = TSP_DataReference.with { $0.identifier = newID }
+        archive.data = TSP_DataReference.with { $0.identifier = info.identifier }
         archive.clearThumbnailData()
         archive.naturalSize = size
         archive.originalSize = size
         if archive.hasTracedPath { archive.tracedPath = Self.rectanglePath(width: Float(file.width), height: Float(file.height)) }
         try replacePayload(of: image, with: try archive.serializedData(partial: true))
 
-        // Orphans: data the image held that nothing refers to any more.
+        let removed = try commitData([(info, bytes)], replacing: oldData, metadata: &metadata)
+        return ImageReplaceReport(image: image, newData: info.identifier, fileName: info.fileName,
+                                  removedData: removed.data, removedFiles: removed.files)
+    }
+
+    // MARK: Shared by image and media replace
+
+    /// A file name stem from a caller's file name: no directories, no extension, never empty.
+    static func fileStem(_ preferredFileName: String, fallback: String) -> String {
+        let stem = ((preferredFileName as NSString).lastPathComponent as NSString).deletingPathExtension
+            .replacingOccurrences(of: "/", with: "-").trimmingCharacters(in: .whitespaces)
+        return stem.isEmpty ? fallback : stem
+    }
+
+    /// A DataInfo as Keynote writes one: the next free data identifier, SHA-1 digest,
+    /// `<stem>-<id>.<ext>`, the original name as preferred_file_name, materialized_length.
+    static func newDataInfo(_ bytes: Data, stem: String, extension ext: String, in metadata: TSP_PackageMetadata, after: UInt64 = 0) -> TSP_DataInfo {
+        let id = max(metadata.datas.map(\.identifier).max() ?? 0, after) + 1
+        var info = TSP_DataInfo()
+        info.identifier = id
+        info.digest = Data(SHA1.digest(bytes))
+        info.preferredFileName = "\(stem).\(ext)"
+        info.fileName = "\(stem)-\(id).\(ext)"
+        info.materializedLength = UInt64(bytes.count)
+        return info
+    }
+
+    /// Adds the new data (DataInfo + file), drops the data in `old` that nothing refers to any more
+    /// (DataInfo, file, data-metadata entry), and writes PackageMetadata back.
+    mutating func commitData(_ new: [(TSP_DataInfo, Data)], replacing old: [UInt64], metadata: inout TSP_PackageMetadata) throws -> (data: [UInt64], files: [String]) {
         var referenced = Set<UInt64>()
         for component in store.components {
             for r in component.records { for m in r.info.messageInfos { referenced.formUnion(m.dataReferences) } }
         }
-        var report = ImageReplaceReport(image: image, newData: newID, fileName: fileName)
-        for id in oldData where !referenced.contains(id) {
+        var removedData = [UInt64](), removedFiles = [String]()
+        for id in Set(old) where !referenced.contains(id) {
             guard let i = metadata.datas.firstIndex(where: { $0.identifier == id }) else { continue }
             let gone = metadata.datas.remove(at: i)
-            report.removedData.append(id)
+            removedData.append(id)
             if let name = gone.storedFileName, package.data("Data/" + name) != nil {
                 package.remove("Data/" + name)
-                report.removedFiles.append(name)
+                removedFiles.append(name)
             }
         }
-        metadata.datas.append(info)
+        for (info, bytes) in new {
+            metadata.datas.append(info)
+            package.set("Data/" + info.fileName, bytes)
+        }
         try replacePayload(of: 2, with: try metadata.serializedData(partial: true))
-        package.set("Data/" + fileName, bytes)
-        try removeDataMetadata(for: Set(report.removedData), map: metadata.hasDataMetadataMap ? metadata.dataMetadataMap.identifier : nil)
-        return report
+        try removeDataMetadata(for: Set(removedData), map: metadata.hasDataMetadataMap ? metadata.dataMetadataMap.identifier : nil)
+        return (removedData.sorted(), removedFiles.sorted())
     }
 
     /// Drops the data-metadata entries of removed data (the map's per-data fallback colours).

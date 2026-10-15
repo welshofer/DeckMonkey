@@ -10,7 +10,8 @@
 # Keynote's AppleScript dictionary cannot create hyperlinks, smart fields, equations, groups or
 # builds, nor set interactive cell formats or slide-number visibility: those features need
 # hand-authored decks. Objects are created by telling the slide (`tell s to make new …`); the
-# `make new … at …` forms fail with "AppleEvent handler failed".
+# `make new … at …` forms fail with "AppleEvent handler failed". Movies and audio are made as
+# images of a media file (`make new movie` silently makes nothing).
 
 set -euo pipefail
 
@@ -206,11 +207,14 @@ feature images '
         set rotation of i5 to 20
         set opacity of i5 to 70'
 
+# `make new movie` / `make new audio clip` report success and insert nothing; `make new image` with
+# a movie or audio file makes the right object. The counts are checked so a silent no-op fails.
 feature media '
         set base layout of s to blank
-        tell s to make new movie with properties {file name:(POSIX file (assets & "/movie.m4v"))}
+        tell s to make new image with properties {file:(POSIX file (assets & "/movie.m4v"))}
         tell d to set s2 to make new slide with properties {base layout:blank}
-        tell s2 to make new audio clip with properties {file name:(POSIX file (assets & "/voice.m4a"))}'
+        tell s2 to make new image with properties {file:(POSIX file (assets & "/voice.m4a"))}
+        if (count of movies of s) is not 1 or (count of audio clips of s2) is not 1 then error "media did not insert"'
 
 feature notes-skipped '
         set object text of default title item of s to "Presenter notes and skipped slides"

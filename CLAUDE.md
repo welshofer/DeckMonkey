@@ -150,10 +150,11 @@ Phase 1 (2026-10-15): text replace (`deckmonkey replace`, KeynoteDocument.replac
 offset-table remap of spec §9; **Gate 1 passed 25/25** (`make gate1`: 22 cases on the generated
 corpus, 3 AT-17 hyperlink cases from private decks in the git-ignored cases.local.tsv).
 
-Phase 2 (2026-10-15, in progress): image replace (`deckmonkey image`), SHA-1 DataInfo, orphan
-removal, the per-component data index rebuilt at save. `Scripts/gate1/gate2.py` runs AT-18/AT-19
-through the oracle. AT-27 (iPad oracle) needs an iOS runner that does not exist yet. Open: movie
-and audio replace through the same path; Keynote-edited images (kept originals, adjustments) are
+Phase 2 (2026-10-15): image replace (`deckmonkey image`) and movie/audio replace (`deckmonkey
+media`, a caller-supplied poster for video), SHA-1 DataInfo, orphan removal, the per-component data
+index rebuilt at save. **Gate 2 on macOS: 12/12** (`Scripts/gate1/gate2.py`: four image formats,
+a rotated reflected image, theme photos, a movie, an audio clip). AT-27 (iPad oracle) needs an iOS
+runner that does not exist yet. Open: Keynote-edited images (kept originals, adjustments) are
 refused; `PackageMetadata.components[].external_references` is not yet re-derived (no edit so far
 changes a cross-component reference).
 
