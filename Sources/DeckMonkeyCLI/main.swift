@@ -108,6 +108,7 @@ func runRoundtrip(_ args: [String]) throws {
             .appendingPathComponent("deckmonkey-roundtrip-\(UUID().uuidString)")
             .appendingPathExtension(url(path).pathExtension.isEmpty ? "key" : url(path).pathExtension)
     }
+    try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
     let report = try DeckMonkey.roundTrip(url(path), to: output)
     print("roundtrip \(report.summaryLine)")
     print("output: \(output.path)")
