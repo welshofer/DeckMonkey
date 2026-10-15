@@ -4,6 +4,8 @@ import Rostrum
 /// Errors from reading or writing an iWork package container.
 public enum IWAPackageError: Error, Equatable, Sendable {
     case notFound(String)
+    /// The file is not a zip archive at all (nor a package directory).
+    case notAZip(String, reason: String)
     /// The URL is neither a zip nor a package directory with `Index/` entries.
     case notAnIWorkPackage(String)
     /// `index.apxl` / `index.apxl.gz`: the pre-2013 XML format, out of scope (docs/spec.md §2).
@@ -53,7 +55,12 @@ public struct IWAPackage: Sendable {
     }
 
     public static func openZip(_ data: Data, name: String = "<memory>") throws -> IWAPackage {
-        let reader = try ZipReader(data: data)
+        let reader: ZipReader
+        do {
+            reader = try ZipReader(data: data)
+        } catch {
+            throw IWAPackageError.notAZip(name, reason: "\(error)")
+        }
         var entries = [String: Data]()
         for entryName in reader.entryNames where !entryName.hasSuffix("/") {
             do {

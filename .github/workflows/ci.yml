@@ -20,6 +20,8 @@ jobs:
         run: |
           apt-get update -qq && apt-get install -y -qq --no-install-recommends make python3 python3-venv >/dev/null
           make snappy-vectors
+      - name: AT-26 CLI refuses the hostile corpus
+        run: make hostile
 
   macos:
     name: macOS build and test
@@ -34,6 +36,8 @@ jobs:
         run: swift test
       - name: AT-01 reference decoder accepts our compression
         run: make snappy-vectors
+      - name: AT-26 CLI refuses the hostile corpus
+        run: make hostile
 
   # The Keynote oracle (AT-10, AT-27) needs a logged-in GUI session with Keynote installed and
   # runs on the M4 under the `oracle` label, not on hosted runners.

@@ -10,3 +10,4 @@ DerivedData/
 /tmp/
 .deckmonkey-corpus
 .venv/
+__pycache__/

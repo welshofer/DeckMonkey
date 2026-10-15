@@ -6,7 +6,7 @@ CORPUS ?= $(shell if [ -n "$$DECKMONKEY_CORPUS" ]; then echo "$$DECKMONKEY_CORPU
 
 PYTHON ?= .venv/bin/python
 
-.PHONY: build test gate roundtrip-corpus oracle-corpus snappy-reference snappy-check snappy-vectors schema schema-diff clean
+.PHONY: build test gate roundtrip-corpus oracle-corpus snappy-reference snappy-check snappy-vectors hostile hostile-regen schema schema-diff clean
 
 build:
 	$(SWIFT) build
@@ -15,13 +15,13 @@ test:
 	$(SWIFT) test
 
 ## Merge gate: tests green, every corpus deck round-trips CLEAN, and AT-01 holds on the corpus.
-gate: test roundtrip-corpus snappy-check snappy-vectors
+gate: test roundtrip-corpus snappy-check snappy-vectors hostile
 
 ## Round-trip every .key under $(CORPUS) and Corpus/ through the CLI.
 roundtrip-corpus:
 	@$(SWIFT) build --product deckmonkey >/dev/null
 	@fail=0; n=0; \
-	for f in $$(find $(CORPUS) Corpus -name '*.key' -prune 2>/dev/null); do \
+	for f in $$(find $(CORPUS) Corpus -path Corpus/hostile -prune -o -name '*.key' -prune -print 2>/dev/null); do \
 	  n=$$((n+1)); \
 	  if ! .build/debug/deckmonkey roundtrip "$$f" >/tmp/deckmonkey-rt.log 2>&1; then fail=$$((fail+1)); echo "FAIL $$f"; cat /tmp/deckmonkey-rt.log; fi; \
 	done; \
@@ -31,7 +31,7 @@ roundtrip-corpus:
 oracle-corpus:
 	@$(SWIFT) build --product deckmonkey >/dev/null
 	@fail=0; n=0; \
-	for f in $$(find $(CORPUS) Corpus -name '*.key' -prune 2>/dev/null); do \
+	for f in $$(find $(CORPUS) Corpus -path Corpus/hostile -prune -o -name '*.key' -prune -print 2>/dev/null); do \
 	  n=$$((n+1)); out=/tmp/deckmonkey-oracle-$$n.key; \
 	  .build/debug/deckmonkey roundtrip "$$f" -o $$out >/dev/null || { fail=$$((fail+1)); echo "FAIL roundtrip $$f"; continue; }; \
 	  golden="$${f%.key}.golden.pdf"; \
@@ -60,6 +60,22 @@ snappy-check: .venv/bin/python
 snappy-vectors: .venv/bin/python
 	@[ -f .build/snappy-vectors-ours.json ] || { echo "no .build/snappy-vectors-ours.json: run make test first"; exit 2; }
 	$(PYTHON) Scripts/snappy-crosscheck.py verify-vectors .build/snappy-vectors-ours.json
+
+## AT-26: `deckmonkey roundtrip` must refuse every file in Corpus/hostile (exit 1) and write nothing.
+## Files the manifest marks `requires` (e.g. the type registry) are skipped until that layer lands.
+hostile:
+	@$(SWIFT) build --product deckmonkey >/dev/null
+	@fail=0; n=0; out=/tmp/deckmonkey-hostile-out.key; \
+	for f in $$(python3 -c 'import json; [print("Corpus/hostile/" + e["file"]) for e in json.load(open("Corpus/hostile/manifest.json"))["files"] if "requires" not in e]'); do \
+	  n=$$((n+1)); rm -rf $$out; \
+	  if .build/debug/deckmonkey roundtrip "$$f" -o $$out >/dev/null 2>&1; then fail=$$((fail+1)); echo "ACCEPTED $$f (must be refused)"; fi; \
+	  if [ -e $$out ]; then fail=$$((fail+1)); echo "WROTE OUTPUT for $$f (must write nothing)"; fi; \
+	done; \
+	echo "hostile: $$((n-fail))/$$n refused"; [ $$fail -eq 0 ]
+
+## Regenerate Corpus/hostile from the synthetic deck (needs cramjam, see snappy-reference).
+hostile-regen: .venv/bin/python
+	$(PYTHON) Scripts/make-hostile-corpus.py --source Tests/DeckMonkeyTests/Fixtures/synthetic-raw.key --out Corpus/hostile
 
 ## Schema pipeline (docs/spec.md §7, Scripts/schema/README.md). Not yet implemented.
 schema:

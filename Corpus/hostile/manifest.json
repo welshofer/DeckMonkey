@@ -1,0 +1,92 @@
+{
+ "format": "deckmonkey-hostile/1",
+ "source": "Tests/DeckMonkeyTests/Fixtures/synthetic-raw.key",
+ "generator": "Scripts/make-hostile-corpus.py",
+ "files": [
+  {
+   "file": "duplicate-identifier.key",
+   "stage": "validate",
+   "expects": "ValidationIssue.duplicateIdentifier",
+   "note": "a second non-merge record with identifier 1 appended to Index/Document.iwa"
+  },
+  {
+   "file": "dangling-reference.key",
+   "stage": "validate",
+   "expects": "ValidationIssue.danglingObjectReference",
+   "note": "a record whose object_references name identifier 999999, which no component defines"
+  },
+  {
+   "file": "unknown-type.key",
+   "stage": "validate",
+   "expects": "ValidationIssue.unknownType",
+   "note": "a record of message type 999999, absent from every Keynote registry (needs the pinned registry)",
+   "requires": "registry"
+  },
+  {
+   "file": "truncated-chunk.key",
+   "stage": "open",
+   "expects": "IWAChunkingError.truncated",
+   "note": "Index/Document.iwa cut 10 bytes short, inside the last chunk's body"
+  },
+  {
+   "file": "bad-chunk-header.key",
+   "stage": "open",
+   "expects": "IWAChunkingError.invalidHeader",
+   "note": "first chunk header byte of Index/Document.iwa is 0x01 instead of 0x00"
+  },
+  {
+   "file": "corrupt-snappy-copy.key",
+   "stage": "open",
+   "expects": "SnappyError.invalidCopy",
+   "note": "Index/Metadata.iwa is one chunk whose Snappy block copies from before the start of the output"
+  },
+  {
+   "file": "corrupt-snappy-length.key",
+   "stage": "open",
+   "expects": "SnappyError.lengthMismatch",
+   "note": "Index/Metadata.iwa is one chunk whose Snappy preamble promises 4 bytes but the block yields 3"
+  },
+  {
+   "file": "truncated-record.key",
+   "stage": "open",
+   "expects": "ArchiveStreamError.truncated",
+   "note": "the decompressed stream of Index/Document.iwa ends 20 bytes into the last record's payload"
+  },
+  {
+   "file": "header-too-long.key",
+   "stage": "open",
+   "expects": "ArchiveStreamError.headerTooLong",
+   "note": "Index/Metadata.iwa begins with a record whose header length (1000) exceeds the stream"
+  },
+  {
+   "file": "missing-identifier.key",
+   "stage": "open",
+   "expects": "ArchiveInfoError.missingIdentifier",
+   "note": "a record appended to Index/Metadata.iwa whose ArchiveInfo has no identifier (field 1)"
+  },
+  {
+   "file": "legacy-apxl.key",
+   "stage": "open",
+   "expects": "IWAPackageError.unsupportedLegacyFormat",
+   "note": "Keynote '09 layout: index.apxl at the root, no Index/"
+  },
+  {
+   "file": "no-index.key",
+   "stage": "open",
+   "expects": "IWAPackageError.notAnIWorkPackage",
+   "note": "a zip with Metadata/ but no Index/ components"
+  },
+  {
+   "file": "not-a-zip.key",
+   "stage": "open",
+   "expects": "IWAPackageError.notAZip",
+   "note": "4096 bytes that are neither a zip nor a package directory"
+  },
+  {
+   "file": "newer-keynote.key",
+   "stage": "save",
+   "expects": "KeynoteError.schemaNewerThanLibrary",
+   "note": "BuildVersionHistory ends with M16.0-8000.0.1-1, newer than the pinned 15.4 schema (AT-25)"
+  }
+ ]
+}

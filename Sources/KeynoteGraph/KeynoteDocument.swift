@@ -25,6 +25,13 @@ public struct KeynoteDocument: Sendable {
     /// The Keynote build that last saved this file, from `BuildVersionHistory.plist` (e.g. "M15.4-7051-1").
     public var lastSavedBy: String? { package.buildVersionHistory.last }
 
+    /// AT-25: a file last saved by a macOS Keynote newer than the pinned schema is read-only here.
+    /// iOS and iCloud stamps carry their own version lines and are not compared.
+    public var isNewerThanPinnedSchema: Bool {
+        guard let stamp = lastSavedBy else { return false }
+        return KeynoteBuild.parse(stamp).isNewer(thanPinned: TypeRegistry.pinnedVersion)
+    }
+
     public static func open(_ url: URL) throws -> KeynoteDocument {
         return try open(IWAPackage.open(url))
     }
@@ -64,8 +71,12 @@ public struct KeynoteDocument: Sendable {
     // MARK: Save
 
     /// Writes the document. Every component is re-joined from the store; untouched records are
-    /// emitted from their original bytes. Refuses on any validation issue.
+    /// emitted from their original bytes. Refuses when the file is newer than the pinned schema
+    /// (AT-25) and on any validation error (invariant 8); in both cases nothing is written.
     public func save(to url: URL, as form: IWAPackage.Form? = nil) throws {
+        if isNewerThanPinnedSchema {
+            throw KeynoteError.schemaNewerThanLibrary(fileBuild: lastSavedBy ?? "", pinned: TypeRegistry.pinnedVersion)
+        }
         let issues = validate().filter { $0.severity == .error }
         guard issues.isEmpty else { throw KeynoteError.validationFailed(issues) }
         var out = package
