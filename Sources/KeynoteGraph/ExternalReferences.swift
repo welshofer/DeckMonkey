@@ -8,8 +8,8 @@ import IWASchema
 ///
 /// - one entry per (target component, target object) referenced from any payload of the component;
 /// - a reference to a component's root object (object identifier == component identifier) is
-///   stored with no object identifier (absent, never an explicit 0: Keynote calls such a file
-///   damaged);
+///   stored with no object identifier (absent, never an explicit 0: Keynote called a clone
+///   whose new entry was spelled that way damaged);
 /// - `is_weak` is set (to true) only when every reference to that object is through a weak field;
 ///   a single strong reference makes the entry strong.
 ///

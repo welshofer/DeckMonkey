@@ -127,18 +127,39 @@ on run argv
   set preexisting to paragraphs of (item 2 of argv)
   tell application "System Events"
     tell (first process whose bundle identifier is "com.apple.Keynote")
-      repeat 3 times
+      repeat 5 times
         set blocked to false
+        set pressed to false
         repeat with w in windows
           if ((name of w) contains token) and (exists sheet 1 of w) then set blocked to true
           try
-            if value of attribute "AXSubrole" of w is in {"AXDialog", "AXSystemDialog"} and (name of w) is not in preexisting then set blocked to true
+            if value of attribute "AXSubrole" of w is in {"AXDialog", "AXSystemDialog"} then
+              -- An alert about our copy with only an OK button ("… is damaged and can't be
+              -- opened.") ignores escape: press OK, never a button of anyone else's dialog.
+              -- Alerts are unnamed, so the pre-open snapshot cannot tell them apart: the text can.
+              set says to ""
+              repeat with t in (static texts of w)
+                set v to value of t
+                if v is not missing value then set says to says & v
+              end repeat
+              if says contains token and (exists button "OK" of w) then
+                click button "OK" of w
+                set pressed to true
+                exit repeat
+              else if (name of w) is not in preexisting then
+                set blocked to true
+              end if
+            end if
           end try
         end repeat
-        if not blocked then exit repeat
-        set frontmost to true
-        key code 53
-        delay 1
+        if pressed then
+          delay 1
+        else
+          if not blocked then exit repeat
+          set frontmost to true
+          key code 53
+          delay 1
+        end if
       end repeat
     end tell
   end tell

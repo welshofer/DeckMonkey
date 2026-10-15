@@ -22,7 +22,8 @@ public struct ValidationIssue: Equatable, Sendable, CustomStringConvertible {
         /// A component file without a ComponentInfo, or a ComponentInfo without its file.
         case componentList(unlisted: [String], missing: [String])
         /// An external reference to a component that is not listed, or one that spells a root
-        /// object reference as an explicit object identifier 0 (Keynote: "damaged").
+        /// object reference as an explicit object identifier 0 (never in Keynote's files; on a
+        /// cloned slide's entry, Keynote refused the deck as damaged).
         case externalReference(component: UInt64, target: UInt64, object: UInt64?)
     }
 
@@ -118,7 +119,7 @@ public enum Validator {
                     unlisted: files.subtracting(listed).sorted(), missing: listed.subtracting(files).sorted())))
             }
             // External references name a listed component, and a component's root object by
-            // leaving the object identifier out: Keynote reads an explicit 0 as a damaged file.
+            // leaving the object identifier out (an explicit 0 made Keynote call a clone damaged).
             let components = Set(metadata.components.map(\.identifier))
             for c in metadata.components {
                 for e in c.externalReferences where !components.contains(e.componentIdentifier) || (e.hasObjectIdentifier && e.objectIdentifier == 0) {

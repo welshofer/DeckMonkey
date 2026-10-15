@@ -98,8 +98,9 @@ public enum HostileCorpus {
             out.append(Case(name: "offset-past-text-length", expected: "textOffset", package: p))
         }
 
-        // External reference with an explicit object identifier 0: the spelling Keynote calls
-        // damaged (a reference to a component's root object leaves the identifier out).
+        // External reference with an explicit object identifier 0: a spelling Keynote never writes
+        // (a reference to a component's root object leaves the identifier out), and a cloned
+        // slide's entry spelled that way made Keynote refuse the deck as damaged.
         do {
             var p = base
             try edit(&p, "Index/Metadata.iwa") { records in
