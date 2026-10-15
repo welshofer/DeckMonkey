@@ -44,7 +44,7 @@ acceptance oracle. The full spec is `docs/spec.md`; sections 5 (invariants), 9 (
 | `IWASchema` | generated SwiftProtobuf sources + type registry per pinned Keynote version — never hand-edited |
 | `KeynoteGraph` | `KeynoteDocument`, `IDAllocator`, `Validator`; later the typed graph and surgery ops |
 | `DeckMonkey` | public API, `roundTrip`, Deck IR bridge (Phase 4) |
-| `deckmonkey` | CLI (`Sources/deckmonkey-cli`): the acceptance surface; every gate is a subcommand with an exit code |
+| `DeckMonkeyCLI` | the `deckmonkey` executable (`Sources/DeckMonkeyCLI`): the acceptance surface; every gate is a subcommand with an exit code |
 
 Design decision to keep: `IWAArchive` decodes `ArchiveInfo` with its own wire-format reader, not
 generated code, so a file from any Keynote version round-trips through the raw store with no
@@ -59,8 +59,15 @@ schema at all. Generated protos arrive in `IWASchema` and are used only for payl
   needs CoreGraphics or Keynote lives in `Scripts/`.
 - Tests are swift-testing (`import Testing`, `@Test`, `#expect`), one suite per module, plus
   `CorpusTests` which is skipped when no corpus is configured.
-- **Merge gate:** `make gate` — `swift test` green AND `deckmonkey roundtrip` CLEAN on every
-  corpus deck. Gate 0 additionally needs `make oracle-corpus` at 40/40 with 0 mismatched pixels.
+- **Merge gate:** `make gate` — `swift test` green, `deckmonkey roundtrip` CLEAN on every
+  corpus deck, and AT-01 (`make snappy-check`: our decoder against cached reference hashes, the
+  reference decoder against our compressor). Gate 0 additionally needs `make oracle-corpus` at
+  40/40 with 0 mismatched pixels.
+- **Reference Snappy:** cramjam (Rust `snap`, format-identical to Google's) in a local `.venv`,
+  driven only by `Scripts/snappy-crosscheck.py`. It runs once per corpus change
+  (`make snappy-reference` → `$CORPUS/.snappy-reference.json`, hashes only, never in the repo);
+  the Swift side (`SnappyReference`, `deckmonkey snappy-check`, `DeckMonkeyTests`) works from
+  the cached hashes and from the checked-in reference-compressed vectors.
 - Oracle (`Scripts/oracle.sh`, `Scripts/pdfdiff.swift`): macOS only, works on a copy, only opens /
   exports / closes. First cut was written without a Keynote in reach; expect to adjust AppleScript
   element names on first run, but keep the JSON verdict shape.
@@ -83,11 +90,18 @@ objects (stylesheet components are full of them) and in these decks every merge 
 `BuildVersionHistory` entries look like `M15.4-7051.0.79-2`, `T2.5.1 (1715)` (iOS), `G-r11-2A396`
 (iCloud).
 
+AT-01 (2026-10-14): `Tests/DeckMonkeyTests` decodes 33 cramjam-compressed vectors (literal-length
+escapes, 1/2-byte copy offsets at 2047/2048/65535, 64 KiB block edges, multi-block) and the
+synthetic deck's reference manifest; CI feeds our compression of the vectors back to the reference
+decoder (`make snappy-vectors`). The corpus half runs once `make snappy-reference` has been run on
+the M4 — it is part of `make gate` from now on.
+
 Remaining, in order:
 
 1. The oracle, first run (step 4 of docs/HANDOFF.md): `Scripts/oracle.sh` on a round-trip output,
    repair the AppleScript until the verdict is trustworthy, then `make oracle-corpus`.
-2. AT-01: a reference Snappy decoder comparison (python-snappy in a venv is fine as the oracle).
+2. AT-01 on the corpus: `make snappy-reference && make snappy-check` (needs python3; the venv is
+   created on first use). Expect MATCH on 28 decks; investigate any mismatch as a codec bug.
 3. Schema pipeline per `Scripts/schema/README.md`: protodump, render, `protoc`, registry dump,
    dispatch generator. Commit `Generated/15.4` and `registry-15.4.json`. AT-05.
 4. AT-06, AT-07, AT-08 on the corpus (derive references with a SwiftProtobuf `Visitor` over the

@@ -9,3 +9,4 @@ DerivedData/
 *.orig
 /tmp/
 .deckmonkey-corpus
+.venv/

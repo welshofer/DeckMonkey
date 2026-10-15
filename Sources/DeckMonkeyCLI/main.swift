@@ -12,6 +12,10 @@ enum CLI {
       dump <file> [component]        every record: identifier, types, versions, lengths, references
       roundtrip <file> [-o out.key]  open, save, re-open; prints CLEAN n/n or the first difference
       verify <file>                  validator (oracle harness wiring arrives with Scripts/oracle.sh)
+      snappy-check <ref.json> [--emit <dir>]
+                                     AT-01: re-derive every chunk hash in a reference manifest
+                                     (Scripts/snappy-crosscheck.py hash) with our decoder; with
+                                     --emit, also write our re-compression for verify-ours
       version
 
     Exit codes: 0 pass, 1 fail, 2 usage.
@@ -115,6 +119,23 @@ func runVerify(_ args: [String]) throws {
     if !errors.isEmpty { exit(1) }
 }
 
+func runSnappyCheck(_ args: [String]) throws {
+    guard let path = args.first else { fail(CLI.usage, code: 2) }
+    var emit: URL?
+    if let i = args.firstIndex(of: "--emit"), i + 1 < args.count {
+        emit = url(args[i + 1])
+    }
+    let report = try SnappyReference.check(manifestAt: url(path), emitTo: emit)
+    print(report.summaryLine)
+    for mismatch in report.mismatches.prefix(50) {
+        print("  \(mismatch)")
+    }
+    if let emit {
+        print("emitted: \(emit.path)/manifest.json (verify with Scripts/snappy-crosscheck.py verify-ours)")
+    }
+    if !report.isClean { exit(1) }
+}
+
 let arguments = Array(CommandLine.arguments.dropFirst())
 guard let command = arguments.first else { fail(usage, code: 2) }
 let rest = Array(arguments.dropFirst())
@@ -125,6 +146,7 @@ do {
     case "dump": try runDump(rest)
     case "roundtrip": try runRoundtrip(rest)
     case "verify": try runVerify(rest)
+    case "snappy-check": try runSnappyCheck(rest)
     case "version": print("deckmonkey \(DeckMonkey.version)")
     case "-h", "--help", "help": print(usage)
     default: fail(usage, code: 2)

@@ -1,0 +1,36 @@
+{
+ "format": "deckmonkey-snappy-reference/1",
+ "reference": "cramjam 2.14.0 (snap)",
+ "decks": [
+  {
+   "path": "synthetic-raw.key",
+   "components": [
+    {
+     "name": "Index/Document.iwa",
+     "chunks": 7,
+     "compressed_sha256": "403f7d200be22a71e12e66e5ef123fe65bed05e4a3df8390b109e80f146067f3",
+     "decompressed_sha256": "5b1902e69fd02536fb2d4330cd492b451e8533004fa5a7986187958b34fd62d9",
+     "chunk_sha256": [
+      "037f973d532d1e9154eaccb1ec676d431bbaa194d4f649c2c1eeb3c6e0767e95",
+      "c228ae1f1f550e02c702784e1339e6f14c4c81a50bb83f2ae90cf9b329b0dc02",
+      "a8ec6289e528015b9f0a54fdb18c80be3809301d8b31c56b83505b60541cf575",
+      "8e3b3a6f093a95d45446700db4d551887ccc9f44644f737d79275191863e3773",
+      "00dd16819d9a0569036eee0c6085f74a75c9404fe936a093c00970bc77122faf",
+      "2b3960cbd93e1ca4939358e8235a1c329227b57a239e01855dd0c1e2dea240b9",
+      "e126b27b3c20288dc6eaaef6aa68377f654d4cdb095dd24243fd0a2abe9adea8"
+     ]
+    },
+    {
+     "name": "Index/Metadata.iwa",
+     "chunks": 2,
+     "compressed_sha256": "18973ddf1b3a03a68e3a51b23e2a38ce2d86340fbf771f8f88a4db17b0cfaac7",
+     "decompressed_sha256": "9fa5f34e02a21e6bdbb66569db559deb353eea97314ac80ebd593eb379cd5588",
+     "chunk_sha256": [
+      "df2f8adad0372fecd6c9a4a8f1afa6832facddca6f9e444541b73b2dd20b24fb",
+      "f3232446b1c0b1c34f9ed6bed9e75dc05856c14b7fd8e238012692cf173e40ce"
+     ]
+    }
+   ]
+  }
+ ]
+}

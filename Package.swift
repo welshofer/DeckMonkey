@@ -9,8 +9,9 @@ import PackageDescription
 //   IWASchema   → SwiftProtobuf (generated per pinned Keynote version)
 //   KeynoteGraph → IWAArchive, IWASchema, IWAContainer
 //   DeckMonkey  → KeynoteGraph, Rostrum (Deck IR)
-//   deckmonkey  → DeckMonkey (CLI, the acceptance surface; lives in Sources/deckmonkey-cli because
-//                 macOS is case-insensitive and would merge it with Sources/DeckMonkey)
+//   DeckMonkeyCLI → DeckMonkey (the `deckmonkey` executable, the acceptance surface). The target
+//                 and its directory avoid the name `deckmonkey`: on a case-insensitive macOS volume
+//                 it collides with the `DeckMonkey` library's source and build directories.
 let package = Package(
     name: "DeckMonkey",
     platforms: [
@@ -19,7 +20,7 @@ let package = Package(
     ],
     products: [
         .library(name: "DeckMonkey", targets: ["DeckMonkey"]),
-        .executable(name: "deckmonkey", targets: ["deckmonkey"]),
+        .executable(name: "deckmonkey", targets: ["DeckMonkeyCLI"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.28.0"),
@@ -40,14 +41,15 @@ let package = Package(
             dependencies: ["IWAArchive", "IWASchema", "IWAContainer"]),
         .target(
             name: "DeckMonkey",
-            dependencies: ["KeynoteGraph", "IWAArchive", "IWAContainer", .product(name: "Rostrum", package: "rostrum")]),
-        .executableTarget(name: "deckmonkey", dependencies: ["DeckMonkey"], path: "Sources/deckmonkey-cli"),
+            dependencies: ["KeynoteGraph", "IWAArchive", "IWAContainer", "IWASnappy", .product(name: "Rostrum", package: "rostrum")]),
+        .executableTarget(name: "DeckMonkeyCLI", dependencies: ["DeckMonkey"], path: "Sources/DeckMonkeyCLI"),
         .testTarget(name: "IWASnappyTests", dependencies: ["IWASnappy"]),
         .testTarget(name: "IWAArchiveTests", dependencies: ["IWAArchive", "IWASnappy"]),
         .testTarget(
             name: "IWAContainerTests",
             dependencies: ["IWAContainer", .product(name: "Rostrum", package: "rostrum")]),
         .testTarget(name: "KeynoteGraphTests", dependencies: ["KeynoteGraph", "IWAArchive", "IWASnappy", "IWAContainer"]),
+        .testTarget(name: "DeckMonkeyTests", dependencies: ["DeckMonkey", "IWASnappy"]),
     ],
     swiftLanguageModes: [.v6]
 )

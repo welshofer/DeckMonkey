@@ -33,7 +33,9 @@ that says what and why:
    arguments, so the CLI itself has not been exercised on a real deck). Fix anything that
    surprises; add a synthetic-stream regression test for each fix (no deck bytes enter the repo).
 
-2. **`make gate`.** It must pass before anything else lands.
+2. **`make snappy-reference`, then `make gate`.** The first runs the reference Snappy decoder
+   (cramjam, in a `.venv` it creates) over the private corpus once and caches hashes next to the
+   decks; `gate` then includes AT-01 in both directions. It must pass before anything else lands.
 
 3. **Verify the §4 table against bytes.** `docs/spec.md` §4 was written from prior art; first
    contact confirmed `MessageInfo` fields 1/2/3/5/6 and the container layouts. Correct the table

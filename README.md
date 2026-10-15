@@ -25,8 +25,9 @@ Point the corpus suite at decks that stay outside the repo:
 
 ```sh
 export DECKMONKEY_CORPUS=/path/to/private/decks
-make gate            # swift test + roundtrip CLEAN on every deck
-make oracle-corpus   # macOS + Keynote: opens every round-trip output and diffs the PDF export
+make snappy-reference  # once per corpus change: the reference Snappy decoder (cramjam) hashes every chunk
+make gate              # swift test + roundtrip CLEAN on every deck + AT-01 against those hashes
+make oracle-corpus     # macOS + Keynote: opens every round-trip output and diffs the PDF export
 ```
 
 ## Layout
@@ -39,6 +40,6 @@ make oracle-corpus   # macOS + Keynote: opens every round-trip output and diffs 
 | `IWASchema` | generated SwiftProtobuf sources and type registry per pinned Keynote version |
 | `KeynoteGraph` | `KeynoteDocument`, identifier allocator, validator; the typed graph and surgery ops come next |
 | `DeckMonkey` | public API; Deck IR bridge to Rostrum's `DeckOutline` in Phase 4 |
-| `deckmonkey` | CLI — the acceptance surface |
+| `DeckMonkeyCLI` | the `deckmonkey` executable — the acceptance surface |
 
 Pinned Keynote build: 15.4 (7051.0.79). License: MIT.
