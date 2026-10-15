@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 import IWAArchive
 import IWAContainer
 import IWASnappy
@@ -560,6 +563,89 @@ struct CorpusTests {
         differ.forEach { print("  \($0)") }
         #expect(differ.isEmpty)
     }
+
+    /// Phase 1 as a property over the corpus: in every storage, replace the first two UTF-16 units
+    /// with a longer string. Each result keeps valid offset tables (or the rule refuses, for a
+    /// paragraph break or an anchored object), and each edited deck saves, reopens and validates.
+    @Test("replace in every corpus storage: tables stay valid, every edited deck saves, reopens and validates", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus"))
+    func corpusReplaceEverywhere() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("deckmonkey-replace-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        var edited = 0, refused = 0, decks = 0
+        var failures = [String]()
+        for url in CorpusTests.corpusFiles() {
+            guard var document = try? KeynoteDocument.open(url), document.writtenByNewerKeynote == nil else { continue }
+            var touched = false
+            for (id, text) in document.textStorages where text.utf16.count >= 2 {
+                do {
+                    try document.replaceText(in: id, range: 0..<2, with: "Replaced·")
+                    edited += 1
+                    touched = true
+                } catch is TextReplace.Failure {
+                    refused += 1
+                } catch {
+                    if failures.count < 10 { failures.append("\(url.lastPathComponent) storage \(id): \(error)") }
+                }
+            }
+            guard touched else { continue }
+            decks += 1
+            let out = dir.appendingPathComponent("\(decks).key")
+            do {
+                try document.save(to: out)
+                let reread = try KeynoteDocument.open(out)
+                let errors = reread.validate().filter { $0.severity == .error }
+                if !errors.isEmpty, failures.count < 10 { failures.append("\(url.lastPathComponent): \(errors.prefix(3))") }
+            } catch {
+                if failures.count < 10 { failures.append("\(url.lastPathComponent): \(error)") }
+            }
+            try? FileManager.default.removeItem(at: out)
+        }
+        print("replace everywhere: \(edited) storages edited in \(decks) decks, \(refused) refused by the Phase 1 rules, \(failures.count) failure(s)")
+        failures.forEach { print("  \($0)") }
+        #expect(failures.isEmpty)
+    }
+
+    /// Gate 1's frame check rests on `location(of:)`: in every template deck, each layout caption
+    /// ("<theme> · <layout>", one title per slide) resolves to its own page, in slide order.
+    @Test("every template caption locates to a distinct PDF page", .enabled(if: FileManager.default.fileExists(atPath: CorpusTests.repoRoot.appendingPathComponent("Corpus/templates").path), "no Corpus/templates"))
+    func templateCaptionsLocate() throws {
+        let dir = CorpusTests.repoRoot.appendingPathComponent("Corpus/templates")
+        var decks = 0
+        for name in try FileManager.default.contentsOfDirectory(atPath: dir.path).sorted() where name.hasSuffix(".key") {
+            let document = try KeynoteDocument.open(dir.appendingPathComponent(name))
+            let slides = document.pageOfSlide.count
+            let captions = document.textStorages.filter { $0.text.contains(" · ") && !$0.text.hasSuffix(" body") }
+            let pages = captions.compactMap { document.location(of: $0.identifier)?.page }
+            #expect(pages.count == captions.count, "\(name): a caption did not locate")
+            #expect(Set(pages).count == pages.count, "\(name): two captions on one page")
+            // Layouts without a title (Blank, Photo) carry no caption: captions cover a subset of pages.
+            #expect(Set(pages).isSubset(of: Set(1...max(slides, 1))), "\(name): caption pages \(pages.sorted()) for \(slides) slides")
+            #expect(pages.count * 2 >= slides, "\(name): only \(pages.count) captions for \(slides) slides")
+            decks += 1
+        }
+        #expect(decks == 106)
+    }
+
+    #if canImport(CoreGraphics)
+    /// `pageOfSlide` against Keynote itself: for every in-repo deck with a golden PDF, the number of
+    /// pages derived from the slide tree equals the golden's page count.
+    @Test("derived PDF page counts equal Keynote's exports", .enabled(if: FileManager.default.fileExists(atPath: CorpusTests.repoRoot.appendingPathComponent("Corpus/manifest.json").path), "no local corpus"))
+    func pageCountsMatchGoldens() throws {
+        var checked = 0
+        for category in ["templates", "features"] {
+            let dir = CorpusTests.repoRoot.appendingPathComponent("Corpus/\(category)")
+            for name in (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? [] where name.hasSuffix(".golden.pdf") {
+                let deck = dir.appendingPathComponent(String(name.dropLast(".golden.pdf".count)) + ".key")
+                guard let pdf = CGPDFDocument(dir.appendingPathComponent(name) as CFURL),
+                      let document = try? KeynoteDocument.open(deck) else { continue }
+                #expect(document.pageOfSlide.count == pdf.numberOfPages, "\(category)/\(name)")
+                checked += 1
+            }
+        }
+        #expect(checked > 0)
+    }
+    #endif
 
     /// Invariant 8 for text, against Keynote's own files: every TSWP.StorageArchive's offset tables
     /// are strictly increasing and within the UTF-16 text length.

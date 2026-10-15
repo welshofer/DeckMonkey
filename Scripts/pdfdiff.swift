@@ -2,7 +2,10 @@
 // pdfdiff.swift — rasterize two PDFs at 72 dpi and count mismatched pixels (docs/spec.md §10 step 5).
 //
 // usage: swift Scripts/pdfdiff.swift golden.pdf candidate.pdf [--dump dir]
-// Prints {"mismatch": <pixels>, "bounds": [page, minX, minY, maxX, maxY] | null, "pages": [a, b]}.
+// Prints {"mismatch": <pixels>, "bounds": [page, minX, minY, maxX, maxY] | null, "pages": [a, b],
+//         "pageBounds": [[page, minX, minY, maxX, maxY], ...]} — `bounds` is the first differing
+// page's box; `pageBounds` has one box per differing page (Gate 1 checks each against the frames
+// of the text replaced on that page). Coordinates are points at 72 dpi, origin top-left.
 // A page-count difference counts every pixel of the extra pages as mismatched.
 // macOS only (CoreGraphics). Exit 0 when the JSON was produced, whatever the mismatch.
 
@@ -41,6 +44,7 @@ guard let a = CGPDFDocument(URL(fileURLWithPath: args[1]) as CFURL),
 
 var mismatch = 0
 var bounds: [Int]? = nil
+var pageBounds = [[Int]]()
 let pages = max(a.numberOfPages, b.numberOfPages)
 for index in 1...max(pages, 1) where pages > 0 {
     guard let pa = a.page(at: index), let pb = b.page(at: index),
@@ -48,12 +52,14 @@ for index in 1...max(pages, 1) where pages > 0 {
         if let p = a.page(at: index) ?? b.page(at: index), let r = raster(p) {
             mismatch += r.width * r.height
             if bounds == nil { bounds = [index, 0, 0, r.width, r.height] }
+            pageBounds.append([index, 0, 0, r.width, r.height])
         }
         continue
     }
     if ra.width != rb.width || ra.height != rb.height {
         mismatch += max(ra.width * ra.height, rb.width * rb.height)
         if bounds == nil { bounds = [index, 0, 0, max(ra.width, rb.width), max(ra.height, rb.height)] }
+        pageBounds.append([index, 0, 0, max(ra.width, rb.width), max(ra.height, rb.height)])
         continue
     }
     var minX = Int.max, minY = Int.max, maxX = -1, maxY = -1
@@ -68,10 +74,12 @@ for index in 1...max(pages, 1) where pages > 0 {
         }
     }
     mismatch += pageMismatch
-    if pageMismatch > 0, bounds == nil {
-        bounds = [index, minX, minY, maxX + 1, maxY + 1]
+    if pageMismatch > 0 {
+        if bounds == nil { bounds = [index, minX, minY, maxX + 1, maxY + 1] }
+        pageBounds.append([index, minX, minY, maxX + 1, maxY + 1])
     }
 }
 
 let boundsJSON = bounds.map { "[\($0.map(String.init).joined(separator: ", "))]" } ?? "null"
-print("{\"mismatch\": \(mismatch), \"bounds\": \(boundsJSON), \"pages\": [\(a.numberOfPages), \(b.numberOfPages)]}")
+let pageBoundsJSON = "[" + pageBounds.map { "[\($0.map(String.init).joined(separator: ", "))]" }.joined(separator: ", ") + "]"
+print("{\"mismatch\": \(mismatch), \"bounds\": \(boundsJSON), \"pages\": [\(a.numberOfPages), \(b.numberOfPages)], \"pageBounds\": \(pageBoundsJSON)}")

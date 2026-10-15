@@ -1,0 +1,24 @@
+# deck	find	replace	kind — Gate 1 cases on the generated corpus (tab-separated). Private-deck
+# cases (AT-17 needs real hyperlinks) go in the git-ignored cases.local.tsv.
+Corpus/templates/basic-white_wide.key	Basic White	Basic Black	AT-14
+Corpus/features/text-runs.key	large	LARGE	AT-14
+Corpus/features/text-lists.key	Second point	Second POINT	AT-14
+Corpus/templates/academy_standard.key	Academy	ACADEMY	AT-14
+Corpus/features/text-unicode.key	日本語	中国語	AT-14
+Corpus/templates/kyoto_wide.key	Kyoto	Kyoto Prefecture	AT-15
+Corpus/features/text-lists.key	Third point with more words in it	Third point, now with a good many more words in it than before	AT-15
+Corpus/templates/minimalist-dark_wide.key	Minimalist Dark	Minimalist Dark, extended	AT-15
+Corpus/features/text-bidi.key	Hebrew	Hebrew text	AT-15
+Corpus/features/text-unicode.key	end	finish 🎉	AT-15
+Corpus/templates/photo-essay_wide.key	Photo Essay	Essay	AT-15
+Corpus/features/text-runs.key	small	s	AT-15
+Corpus/templates/editorial_standard.key	Editorial	Ed	AT-15
+Corpus/features/text-lists.key	One long paragraph that wraps across several lines	One paragraph	AT-15
+Corpus/features/notes-skipped.key	Slide 3	S3	AT-15
+Corpus/features/many-slides.key	Body text for slide	Text for slide	AT-15
+Corpus/features/text-runs.key	bold italic	BOLD-and-ITALIC	AT-16
+Corpus/features/text-runs.key	italic red	IR	AT-16
+Corpus/features/text-runs.key	gamma delta	GD	AT-16
+Corpus/features/text-runs.key	blue phrase in	azure words in	AT-16
+Corpus/features/text-unicode.key	Math 𝔸𝔹ℂ	Sets	AT-16
+Corpus/features/text-runs.key	Plain bold	plain BOLD	AT-16

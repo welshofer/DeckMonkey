@@ -18,3 +18,4 @@ DerivedData/
 /Corpus/manifest.json
 /Corpus/.snappy-reference.json
 /Corpus/**/*.golden.pdf
+/Scripts/gate1/cases.local.tsv

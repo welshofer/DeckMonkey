@@ -33,6 +33,7 @@ enum CLI {
                                      replace every occurrence (Phase 1: within a paragraph; the new
                                      text takes the style in force at the first replaced character;
                                      overlapping hyperlinks and smart fields are removed and listed)
+      locate <file> --storage <id>   a text storage's shape, PDF page and frame, as JSON
       version
 
     Exit codes: 0 pass, 1 fail, 2 usage, 3 refused (Keynote '09 APXL, out of scope).
@@ -79,6 +80,7 @@ func runInspect(_ args: [String]) throws {
     }
     print("objects: \(s.objectCount)  records: \(s.recordCount)  merges: \(s.mergeRecordCount)  highest identifier: \(s.highestIdentifier)")
     print("data entries: \(s.dataEntries)")
+    print("pdf pages: \(document.pageOfSlide.count) (non-skipped slides in slide-tree order)")
     print("types:")
     for (type, count) in s.typeHistogram.sorted(by: { $0.key < $1.key }) {
         let name = document.registry?.name(for: type).map { " \($0)" } ?? ""
@@ -350,6 +352,21 @@ func runReplace(_ args: [String]) throws {
     print("output: \(url(out).path)")
 }
 
+func runLocate(_ args: [String]) throws {
+    guard let path = args.first, !path.hasPrefix("-"), let value = option("--storage", in: args), let id = UInt64(value) else {
+        fail(CLI.usage, code: 2)
+    }
+    let document = try DeckMonkey.open(url(path))
+    // Text no slide shape owns (presenter notes, table cells, masters) is not on a page by itself.
+    guard let at = document.location(of: id) else {
+        print("{\"storage\":\(id),\"shape\":null,\"slide\":null,\"page\":null,\"frame\":null}")
+        return
+    }
+    func num(_ v: Double) -> String { v == v.rounded() ? String(Int(v)) : String(format: "%.2f", v) }
+    let frame = at.frame.map { "{\"x\":\(num($0.x)),\"y\":\(num($0.y)),\"width\":\(num($0.width)),\"height\":\(num($0.height)),\"angle\":\(num($0.angle))}" } ?? "null"
+    print("{\"storage\":\(id),\"shape\":\(at.shape),\"slide\":\(at.slide.map(String.init) ?? "null"),\"page\":\(at.page.map(String.init) ?? "null"),\"frame\":\(frame)}")
+}
+
 let arguments = Array(CommandLine.arguments.dropFirst())
 guard let command = arguments.first else { fail(usage, code: 2) }
 let rest = Array(arguments.dropFirst())
@@ -364,6 +381,7 @@ do {
     case "reference-strength": try runReferenceStrength(rest)
     case "text": try runText(rest)
     case "replace": try runReplace(rest)
+    case "locate": try runLocate(rest)
     case "corpus":
         switch rest.first {
         case "add": try runCorpusAdd(Array(rest.dropFirst()))

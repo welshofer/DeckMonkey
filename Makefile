@@ -6,7 +6,7 @@ CORPUS ?= $(shell if [ -n "$$DECKMONKEY_CORPUS" ]; then echo "$$DECKMONKEY_CORPU
 
 PYTHON ?= .venv/bin/python
 
-.PHONY: corpus goldens reference-strength build test gate roundtrip-corpus oracle-corpus snappy-reference snappy-check snappy-vectors schema schema-tools schema-diff clean
+.PHONY: gate1 corpus goldens reference-strength build test gate roundtrip-corpus oracle-corpus snappy-reference snappy-check snappy-vectors schema schema-tools schema-diff clean
 
 build:
 	$(SWIFT) build
@@ -64,6 +64,12 @@ goldens:
 	@for c in templates features; do \
 	  [ -d Corpus/$$c ] && ls Corpus/$$c/*.key >/dev/null 2>&1 && .build/debug/deckmonkey corpus add --category $$c Corpus/$$c/*.key | tail -1; \
 	done; true
+
+## Gate 1 (docs/spec.md §12): the text-replace cases through the oracle (macOS, Keynote; run with
+## the machine left alone). Scripts/gate1/cases.local.tsv, if present, adds private-deck cases.
+gate1:
+	@$(SWIFT) build --product deckmonkey >/dev/null
+	python3 -I Scripts/gate1/gate1.py
 
 ## AT-01 (docs/spec.md §14). The reference Snappy decoder is cramjam, in a local venv.
 .venv/bin/python:

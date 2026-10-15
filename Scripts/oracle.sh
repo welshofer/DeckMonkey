@@ -13,8 +13,9 @@
 #   and every AppleScript step addresses only the document or window carrying that unique token.
 # - The script only opens, exports and closes (without saving) that copy. It never closes, saves,
 #   or inspects any other document.
-# - Don't type or paste into Keynote while it runs: Keynote is brought forward, so input lands in
-#   the oracle's copy. A copy that was edited is never exported; the verdict says so.
+# - Don't touch the machine while it runs: Keynote is brought forward, so typing lands in the
+#   oracle's copy. Any keyboard or mouse input during a run (HIDIdleTime) fails the verdict with a
+#   "rerun" sheet, and a copy Keynote marks modified is never exported.
 # - Paths reach AppleScript through argv, never by interpolation into script source.
 #
 # The AppleScript lives in variables piped to `osascript -`: macOS's bash 3.2 misparses heredocs
@@ -187,6 +188,10 @@ LOGHITS=0
 PDFMISMATCH="null"
 PDFBOUNDS="null"
 START=$(date +"%Y-%m-%d %H:%M:%S")
+RUN_START=$(date +%s)
+
+# Seconds since the last keyboard or mouse event anywhere on the machine (IOHIDSystem).
+hid_idle() { ioreg -c IOHIDSystem | awk '/HIDIdleTime/ { printf "%d", $NF / 1000000000; exit }'; }
 
 BEFORE=$(applescript "$AS_DIALOGS" || true)
 trap 'applescript "$AS_CLOSE" "$TOKEN" "$BEFORE" >/dev/null || true' EXIT
@@ -230,6 +235,16 @@ if [[ "$OPENS" == true ]]; then
     rm -f "$PDF"
     SHEET=$(printf 'document changed during the oracle run (input reached Keynote); not exported' | json_string)
   fi
+fi
+# A person's keyboard or mouse input during the run makes the verdict untrustworthy: Keynote is in
+# front, so typing lands in the copy, and Keynote's `modified` flag does not flip while a text edit
+# is still open. The oracle itself posts no input until cleanup, which runs after this check.
+IDLE=$(hid_idle || echo "")
+ELAPSED=$(( $(date +%s) - RUN_START ))
+if [[ -n "$IDLE" && "$IDLE" -lt "$ELAPSED" ]]; then
+  rm -f "$PDF"
+  OPENS=false
+  SHEET=$(printf 'input reached the machine during the run (idle %ss of a %ss run): rerun without touching it' "$IDLE" "$ELAPSED" | json_string)
 fi
 [[ -f "$PDF" ]] || PDF=""
 
