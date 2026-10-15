@@ -72,6 +72,7 @@ goldens:
 snappy-reference: .venv/bin/python
 	@[ -n "$(CORPUS)" ] || { echo "no corpus: set DECKMONKEY_CORPUS or write .deckmonkey-corpus"; exit 2; }
 	$(PYTHON) Scripts/snappy-crosscheck.py hash "$(CORPUS)" --out "$(CORPUS)/.snappy-reference.json"
+	@if [ -d Corpus/templates ]; then $(PYTHON) Scripts/snappy-crosscheck.py hash Corpus/templates --out Corpus/.snappy-reference.json; fi
 
 ## Our decoder against the cached reference hashes, then the reference decoder against our compressor.
 snappy-check: .venv/bin/python
@@ -79,6 +80,9 @@ snappy-check: .venv/bin/python
 	@$(SWIFT) build --product deckmonkey >/dev/null
 	.build/debug/deckmonkey snappy-check "$(CORPUS)/.snappy-reference.json" --emit .build/snappy-ours
 	$(PYTHON) Scripts/snappy-crosscheck.py verify-ours .build/snappy-ours
+	@if [ -f Corpus/.snappy-reference.json ]; then \
+	  .build/debug/deckmonkey snappy-check Corpus/.snappy-reference.json --emit .build/snappy-ours-corpus && \
+	  $(PYTHON) Scripts/snappy-crosscheck.py verify-ours .build/snappy-ours-corpus; fi
 
 ## The reference decoder against our compression of the fixture vectors (written by `swift test`).
 snappy-vectors: .venv/bin/python

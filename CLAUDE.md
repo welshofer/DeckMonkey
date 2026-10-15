@@ -132,10 +132,15 @@ offset rule (strictly increasing, ≤ UTF-16 length; 0 violations in 30,044 stor
 `Corpus/hostile` (`deckmonkey corpus hostile`), `Scripts/corpus-gen` (106 template decks from the
 53 built-in themes; user themes, id `CloudKit/…`, are never used) and `deckmonkey corpus add`.
 
-Remaining, in order:
+**Gate 0 passed (2026-10-14)** over 134 decks (106 local templates + 28 private; 7 APXL refused):
+AT-01 (5,803 chunks match the reference decoder, both directions), AT-02–AT-04, AT-05, AT-06–AT-08,
+AT-09 roundtrip 134/134 CLEAN, AT-10 oracle 134/134 (the 106 templates at 0 mismatched pixels
+against their goldens; private decks have no goldens and are open-checked), AT-11, AT-12, AT-13
+(Linux), AT-25, AT-26. Don't use Keynote while the oracle runs: it refuses an edited copy.
 
-1. `make oracle-corpus` 40/40 (AT-10) over the local corpus (`make corpus` builds it).
-2. Hand-authored `Corpus/features` (Jay): widens reference-strength coverage (tables, charts,
-   builds); rerun `make reference-strength` after adding them.
+Before Phase 1, recommended (Jay): hand-author `Corpus/features` (spec §11, ≥ 30 decks: lists,
+bidi, smart fields, hyperlinks, tables, charts, builds…), then `make reference-strength` and
+`make goldens`. The templates exercise 126 reference fields; the feature decks widen that, and
+Phase 1's AT-16/AT-17 need smart fields and hyperlinks to replace across.
 
-Do not start Phase 1 (text replace) on a partial Gate 0.
+Phase 1 (text replace) may start: Gate 0 is complete.

@@ -16,4 +16,5 @@ DerivedData/
 /Corpus/features/
 /Corpus/hostile/
 /Corpus/manifest.json
+/Corpus/.snappy-reference.json
 /Corpus/**/*.golden.pdf
