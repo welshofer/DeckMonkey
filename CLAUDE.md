@@ -193,6 +193,19 @@ keep cross-table formulas working (AppleScript cell edits: a cloned dependent re
 source; a cloned source is independent; deleting a referenced table gives `#REF!`, exactly as
 Keynote's own delete). The strength table now has 215 fields from 122 decks.
 
+Phase 4, first half (2026-10-15, branch `phase4`): `deckmonkey from-ir <deck.json> --template t.key`
+(DeckIRWriter) builds a `.key` from a `lectern.deck/1` Deck IR. The IR types come from LecternIR,
+extracted from LecternCore on rostrum branch `deckmonkey/lectern-ir` (Foundation only; LecternCore's
+346 tests pass); `phase4` builds against that checkout (`swift package edit rostrum --path
+../rostrum-lecternir`) and merges once a Rostrum release carries LecternIR. Each IR slide clones the
+template's sample slide for its master (title, sectionHeader, bullets, agenda, statement, bigNumber,
+quote, closing on the 20 modern Apple themes) and `setParagraphs` fills it (list levels in
+`table_para_data`; only tables the storage has are touched, else Keynote rewrites it on read).
+**Gate 4 (AT-24): 22/22 at 0 mismatched pixels** against Keynote building the same fixture through
+AppleScript (`Scripts/gate4/gate4.py`, fixtures in `Corpus/ir`); 23–25 have sub-bullets, which
+AppleScript cannot author, and wait for hand-built `<fixture>.golden.key` decks (Jay). Open: the
+other twelve layouts (new drawables), older themes' masters, images, tables and charts from the IR.
+
 Keynote on the M4 began refusing every oracle copy ("can't be opened right now | Operation not
 permitted") after several hundred opens in one session; only a Keynote restart clears it, and the
 user's own documents are open in Keynote, so that restart is the user's call.
