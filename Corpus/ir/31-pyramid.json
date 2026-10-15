@@ -1,0 +1,23 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Structures"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "diagram",
+   "title": "Pyramid",
+   "body": {
+    "diagram": {
+     "kind": "pyramid",
+     "items": [
+      "Vision",
+      "Strategy",
+      "Execution"
+     ]
+    }
+   }
+  }
+ ]
+}

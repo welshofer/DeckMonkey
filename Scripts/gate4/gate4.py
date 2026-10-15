@@ -29,14 +29,15 @@ def main():
         label = f"{n:2} AT-24 {os.path.basename(fixture)} on {os.path.basename(template)}"
         try:
             out = os.path.join(work, f"case{n}.key")
-            run(dm, "from-ir", fixture, "--template", template, "-o", out)
+            plan = os.path.join(work, f"plan{n}.json")
+            run(dm, "from-ir", fixture, "--template", template, "--plan-out", plan, "-o", out)
             if "FAIL" in run(dm, "verify", out, check=False).stdout: raise RuntimeError("validator fails on the output")
             hand = fixture[:-5] + ".golden.key"
             if os.path.exists(hand):
                 golden_deck = hand
             else:
                 golden_deck = os.path.join(work, f"golden{n}.key")
-                g = subprocess.run(["python3", "-I", "Scripts/gate4/golden.py", fixture, template, golden_deck], capture_output=True, text=True)
+                g = subprocess.run(["python3", "-I", "Scripts/gate4/golden.py", plan, template, golden_deck], capture_output=True, text=True)
                 if g.returncode == 3: raise RuntimeError("needs a hand-built golden (sub-bullets): " + hand)
                 if g.returncode != 0: raise RuntimeError(f"golden: {g.stderr.strip() or g.stdout.strip()}")
             gv = oracle(golden_deck, os.path.join(work, f"golden{n}"))

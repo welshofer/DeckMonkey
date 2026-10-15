@@ -1,0 +1,33 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Structures"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "metrics",
+   "title": "Health",
+   "body": {
+    "stats": [
+     {
+      "value": "99.9%",
+      "label": "uptime"
+     },
+     {
+      "value": "120ms",
+      "label": "p95 latency"
+     },
+     {
+      "value": "0",
+      "label": "incidents"
+     },
+     {
+      "value": "4.8",
+      "label": "rating"
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,23 +1,65 @@
 import Foundation
 import KeynoteGraph
 import LecternIR
+import Rostrum
+import RostrumLayout
 
 /// Phase 4: a `lectern.deck/1` Deck IR to a `.key`, by surgery on a Keynote-authored template
-/// (docs/spec.md §12). Nothing is synthesized: every IR slide starts as a clone of the template's
-/// own sample slide for the master its layout maps to, its placeholders' text is set from the IR
-/// (`setParagraphs`, so the theme's styles carry the words), and the template's sample slides are
-/// deleted at the end. A layout with no master mapping, or a template without the master, is
-/// refused rather than approximated.
+/// (docs/spec.md §12). Nothing is synthesized.
 ///
-/// Layout → master (Apple theme names): title → Title, sectionHeader → Section, bullets → Title &
+/// The IR is first turned into a `DeckPlan`: for every slide the master it is built on, the text
+/// of its placeholders and of the master's free text box, its notes, and the new drawables it needs
+/// (theme-default shapes and text boxes, with frames in points). The plan is then applied: each
+/// slide clones the template's own sample slide for its master, the text is set (`setParagraphs`),
+/// each new drawable is a copy of a Keynote-authored plain shape or text item from a parts deck
+/// (`Corpus/features/drawables.key`), restyled to the theme's defaults by identifier
+/// (`insertDrawable`), and the template's sample slides are deleted. Gate 4 has Keynote build the
+/// same plan through AppleScript, so the golden is Keynote's own rendering of identical content.
+///
+/// Layouts: title → Title, sectionHeader → Section, bullets / imageLeft / imageRight → Title &
 /// Bullets, agenda → Agenda (else Title & Bullets), statement → Statement, bigNumber → Big Fact,
-/// quote → Quote, closing → Title. Bullets nest one level (sub-bullets at level 1). Content the
-/// master has no place for (a title on a Statement, an image brief, a lead) is reported, not drawn.
+/// quote → Quote, closing → Title; metrics, bands, diagram (process, cycle, pyramid), timeline and
+/// quadrant → Title Only with one theme-default shape per item in Rostrum's StructuredLayout
+/// cells over the theme's body area (and an arrow between ordered steps); twoColumn and
+/// comparison → Title Only with two text boxes; callout → Title Only with a band shape and a text
+/// box. Styles stay the theme's (invariant 6: no overrides are created). Chart and table are
+/// refused for now; content with no place is reported.
 public enum DeckIRWriter {
+    // MARK: Plan
+
+    public struct Paragraph: Codable, Equatable, Sendable {
+        public var text: String
+        public var level: Int
+        public init(_ text: String, level: Int = 0) { self.text = text; self.level = level }
+    }
+
+    public struct DrawablePlan: Codable, Equatable, Sendable {
+        public enum Kind: String, Codable, Sendable { case shape, textBox }
+        public var kind: Kind
+        /// Points. A text box has height 0: its width is fixed and its height automatic.
+        public var x, y, width, height: Double
+        public var paragraphs: [Paragraph]
+    }
+
+    public struct SlidePlan: Codable, Equatable, Sendable {
+        public var id: String
+        public var master: String
+        public var title: [Paragraph]?
+        public var body: [Paragraph]?
+        /// The master's free text box (Big Fact's label, Quote's attribution).
+        public var box: [Paragraph]?
+        public var notes: [Paragraph]?
+        public var drawables: [DrawablePlan] = []
+    }
+
+    public struct DeckPlan: Codable, Equatable, Sendable {
+        public var slides: [SlidePlan]
+        /// IR content with no place on its slide, as "slide id: field".
+        public var ignored: [String]
+    }
+
     public struct Report: Equatable, Sendable {
-        /// Each IR slide's id and the master it was built on.
         public var slides: [(id: String, master: String)] = []
-        /// IR content with no place on its master, as "slide id: field".
         public var ignored: [String] = []
 
         public static func == (a: Report, b: Report) -> Bool {
@@ -29,108 +71,226 @@ public enum DeckIRWriter {
         case unsupportedLayout(slide: String, layout: String)
         case noSampleSlide(slide: String, masters: [String])
         case noPlaceholder(slide: String, role: String)
+        case noParts(slide: String)
+        case noContentRegion
+        case layout(slide: String, String)
         case emptyDeck
 
         public var description: String {
             switch self {
             case .unsupportedLayout(let slide, let layout):
-                return "slide \(slide): layout “\(layout)” has no master mapping yet (supported: \(DeckIRWriter.supportedLayouts.joined(separator: ", ")))"
+                return "slide \(slide): layout “\(layout)” has no mapping yet (supported: \(DeckIRWriter.supportedLayouts.joined(separator: ", ")))"
             case .noSampleSlide(let slide, let masters):
                 return "slide \(slide): the template has no sample slide on \(masters.map { "“\($0)”" }.joined(separator: " or "))"
             case .noPlaceholder(let slide, let role): return "slide \(slide): its master has no \(role)"
+            case .noParts(let slide): return "slide \(slide) needs new shapes or text boxes: pass a parts deck (Corpus/features/drawables.key, `make corpus`)"
+            case .noContentRegion: return "the template has no Title & Bullets sample slide to take the content area from"
+            case .layout(let slide, let detail): return "slide \(slide): \(detail)"
             case .emptyDeck: return "the IR has no slides"
             }
         }
     }
 
-    /// Masters for each supported layout, in preference order.
     static let masters: [String: [String]] = [
-        "title": ["Title"], "sectionHeader": ["Section"], "bullets": ["Title & Bullets"],
-        "agenda": ["Agenda", "Title & Bullets"], "statement": ["Statement"], "bigNumber": ["Big Fact"],
-        "quote": ["Quote"], "closing": ["Title"],
+        "title": ["Title"], "sectionHeader": ["Section"], "bullets": ["Title & Bullets"], "imageLeft": ["Title & Bullets"],
+        "imageRight": ["Title & Bullets"], "agenda": ["Agenda", "Title & Bullets"], "statement": ["Statement"],
+        "bigNumber": ["Big Fact"], "quote": ["Quote"], "closing": ["Title"],
+        "metrics": ["Title Only"], "bands": ["Title Only"], "diagram": ["Title Only"], "timeline": ["Title Only"],
+        "quadrant": ["Title Only"], "twoColumn": ["Title Only"], "comparison": ["Title Only"], "callout": ["Title Only"],
     ]
     public static var supportedLayouts: [String] { masters.keys.sorted() }
 
-    public static func build(_ ir: DeckIR, template: KeynoteDocument) throws -> (KeynoteDocument, Report) {
+    /// The plan for `ir` on `template`.
+    public static func plan(_ ir: DeckIR, template: KeynoteDocument) throws -> DeckPlan {
         guard !ir.slides.isEmpty else { throw Failure.emptyDeck }
-        var document = template
-        var report = Report()
-        let originals = try document.slideList().count
-        let sampleMasters = try document.slideMasters()
+        let list = try template.slideList()
+        let sampleMasters = try template.slideMasters()
+        // The content area: the theme's own body placeholder on its Title & Bullets sample.
+        let region: KeynoteDocument.Frame? = sampleMasters.firstIndex(of: "Title & Bullets").flatMap { template.slideText(list[$0].slide)?.bodyFrame }
+        var plan = DeckPlan(slides: [], ignored: [])
         for slide in ir.slides {
             guard let candidates = masters[slide.layout] else { throw Failure.unsupportedLayout(slide: slide.id, layout: slide.layout) }
-            guard let (index, master) = candidates.lazy.compactMap({ m in sampleMasters.firstIndex(of: m).map { ($0, m) } }).first else {
+            guard let master = candidates.first(where: { sampleMasters.contains($0) }) else {
                 throw Failure.noSampleSlide(slide: slide.id, masters: candidates)
             }
+            var s = SlidePlan(id: slide.id, master: master)
+            try fill(&s, slide: slide, meta: ir.meta, region: region, ignored: &plan.ignored)
+            if let notes = slide.notes { s.notes = notes.components(separatedBy: "\n").map { Paragraph($0) } }
+            plan.slides.append(s)
+        }
+        return plan
+    }
+
+    static func fill(_ s: inout SlidePlan, slide: IRSlide, meta: Meta, region: KeynoteDocument.Frame?, ignored: inout [String]) throws {
+        let body = slide.body
+        func lines(_ t: String?) -> [Paragraph]? { t.map { [Paragraph($0)] } }
+        func ignore(_ field: String, _ present: Bool) { if present { ignored.append("\(slide.id): \(field)") } }
+        func bullets(_ list: [Bullet]?) -> [Paragraph] {
+            (list ?? []).flatMap { [Paragraph($0.text)] + ($0.subBullets ?? []).map { Paragraph($0, level: 1) } }
+        }
+        func area() throws -> KeynoteDocument.Frame {
+            guard let region else { throw Failure.noContentRegion }
+            return region
+        }
+        switch slide.layout {
+        case "title":
+            s.title = lines(slide.title ?? meta.title)
+            s.body = lines(body?.subtitle ?? (slide.title == nil ? meta.subtitle : nil))
+        case "sectionHeader":
+            s.title = lines(slide.title)
+            s.body = lines(body?.kicker)
+        case "bullets", "imageLeft", "imageRight":
+            s.title = lines(slide.title)
+            s.body = bullets(body?.bullets)
+            ignore("lead", body?.lead != nil)
+            ignore("kicker", body?.kicker != nil)
+        case "agenda":
+            s.title = lines(slide.title)
+            s.body = (body?.items ?? []).map { Paragraph($0) }
+        case "statement":
+            s.body = lines(body?.claim ?? slide.title)
+            ignore("title", body?.claim != nil && slide.title != nil)
+        case "bigNumber":
+            s.body = lines(body?.value)
+            s.box = lines(body?.label)
+            ignore("title", slide.title != nil)
+        case "quote":
+            s.body = lines(body?.quote)
+            s.box = lines(body?.attribution)
+            ignore("title", slide.title != nil)
+        case "closing":
+            s.title = lines(body?.callToAction ?? slide.title)
+            s.body = lines(body?.contact)
+            ignore("title", body?.callToAction != nil && slide.title != nil)
+        case "metrics":
+            s.title = lines(slide.title)
+            let items = (body?.stats ?? []).map { ($0.value, $0.label) }
+            s.drawables = try structured(.metrics, items, in: try area(), slide: slide.id)
+        case "bands":
+            s.title = lines(slide.title)
+            let declared = body?.items ?? []
+            let items = (declared.isEmpty ? bullets(body?.bullets).map(\.text) : declared).map { ($0, "") }
+            s.drawables = try structured(.bands, items, in: try area(), slide: slide.id)
+        case "diagram":
+            s.title = lines(slide.title)
+            let kind: StructuredKind
+            switch body?.diagram?.kind.lowercased() {
+            case "pyramid": kind = .pyramid
+            case "cycle": kind = .cycle
+            default: kind = .process
+            }
+            let items = (body?.diagram?.items ?? []).map { item -> (String, String) in
+                let parts = item.components(separatedBy: " — ")
+                return parts.count > 1 ? (parts[0], parts.dropFirst().joined(separator: " — ")) : (item, "")
+            }
+            s.drawables = try structured(kind, items, in: try area(), slide: slide.id)
+        case "timeline":
+            s.title = lines(slide.title)
+            s.drawables = try structured(.timeline, (body?.milestones ?? []).map { ($0.label, $0.detail) }, in: try area(), slide: slide.id)
+        case "quadrant":
+            s.title = lines(slide.title)
+            s.drawables = try structured(.quadrant, (body?.quadrants ?? []).map { ($0.heading, $0.detail) }, in: try area(), slide: slide.id)
+            ignore("xAxis", body?.xAxis != nil)
+            ignore("yAxis", body?.yAxis != nil)
+        case "twoColumn", "comparison":
+            s.title = lines(slide.title)
+            let r = try area(), gap = 16.0, w = (r.width - gap) / 2
+            for (i, column) in [body?.left, body?.right].enumerated() {
+                guard let column else { continue }
+                let paragraphs = (column.heading.isEmpty ? [] : [Paragraph(column.heading)]) + column.bullets.map { Paragraph($0) }
+                s.drawables.append(.init(kind: .textBox, x: r.x + Double(i) * (w + gap), y: r.y, width: w, height: 0, paragraphs: paragraphs))
+            }
+            ignore("lead", body?.lead != nil)
+        case "callout":
+            s.title = lines(slide.title)
+            let r = try area(), band = r.height * 0.25
+            if let text = body?.band, !text.isEmpty {
+                s.drawables.append(.init(kind: .shape, x: r.x, y: r.y, width: r.width, height: band, paragraphs: [Paragraph(text)]))
+            }
+            let rest = bullets(body?.bullets)
+            if !rest.isEmpty {
+                s.drawables.append(.init(kind: .textBox, x: r.x, y: r.y + band + 24, width: r.width, height: 0, paragraphs: rest))
+            }
+            ignore("lead", body?.lead != nil)
+            ignore("kicker", body?.kicker != nil)
+        default:
+            throw Failure.unsupportedLayout(slide: slide.id, layout: slide.layout)
+        }
+        ignore("image", slide.image != nil)
+        ignore("source", body?.source != nil)
+    }
+
+    /// Rostrum's StructuredLayout cells over `region`: one theme-default shape per item (heading,
+    /// then detail, as paragraphs), and for ordered kinds an arrow text box between steps, placed
+    /// as Rostrum places it.
+    static func structured(_ kind: StructuredKind, _ items: [(String, String)], in region: KeynoteDocument.Frame, slide: String) throws -> [DrawablePlan] {
+        guard !items.isEmpty else { throw Failure.layout(slide: slide, "no items") }
+        let rect = Rect(x: .points(region.x), y: .points(region.y), width: .points(region.width), height: .points(region.height))
+        let cells: [Rect]
+        do { cells = try StructuredLayout.frames(kind: kind, count: items.count, in: rect) } catch { throw Failure.layout(slide: slide, "\(error)") }
+        var out = [DrawablePlan]()
+        for ((heading, detail), cell) in zip(items, cells) {
+            let paragraphs = [Paragraph(heading)] + (detail.isEmpty ? [] : [Paragraph(detail)])
+            out.append(.init(kind: .shape, x: cell.x.points, y: cell.y.points, width: cell.width.points, height: cell.height.points, paragraphs: paragraphs))
+        }
+        if [.process, .timeline, .cycle].contains(kind) {
+            for (i, cell) in cells.enumerated() where i + 1 < cells.count {
+                let next = cells[i + 1]
+                let sameRow = next.y == cell.y
+                let arrow = sameRow ? (next.x > cell.x ? "→" : "←") : (next.y > cell.y ? "↓" : "↑")
+                let x = sameRow ? min(cell.maxX.points, next.maxX.points) : cell.x.points + cell.width.points / 2 - 8
+                let y = sameRow ? cell.y.points + cell.height.points / 2 - 12 : min(cell.maxY.points, next.maxY.points)
+                out.append(.init(kind: .textBox, x: x, y: y, width: 16, height: 0, paragraphs: [Paragraph(arrow)]))
+            }
+        }
+        return out
+    }
+
+    // MARK: Apply
+
+    /// Builds `plan` on `template`, copying new drawables from `parts` (needed only when a slide
+    /// has some).
+    public static func apply(_ plan: DeckPlan, template: KeynoteDocument, parts: KeynoteDocument?) throws -> (KeynoteDocument, Report) {
+        var document = template
+        var report = Report(slides: [], ignored: plan.ignored)
+        let originals = try document.slideList().count
+        let sampleMasters = try document.slideMasters()
+        // The parts deck's plain text item (slide 1) and shape (slide 2).
+        var textItem: UInt64?, shape: UInt64?
+        if let parts, let list = try? parts.slideList(), list.count >= 2 {
+            textItem = parts.slideDrawables(list[0].slide).first
+            shape = parts.slideDrawables(list[1].slide).first
+        }
+        for s in plan.slides {
+            guard let index = sampleMasters.firstIndex(of: s.master) else { throw Failure.noSampleSlide(slide: s.id, masters: [s.master]) }
             let clone = try document.cloneSlide(at: index, to: try document.slideList().count)
-            guard let targets = document.slideText(clone.slide) else { throw Failure.noPlaceholder(slide: slide.id, role: "text") }
-            try fill(&document, targets: targets, slide: slide, meta: ir.meta, report: &report)
-            report.slides.append((slide.id, master))
+            guard let targets = document.slideText(clone.slide) else { throw Failure.noPlaceholder(slide: s.id, role: "text") }
+            func set(_ storage: UInt64?, _ role: String, _ paragraphs: [Paragraph]?) throws {
+                guard let paragraphs else { return }
+                guard let storage else { throw Failure.noPlaceholder(slide: s.id, role: role) }
+                let p = paragraphs.isEmpty ? [TextParagraphs.Paragraph("")] : paragraphs.map { TextParagraphs.Paragraph($0.text, level: $0.level) }
+                try document.setParagraphs(in: storage, p)
+            }
+            try set(targets.title, "title placeholder", s.title)
+            try set(targets.body, "body placeholder", s.body)
+            try set(targets.textBoxes.first, "free text box", s.box)
+            if s.notes != nil {
+                if targets.notes == nil { report.ignored.append("\(s.id): notes") } else { try set(targets.notes, "notes", s.notes) }
+            }
+            for d in s.drawables {
+                guard let parts, let source = d.kind == .shape ? shape : textItem else { throw Failure.noParts(slide: s.id) }
+                try document.insertDrawable(source, from: parts, onto: clone.slide,
+                                            frame: .init(x: d.x, y: d.y, width: d.width, height: d.height),
+                                            paragraphs: d.paragraphs.map { TextParagraphs.Paragraph($0.text, level: $0.level) })
+            }
+            report.slides.append((s.id, s.master))
         }
         for i in (0..<originals).reversed() { try document.deleteSlide(at: i) }
         return (document, report)
     }
 
-    typealias Paragraph = TextParagraphs.Paragraph
-
-    static func fill(_ d: inout KeynoteDocument, targets: SlideText, slide: IRSlide, meta: Meta, report: inout Report) throws {
-        let body = slide.body
-        func set(_ storage: UInt64?, _ role: String, _ paragraphs: [Paragraph]) throws {
-            guard let storage else { throw Failure.noPlaceholder(slide: slide.id, role: role) }
-            try d.setParagraphs(in: storage, paragraphs.isEmpty ? [Paragraph("")] : paragraphs)
-        }
-        func lines(_ s: String?) -> [Paragraph] { s.map { [Paragraph($0)] } ?? [] }
-        func ignore(_ field: String, _ present: Bool) { if present { report.ignored.append("\(slide.id): \(field)") } }
-
-        switch slide.layout {
-        case "title":
-            try set(targets.title, "title placeholder", lines(slide.title ?? meta.title))
-            try set(targets.body, "body placeholder", lines(body?.subtitle ?? (slide.title == nil ? meta.subtitle : nil)))
-        case "sectionHeader":
-            try set(targets.title, "title placeholder", lines(slide.title))
-            if let kicker = body?.kicker { try set(targets.body, "body placeholder", lines(kicker)) }
-        case "bullets":
-            try set(targets.title, "title placeholder", lines(slide.title))
-            var paragraphs = [Paragraph]()
-            for bullet in body?.bullets ?? [] {
-                paragraphs.append(Paragraph(bullet.text, level: 0))
-                paragraphs += (bullet.subBullets ?? []).map { Paragraph($0, level: 1) }
-            }
-            try set(targets.body, "body placeholder", paragraphs)
-            ignore("lead", body?.lead != nil)
-        case "agenda":
-            try set(targets.title, "title placeholder", lines(slide.title))
-            try set(targets.body, "body placeholder", (body?.items ?? []).map { Paragraph($0) })
-        case "statement":
-            try set(targets.body, "body placeholder", lines(body?.claim ?? slide.title))
-            ignore("title", body?.claim != nil && slide.title != nil)
-        case "bigNumber":
-            try set(targets.body, "body placeholder", lines(body?.value))
-            if let label = body?.label {
-                guard let box = targets.textBoxes.first else { throw Failure.noPlaceholder(slide: slide.id, role: "label text box") }
-                try d.setParagraphs(in: box, [Paragraph(label)])
-            }
-            ignore("title", slide.title != nil)
-        case "quote":
-            try set(targets.body, "body placeholder", lines(body?.quote))
-            if let attribution = body?.attribution {
-                guard let box = targets.textBoxes.first else { throw Failure.noPlaceholder(slide: slide.id, role: "attribution text box") }
-                try d.setParagraphs(in: box, [Paragraph(attribution)])
-            }
-            ignore("title", slide.title != nil)
-        case "closing":
-            try set(targets.title, "title placeholder", lines(body?.callToAction ?? slide.title))
-            try set(targets.body, "body placeholder", lines(body?.contact))
-            ignore("title", body?.callToAction != nil && slide.title != nil)
-        default:
-            throw Failure.unsupportedLayout(slide: slide.id, layout: slide.layout)
-        }
-        if let notes = slide.notes, let storage = targets.notes {
-            try d.setParagraphs(in: storage, notes.components(separatedBy: "\n").map { Paragraph($0) })
-        } else if slide.notes != nil {
-            report.ignored.append("\(slide.id): notes")
-        }
-        ignore("image", slide.image != nil)
-        ignore("source", body?.source != nil)
+    /// Plan and apply.
+    public static func build(_ ir: DeckIR, template: KeynoteDocument, parts: KeynoteDocument? = nil) throws -> (KeynoteDocument, Report) {
+        try apply(try plan(ir, template: template), template: template, parts: parts)
     }
 }

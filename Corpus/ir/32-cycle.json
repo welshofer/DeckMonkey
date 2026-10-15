@@ -1,0 +1,24 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Structures"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "diagram",
+   "title": "Cycle",
+   "body": {
+    "diagram": {
+     "kind": "cycle",
+     "items": [
+      "Plan",
+      "Do",
+      "Check",
+      "Act"
+     ]
+    }
+   }
+  }
+ ]
+}

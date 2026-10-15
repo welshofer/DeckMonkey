@@ -50,7 +50,7 @@ enum CLI {
       slide delete <file> --index <n> -o <out.key>
       slide clone <file> --index <n> [--to <m>] -o <out.key>
       slide import <file> --from <source.key> --index <n> [--to <m>] -o <out.key>
-      from-ir <deck.json> --template <t.key> -o <out.key>
+      from-ir <deck.json> --template <t.key> [--parts <drawables.key>] [--plan-out <plan.json>] -o <out.key>
                                      build a .key from a lectern.deck/1 Deck IR on a template's masters
                                      move, delete or duplicate a slide (0-based indexes, show order);
                                      delete removes the slide's component and data only it used; a
@@ -480,7 +480,17 @@ func runFromIR(_ args: [String]) throws {
         fail(CLI.usage, code: 2)
     }
     let ir = try JSONDecoder().decode(DeckIR.self, from: Data(contentsOf: url(path)))
-    let (document, report) = try DeckIRWriter.build(ir, template: try DeckMonkey.open(url(template)))
+    let base = try DeckMonkey.open(url(template))
+    let plan = try DeckIRWriter.plan(ir, template: base)
+    if let planOut = option("--plan-out", in: args) {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try encoder.encode(plan).write(to: url(planOut))
+    }
+    // New shapes and text boxes are copied from a parts deck of plain Keynote-made drawables.
+    let partsPath = option("--parts", in: args) ?? "Corpus/features/drawables.key"
+    let parts = FileManager.default.fileExists(atPath: url(partsPath).path) ? try DeckMonkey.open(url(partsPath)) : nil
+    let (document, report) = try DeckIRWriter.apply(plan, template: base, parts: parts)
     try FileManager.default.createDirectory(at: url(out).deletingLastPathComponent(), withIntermediateDirectories: true)
     try document.save(to: url(out))
     print("built \(report.slides.count) slide(s) on \(Set(report.slides.map(\.master)).count) master(s)"

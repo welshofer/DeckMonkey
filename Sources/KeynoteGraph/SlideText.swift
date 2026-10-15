@@ -12,6 +12,9 @@ public struct SlideText: Equatable, Sendable {
     /// Storages of free text boxes (shapes with text, not placeholders), in component order.
     public var textBoxes: [UInt64] = []
     public var notes: UInt64?
+    /// The placeholders' frames on the slide (points).
+    public var titleFrame: KeynoteDocument.Frame?
+    public var bodyFrame: KeynoteDocument.Frame?
 }
 
 extension KeynoteDocument {
@@ -28,9 +31,11 @@ extension KeynoteDocument {
         for record in records {
             guard let type = record.info.messageInfos.first?.type else { continue }
             if type == Self.placeholderArchiveType, let p = decoded(KN_PlaceholderArchive.self, record.identifier), p.super.hasOwnedStorage {
+                let g = p.super.super.super.geometry
+                let frame = Frame(x: Double(g.position.x), y: Double(g.position.y), width: Double(g.size.width), height: Double(g.size.height))
                 switch p.kind {
-                case .kKindTitlePlaceholder: text.title = p.super.ownedStorage.identifier
-                case .kKindBodyPlaceholder: text.body = p.super.ownedStorage.identifier
+                case .kKindTitlePlaceholder: text.title = p.super.ownedStorage.identifier; text.titleFrame = frame
+                case .kKindBodyPlaceholder: text.body = p.super.ownedStorage.identifier; text.bodyFrame = frame
                 default: break
                 }
             } else if type == Self.shapeInfoType, let shape = decoded(TSWP_ShapeInfoArchive.self, record.identifier), shape.hasOwnedStorage {
@@ -40,6 +45,11 @@ extension KeynoteDocument {
             }
         }
         return text
+    }
+
+    /// The drawables `slide` owns, in order.
+    public func slideDrawables(_ slide: UInt64) -> [UInt64] {
+        decoded(KN_SlideArchive.self, slide)?.ownedDrawables.map(\.identifier) ?? []
     }
 
     /// The master each slide uses, in show order.

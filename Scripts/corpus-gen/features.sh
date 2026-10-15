@@ -302,6 +302,20 @@ feature text-styles '
           set y to y + 200
         end repeat'
 
+# Plain drawables, exactly as AppleScript makes them (no overrides, so their styles are the theme's
+# defaults): the sources Phase 4 copies text boxes, shapes and lines from, restyled to the target
+# theme by identifier. Slide 1: a text item; slide 2: a shape with text; slide 3: an empty shape;
+# slide 4: a line.
+feature drawables '
+        set base layout of s to blank
+        tell s to make new text item with properties {object text:"Plain text item"}
+        tell d to set s2 to make new slide with properties {base layout:blank}
+        tell s2 to make new shape with properties {object text:"Plain shape"}
+        tell d to set s3 to make new slide with properties {base layout:blank}
+        tell s3 to make new shape
+        tell d to set s4 to make new slide with properties {base layout:blank}
+        tell s4 to make new line'
+
 # --- Movie asset (a Keynote export of a template) and the run --------------------------------------
 
 if wants media; then

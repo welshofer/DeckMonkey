@@ -1,93 +1,70 @@
 #!/usr/bin/env python3
-"""golden.py — Gate 4 (AT-24) reference decks: Keynote builds a Deck IR fixture itself.
+"""golden.py — Gate 4 (AT-24) reference decks: Keynote builds a deck plan itself.
 
-usage: Scripts/gate4/golden.py <fixture.json> <template.key> <out.key>
+usage: Scripts/gate4/golden.py <plan.json> <template.key> <out.key>
 
-Keynote opens a tokened copy of the template, adds one slide per IR slide on the master the IR
-layout maps to (the same table as DeckIRWriter), sets the placeholder text through its own
-AppleScript dictionary, deletes the template's sample slides and saves. The golden is Keynote's
-own rendering of the same content: DeckMonkey's output must match it at 0 mismatched pixels.
+The plan is what `deckmonkey from-ir --plan-out` writes: for every slide its master, the text of
+its placeholders and of the master's free text box, its notes, and its new shapes and text boxes
+with frames in points. Keynote opens a tokened copy of the template, adds one slide per plan slide
+on that master, sets the text and makes the drawables through its own AppleScript dictionary,
+deletes the template's sample slides and saves. The golden is Keynote's own rendering of the same
+content: DeckMonkey's output must match it at 0 mismatched pixels.
 
-AppleScript cannot set a paragraph's list level, so a fixture with sub-bullets cannot be built
-here (exit 3): those fixtures need hand-built reference decks.
+AppleScript cannot set a paragraph's list level (exit 3 for a plan that has one: those fixtures
+need hand-built reference decks). Geometry: AppleScript's position of an auto-height text item is
+offset by half its height from the stored one, so a text box is placed at y - height / 2 once its
+text has set its height; a shape's position and size are stored as given.
 """
 import json, os, shutil, subprocess, sys, tempfile, uuid
 
-MASTERS = {"title": ["Title"], "sectionHeader": ["Section"], "bullets": ["Title & Bullets"],
-           "agenda": ["Agenda", "Title & Bullets"], "statement": ["Statement"], "bigNumber": ["Big Fact"],
-           "quote": ["Quote"], "closing": ["Title"]}
 
-
-def q(s):
-    """An AppleScript string literal; paragraphs joined with `return` (AppleScript has no escapes for it)."""
-    parts = [p.replace("\\", "\\\\").replace('"', '\\"') for p in s.split("\n")]
+def q(paragraphs):
+    """Paragraphs as an AppleScript string expression, joined with `return`."""
+    parts = [p["text"].replace("\\", "\\\\").replace('"', '\\"') for p in paragraphs]
     return " & return & ".join(f'"{p}"' for p in parts) if parts else '""'
 
 
-def slide_script(slide, meta):
-    layout, body = slide["layout"], slide.get("body") or {}
-    title, out = slide.get("title"), []
-    def title_(text):
-        if text is not None: out.append(f"set object text of default title item of s to {q(text)}")
-    def body_(text):
-        if text is not None: out.append(f"set object text of default body item of s to {q(text)}")
-    def box(text):
+def slide_lines(slide):
+    out = []
+    every = [slide.get(k) or [] for k in ("title", "body", "box", "notes")] + [d["paragraphs"] for d in slide.get("drawables", [])]
+    if any(p.get("level", 0) > 0 for ps in every for p in ps): raise SystemExit(3)
+    out.append(f'set l to (first slide layout of d whose name is "{slide["master"]}")')
+    out.append("tell d to set s to make new slide at end of slides with properties {base layout:l}")
+    if slide.get("title") is not None: out.append(f"set object text of default title item of s to {q(slide['title'])}")
+    if slide.get("body") is not None: out.append(f"set object text of default body item of s to {q(slide['body'])}")
+    if slide.get("box") is not None:
         # Text items include the placeholders (the body twice, a hidden title at width 0): the free
-        # text box is the first item still empty, with a width, once the body is set (called after).
-        if text is None: return
-        out.append("set box to missing value")
-        out.append("repeat with i from 1 to count of text items of s")
-        out.append("  if box is missing value and (object text of text item i of s) is \"\" and (width of text item i of s) > 0 then set box to text item i of s")
-        out.append("end repeat")
-        out.append('if box is missing value then error "no free text box on this master"')
-        out.append(f"set object text of box to {q(text)}")
-    if layout == "title":
-        title_(title or meta.get("title")); body_(body.get("subtitle") or (meta.get("subtitle") if title is None else None))
-    elif layout == "sectionHeader":
-        title_(title); body_(body.get("kicker"))
-    elif layout == "bullets":
-        title_(title)
-        bullets = body.get("bullets") or []
-        if any(b.get("subBullets") for b in bullets): raise SystemExit(3)
-        body_("\n".join(b["text"] for b in bullets))
-    elif layout == "agenda":
-        title_(title); body_("\n".join(body.get("items") or []))
-    elif layout == "statement":
-        body_(body.get("claim") or title)
-    elif layout == "bigNumber":
-        body_(body.get("value")); box(body.get("label"))
-    elif layout == "quote":
-        body_(body.get("quote")); box(body.get("attribution"))
-    elif layout == "closing":
-        title_(body.get("callToAction") or title); body_(body.get("contact"))
-    else:
-        raise SystemExit(f"unsupported layout {layout}")
-    if slide.get("notes") is not None:
-        out.append(f"set presenter notes of s to {q(slide['notes'])}")
+        # text box is the first item still empty, with a width, once the body is set.
+        out += ["set box to missing value",
+                "repeat with i from 1 to count of text items of s",
+                '  if box is missing value and (object text of text item i of s) is "" and (width of text item i of s) > 0 then set box to text item i of s',
+                "end repeat",
+                'if box is missing value then error "no free text box on this master"',
+                f"set object text of box to {q(slide['box'])}"]
+    if slide.get("notes") is not None: out.append(f"set presenter notes of s to {q(slide['notes'])}")
+    for d in slide.get("drawables", []):
+        if d["kind"] == "shape":
+            out += [f"tell s to set n to make new shape with properties {{object text:{q(d['paragraphs'])}}}",
+                    f"set width of n to {d['width']!r}", f"set height of n to {d['height']!r}",
+                    f"set position of n to {{{d['x']!r}, {d['y']!r}}}"]
+        else:
+            out += [f"tell s to set n to make new text item with properties {{object text:{q(d['paragraphs'])}}}",
+                    f"set width of n to {d['width']!r}", "set h to height of n",
+                    f"set position of n to {{{d['x']!r}, {d['y']!r} - h / 2}}"]
     return out
 
 
 def main():
     if len(sys.argv) != 4: raise SystemExit(__doc__)
-    fixture, template, out = sys.argv[1:]
-    ir = json.load(open(fixture, encoding="utf-8"))
+    plan_path, template, out = sys.argv[1:]
+    plan = json.load(open(plan_path, encoding="utf-8"))
     token = "oracle-" + uuid.uuid4().hex[:8]
     work = tempfile.mkdtemp(prefix="deckmonkey-golden.")
     copy = os.path.join(work, f"{token}-template.key")
     shutil.copytree(template, copy) if os.path.isdir(template) else shutil.copy(template, copy)
     saved = os.path.join(work, f"{token}-golden.key")
-    lines = []
-    for slide in ir["slides"]:
-        masters = MASTERS.get(slide["layout"])
-        if not masters: raise SystemExit(f"unsupported layout {slide['layout']}")
-        # One single-line `if` per candidate, least preferred first, so the preferred master wins.
-        lines.append("set l to missing value")
-        for m in reversed(masters):
-            lines.append(f'if exists (first slide layout of d whose name is "{m}") then set l to (first slide layout of d whose name is "{m}")')
-        lines.append('if l is missing value then error "the template has no master for ' + slide["layout"] + '"')
-        lines.append("tell d to set s to make new slide at end of slides with properties {base layout:l}")
-        lines += slide_script(slide, ir.get("meta") or {})
-    script = f'''on run argv
+    lines = [l for s in plan["slides"] for l in slide_lines(s)]
+    script = '''on run argv
   set f to POSIX file (item 1 of argv)
   set token to item 2 of argv
   set out to POSIX file (item 3 of argv)

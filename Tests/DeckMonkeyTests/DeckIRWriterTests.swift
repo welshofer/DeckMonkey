@@ -19,11 +19,13 @@ struct DeckIRWriterTests {
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }
         var built = 0
+        let partsURL = Self.root.appendingPathComponent("Corpus/features/drawables.key")
+        let parts = FileManager.default.fileExists(atPath: partsURL.path) ? try KeynoteDocument.open(partsURL) : nil
         for template in Self.templates {
             let base = try KeynoteDocument.open(template)
             for fixture in Self.fixtures {
                 let ir = try JSONDecoder().decode(DeckIR.self, from: Data(contentsOf: fixture))
-                let (doc, report) = try DeckIRWriter.build(ir, template: base)
+                let (doc, report) = try DeckIRWriter.build(ir, template: base, parts: parts)
                 let out = dir.appendingPathComponent("\(built).key")
                 try doc.save(to: out)
                 let reread = try KeynoteDocument.open(out)
@@ -42,6 +44,9 @@ struct DeckIRWriterTests {
                     let b = s.body
                     let strings = [b?.subtitle, b?.value, b?.label, b?.quote, b?.attribution, b?.claim, b?.contact, b?.callToAction, b?.kicker].compactMap { $0 }
                         + (b?.items ?? []) + (b?.bullets ?? []).flatMap { [$0.text] + ($0.subBullets ?? []) } + (s.notes.map { [$0] } ?? [])
+                        + (b?.stats ?? []).flatMap { [$0.value, $0.label] } + (b?.milestones ?? []).flatMap { [$0.label, $0.detail] }
+                        + (b?.quadrants ?? []).flatMap { [$0.heading, $0.detail] } + (b?.diagram?.items ?? []).flatMap { $0.components(separatedBy: " — ") }
+                        + [b?.left, b?.right].compactMap { $0 }.flatMap { [$0.heading] + $0.bullets } + [b?.band].compactMap { $0 }
                     for string in strings where !string.isEmpty {
                         #expect(joined.contains(string), "\(fixture.lastPathComponent) \(s.id): “\(string)” missing on \(template.lastPathComponent)")
                     }
@@ -55,8 +60,8 @@ struct DeckIRWriterTests {
     @Test("an unsupported layout and an empty deck are refused with typed errors", .enabled(if: !templates.isEmpty, "no Corpus/templates"))
     func refusals() throws {
         let base = try KeynoteDocument.open(Self.templates[0])
-        let timeline = DeckIR(meta: Meta(title: "x"), slides: [IRSlide(id: "a", layout: "timeline")])
-        #expect(throws: DeckIRWriter.Failure.unsupportedLayout(slide: "a", layout: "timeline")) { try DeckIRWriter.build(timeline, template: base) }
+        let chart = DeckIR(meta: Meta(title: "x"), slides: [IRSlide(id: "a", layout: "chart")])
+        #expect(throws: DeckIRWriter.Failure.unsupportedLayout(slide: "a", layout: "chart")) { try DeckIRWriter.build(chart, template: base) }
         #expect(throws: DeckIRWriter.Failure.emptyDeck) { try DeckIRWriter.build(DeckIR(meta: Meta(title: "x"), slides: []), template: base) }
     }
 }

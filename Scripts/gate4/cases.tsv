@@ -25,3 +25,13 @@ Corpus/ir/22-mixed-punctuation.json	Corpus/templates/basic-white_wide.key
 Corpus/ir/23-subbullets.json	Corpus/templates/basic-color_wide.key
 Corpus/ir/24-subbullets-deep.json	Corpus/templates/academy_wide.key
 Corpus/ir/25-subbullets-mixed.json	Corpus/templates/bold-color_wide.key
+Corpus/ir/26-metrics.json	Corpus/templates/basic-black_wide.key
+Corpus/ir/27-metrics-four.json	Corpus/templates/basic-white_wide.key
+Corpus/ir/28-timeline.json	Corpus/templates/academy_wide.key
+Corpus/ir/29-quadrant.json	Corpus/templates/bold-color_wide.key
+Corpus/ir/30-process.json	Corpus/templates/briefing_wide.key
+Corpus/ir/31-pyramid.json	Corpus/templates/dynamic-color_wide.key
+Corpus/ir/32-cycle.json	Corpus/templates/minimalist-light_wide.key
+Corpus/ir/33-bands.json	Corpus/templates/showcase_wide.key
+Corpus/ir/34-two-column.json	Corpus/templates/color-gradient-light_wide.key
+Corpus/ir/35-callout.json	Corpus/templates/feature-story_wide.key
