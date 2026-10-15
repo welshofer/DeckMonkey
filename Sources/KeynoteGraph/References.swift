@@ -119,10 +119,18 @@ extension ReferenceDerivation {
         }
     }
 
-    /// The `object_references` a payload's header must list: the references found in strong
-    /// fields. A weak occurrence never removes a reference that is strong elsewhere. For a mixed
-    /// field, a reference the original payload already held keeps its stored membership; a new one
-    /// is listed, since an extra strong edge is harmless and a missing one loses objects.
+    /// The `object_references` a payload's header must list (invariant 4), as the pinned Keynote
+    /// would archive it: every reference in a strong field. A weak occurrence never removes a
+    /// reference that is strong elsewhere.
+    ///
+    /// With `original` (a mutation: the payload and stored list before the edit), two more rules
+    /// keep older files safe, since the table describes the pinned Keynote and a record last
+    /// archived by an older one may list what 15.4 calls weak:
+    /// - a reference that was stored and is still present stays listed (an extra strong edge is
+    ///   harmless; a dropped one loses objects);
+    /// - in a mixed field, a reference the original held keeps its membership, and a new one is listed.
+    /// A field the table does not know is refused only when it holds a reference the original did
+    /// not: anything else is decided by the stored list, never by a guess.
     public static func listedObjects(
         _ derived: DerivedReferences,
         strength: ReferenceStrength,
@@ -132,15 +140,17 @@ extension ReferenceDerivation {
         let originalListed = Set(original?.stored ?? [])
         var listed = Set<UInt64>()
         for (ref, field) in zip(derived.objects, derived.objectFields) {
+            let held = originalRefs.contains(ref)
+            if held && originalListed.contains(ref) { listed.insert(ref); continue }
             switch strength.strength(of: field) {
             case .strong:
                 listed.insert(ref)
             case .weak:
                 break
             case .mixed:
-                if !originalRefs.contains(ref) || originalListed.contains(ref) { listed.insert(ref) }
+                if !held { listed.insert(ref) }
             case nil:
-                throw .unclassifiedField(field)
+                if !held { throw .unclassifiedField(field) }
             }
         }
         return listed

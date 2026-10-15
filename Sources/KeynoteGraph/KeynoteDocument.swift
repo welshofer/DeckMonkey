@@ -113,10 +113,16 @@ public struct KeynoteDocument: Sendable {
     /// schema wrote this file. Such a document reads through the raw store and refuses `save`.
     public var writtenByNewerKeynote: String? {
         guard let m = packageMetadata else { return nil }
-        guard TypeRegistry.isNewer(m.writeVersion, than: TypeRegistry.pinnedWriteVersion)
-            || TypeRegistry.isNewer(m.fileFormatVersion, than: TypeRegistry.pinnedFileFormatVersion) else { return nil }
-        func v(_ x: [UInt32]) -> String { x.map(String.init).joined(separator: ".") }
-        return "\(lastSavedBy ?? "unknown build") (write \(v(m.writeVersion)), file format \(v(m.fileFormatVersion)))"
+        guard TypeRegistry.isNewer(m.fileFormatVersion, than: TypeRegistry.pinnedFileFormatVersion) else { return nil }
+        return "\(lastSavedBy ?? "unknown build") (file format \(m.fileFormatVersion.map(String.init).joined(separator: ".")))"
+    }
+
+    /// True when every save in `BuildVersionHistory` is the pinned Keynote (a `Template: …` origin is
+    /// allowed): then every object was archived by it, and its reference lists show the pinned
+    /// Keynote's own strength rule. Older saves leave records it never re-archived.
+    public var authoredByPinnedKeynote: Bool {
+        let history = package.buildVersionHistory
+        return !history.isEmpty && history.allSatisfy { $0.hasPrefix("Template:") || $0.hasPrefix("M\(TypeRegistry.pinnedVersion)-") }
     }
 
     // MARK: Mutation

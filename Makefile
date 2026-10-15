@@ -6,7 +6,7 @@ CORPUS ?= $(shell if [ -n "$$DECKMONKEY_CORPUS" ]; then echo "$$DECKMONKEY_CORPU
 
 PYTHON ?= .venv/bin/python
 
-.PHONY: reference-strength build test gate roundtrip-corpus oracle-corpus snappy-reference snappy-check snappy-vectors schema schema-tools schema-diff clean
+.PHONY: corpus goldens reference-strength build test gate roundtrip-corpus oracle-corpus snappy-reference snappy-check snappy-vectors schema schema-tools schema-diff clean
 
 build:
 	$(SWIFT) build
@@ -20,7 +20,7 @@ gate: test roundtrip-corpus snappy-check snappy-vectors
 ## Round-trip every .key under $(CORPUS) and Corpus/ through the CLI.
 roundtrip-corpus:
 	@$(SWIFT) build --product deckmonkey >/dev/null
-	@find $(CORPUS) Corpus -name '*.key' -prune -print0 2>/dev/null | { \
+	@find $(CORPUS) Corpus -path Corpus/hostile -prune -o -name '*.key' -prune -print0 2>/dev/null | { \
 	  fail=0; n=0; skip=0; \
 	  while IFS= read -r -d '' f; do \
 	    .build/debug/deckmonkey roundtrip "$$f" >/tmp/deckmonkey-rt.log 2>&1; rc=$$?; \
@@ -33,7 +33,7 @@ roundtrip-corpus:
 ## Run the Keynote oracle over every corpus deck's round-trip output (macOS only).
 oracle-corpus:
 	@$(SWIFT) build --product deckmonkey >/dev/null
-	@find $(CORPUS) Corpus -name '*.key' -prune -print0 2>/dev/null | { \
+	@find $(CORPUS) Corpus -path Corpus/hostile -prune -o -name '*.key' -prune -print0 2>/dev/null | { \
 	  fail=0; n=0; skip=0; \
 	  while IFS= read -r -d '' f; do \
 	    out=/tmp/deckmonkey-oracle-$$((n+skip+1)).key; \
@@ -42,10 +42,27 @@ oracle-corpus:
 	    n=$$((n+1)); \
 	    [ $$rc -eq 0 ] || { fail=$$((fail+1)); echo "FAIL roundtrip $$f"; continue; }; \
 	    golden="$${f%.key}.golden.pdf"; \
+	    case "$$f" in Corpus/*) [ -f "$$golden" ] || { fail=$$((fail+1)); echo "FAIL $$f: no golden PDF (run make goldens)"; continue; } ;; esac; \
 	    if [ -f "$$golden" ]; then Scripts/oracle.sh $$out --golden "$$golden" || { fail=$$((fail+1)); echo "FAIL oracle $$f"; }; \
 	    else Scripts/oracle.sh $$out || { fail=$$((fail+1)); echo "FAIL oracle $$f"; }; fi; \
 	  done; \
 	  echo "oracle-corpus: $$((n-fail))/$$n pass ($$skip legacy '09 deck(s) refused as designed)"; [ $$fail -eq 0 ]; }
+
+## The whole local corpus from the committed scripts (macOS, Keynote): the 106 template decks,
+## the hostile copies (AT-26) and the golden PDFs. Nothing it writes is committed.
+corpus:
+	Scripts/corpus-gen/corpus-gen.sh --out Corpus/templates
+	@$(SWIFT) build --product deckmonkey >/dev/null
+	.build/debug/deckmonkey corpus hostile --from Corpus/templates/basic-white_wide.key --out Corpus/hostile
+	@$(MAKE) goldens
+
+## Golden PDFs for every in-repo corpus deck, exported by the Keynote oracle (macOS, Keynote).
+## Local only: git-ignored, rebuilt from the committed decks.
+goldens:
+	@$(SWIFT) build --product deckmonkey >/dev/null
+	@for c in templates features; do \
+	  [ -d Corpus/$$c ] && ls Corpus/$$c/*.key >/dev/null 2>&1 && .build/debug/deckmonkey corpus add --category $$c Corpus/$$c/*.key | tail -1; \
+	done; true
 
 ## AT-01 (docs/spec.md §14). The reference Snappy decoder is cramjam, in a local venv.
 .venv/bin/python:
@@ -90,12 +107,12 @@ schema: schema-tools
 	  python3 -I Scripts/schema/registry-dump.py "$$app" $(SCHEMA_PROTO)/descriptors.pb --out $(SCHEMA_REGISTRY) && \
 	  $(SCHEMA_TOOLS)/protodump dispatch $(SCHEMA_PROTO)/descriptors.pb $(SCHEMA_REGISTRY) $(SCHEMA_SWIFT) --out $(SCHEMA_SWIFT)/Dispatch.swift
 
-## Learn which reference fields Keynote lists (invariant 4) from every Keynote-authored deck under
-## $(CORPUS) and Corpus/; deterministic, so a re-run on the same corpus leaves git clean. Holds field
-## names and counts only, never deck content.
+## Learn which reference fields the pinned Keynote lists (invariant 4) from the decks it authored
+## (Corpus/templates and Corpus/features, built by `make corpus`); decks with any other save in
+## their history are skipped. Reproducible from the repo's scripts alone: no private deck is read.
 reference-strength:
 	@$(SWIFT) build --product deckmonkey >/dev/null
-	.build/debug/deckmonkey reference-strength --out Sources/IWASchema/Registry/reference-strength-$(SCHEMA_VERSION).json $(CORPUS) Corpus
+	.build/debug/deckmonkey reference-strength --out Sources/IWASchema/Registry/reference-strength-$(SCHEMA_VERSION).json Corpus/templates Corpus/features
 
 ## Re-extract from the installed Keynote into a scratch dir and diff against the pinned tree. Fails on
 ## any difference; a new Keynote needs a new SCHEMA_VERSION and a dated note in docs/schema-changes.md.

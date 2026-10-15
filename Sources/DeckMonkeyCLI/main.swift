@@ -20,6 +20,13 @@ enum CLI {
       reference-strength --out <json> <deck or dir>...
                                      learn which reference fields Keynote lists (invariant 4)
                                      from Keynote-authored decks; `make reference-strength`
+      corpus add [--category <c>] <deck>...
+                                     file decks under Corpus/<c> (default templates) with a golden
+                                     PDF from the Keynote oracle and a Corpus/manifest.json entry;
+                                     refuses a deck that does not open cleanly (macOS, Keynote)
+      corpus hostile --from <template.key> [--out Corpus/hostile]
+                                     AT-26: one broken copy of a Keynote-authored template per
+                                     validator rule, plus expected.json naming each one's error
       version
 
     Exit codes: 0 pass, 1 fail, 2 usage, 3 refused (Keynote '09 APXL, out of scope).
@@ -176,13 +183,19 @@ func runReferenceStrength(_ args: [String]) throws {
     let files = keyFiles(paths)
     guard !files.isEmpty else { fail("error: no .key files under \(paths.joined(separator: ", "))", code: 2) }
     var learner = ReferenceStrengthLearner()
-    var refused = 0
+    var refused = 0, notPinned = 0
     for file in files {
         let document: KeynoteDocument
         do {
             document = try DeckMonkey.open(file)
         } catch IWAPackageError.unsupportedLegacyFormat {
             refused += 1
+            continue
+        }
+        // Only decks the pinned Keynote archived entirely: an older save leaves records whose lists
+        // follow that Keynote's rule, not the one DeckMonkey writes by.
+        guard document.authoredByPinnedKeynote else {
+            notPinned += 1
             continue
         }
         learner.observeDeck()
@@ -195,14 +208,98 @@ func runReferenceStrength(_ args: [String]) throws {
             }
         }
     }
-    let result = learner.result(source: "deckmonkey reference-strength over \(learner.decks) Keynote-authored deck(s)")
+    guard learner.decks > 0 else { fail("error: no deck under \(paths.joined(separator: ", ")) was saved only by Keynote \(TypeRegistry.pinnedVersion)") }
+    let result = learner.result(source: "deckmonkey reference-strength over \(learner.decks) deck(s) saved only by Keynote \(TypeRegistry.pinnedVersion)")
     try result.encoded().write(to: url(out))
     let counts = Dictionary(grouping: result.fields.values, by: \.strength).mapValues(\.count)
-    print("reference-strength: \(result.fields.count) fields from \(result.payloads) payloads in \(result.decks) deck(s) (\(refused) refused): "
+    print("reference-strength: \(result.fields.count) fields from \(result.payloads) payloads in \(result.decks) deck(s) "
+        + "(\(refused) refused, \(notPinned) skipped: saved by another Keynote): "
         + "\(counts[.strong] ?? 0) strong, \(counts[.weak] ?? 0) weak, \(counts[.mixed] ?? 0) mixed -> \(out)")
     for (name, field) in result.fields.sorted(by: { $0.key < $1.key }) where field.strength == .mixed {
         print("  mixed \(name): \(field.occurrences) seen, \(field.unlisted) unlisted, \(field.unexplainedListed) listed without a strong twin")
     }
+}
+
+/// Runs a command, returning its exit status and standard output.
+func run(_ executable: String, _ args: [String]) throws -> (status: Int32, output: String) {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: executable)
+    process.arguments = args
+    let pipe = Pipe()
+    process.standardOutput = pipe
+    process.standardError = FileHandle.standardError
+    try process.run()
+    let output = pipe.fileHandleForReading.readDataToEndOfFile()
+    process.waitUntilExit()
+    return (process.terminationStatus, String(decoding: output, as: UTF8.self))
+}
+
+func runCorpusAdd(_ args: [String]) throws {
+    let category = option("--category", in: args) ?? "templates"
+    var decks = args
+    if let i = decks.firstIndex(of: "--category") { decks.removeSubrange(i...(i + 1)) }
+    let corpus = url("Corpus")
+    let oracle = "Scripts/oracle.sh"
+    guard FileManager.default.isExecutableFile(atPath: oracle) else { fail("error: run from the repository root (needs \(oracle))", code: 2) }
+    guard !decks.isEmpty else { fail(CLI.usage, code: 2) }
+    let manifestURL = corpus.appendingPathComponent("manifest.json")
+    var manifest = try CorpusManifest.load(manifestURL)
+    let directory = corpus.appendingPathComponent(category)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    var added = 0, refused = 0
+    for path in decks {
+        let source = url(path).standardizedFileURL
+        let deck = directory.appendingPathComponent(source.lastPathComponent).standardizedFileURL
+        if source.path != deck.path {
+            if FileManager.default.fileExists(atPath: deck.path) { try FileManager.default.removeItem(at: deck) }
+            try FileManager.default.copyItem(at: source, to: deck)
+        }
+        let document = try DeckMonkey.open(deck)
+        let scratch = FileManager.default.temporaryDirectory.appendingPathComponent("deckmonkey-corpus-add-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: scratch) }
+        let verdict = try run(oracle, [deck.path, "--out", scratch.path])
+        struct Verdict: Decodable { let pass: Bool; let pdf: String; let keynoteVersion: String; let sheet: String? }
+        guard let parsed = try? JSONDecoder().decode(Verdict.self, from: Data(verdict.output.utf8)), parsed.pass, !parsed.pdf.isEmpty else {
+            print("refused \(deck.lastPathComponent): the original does not pass the oracle: \(verdict.output.trimmingCharacters(in: .whitespacesAndNewlines))")
+            refused += 1
+            continue
+        }
+        let golden = deck.deletingPathExtension().appendingPathExtension("golden.pdf")
+        if FileManager.default.fileExists(atPath: golden.path) { try FileManager.default.removeItem(at: golden) }
+        try FileManager.default.moveItem(at: URL(fileURLWithPath: parsed.pdf), to: golden)
+        let key = "\(category)/\(deck.lastPathComponent)"
+        manifest.decks[key] = CorpusManifest.Entry(
+            sha256: try CorpusManifest.digest(of: deck),
+            goldenSHA256: SHA256.hex(try Data(contentsOf: golden)),
+            savedBy: document.lastSavedBy ?? "-",
+            fileFormatVersion: document.packageMetadata.map { $0.fileFormatVersion.map(String.init).joined(separator: ".") } ?? "-",
+            oracleKeynote: parsed.keynoteVersion)
+        try manifest.write(to: manifestURL)   // after every deck: an interrupted run keeps what it did
+        print("added \(key)")
+        added += 1
+    }
+    print("corpus add: \(added) added, \(refused) refused → \(manifestURL.path)")
+    if refused > 0 { exit(1) }
+}
+
+func runCorpusHostile(_ args: [String]) throws {
+    guard let from = option("--from", in: args) else { fail(CLI.usage, code: 2) }
+    let out = url(option("--out", in: args) ?? "Corpus/hostile")
+    let template = try DeckMonkey.open(url(from))
+    guard template.authoredByPinnedKeynote else { fail("error: \(from) was not saved only by Keynote \(TypeRegistry.pinnedVersion)") }
+    try FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
+    var expected = [String: String]()
+    for c in try HostileCorpus.cases(from: template) {
+        let file = out.appendingPathComponent("\(c.name).key")
+        if FileManager.default.fileExists(atPath: file.path) { try FileManager.default.removeItem(at: file) }
+        try c.package.write(to: file)          // deliberately unvalidated
+        expected["\(c.name).key"] = c.expected
+        print("wrote \(file.lastPathComponent): expects \(c.expected)")
+    }
+    expected["_template"] = url(from).lastPathComponent
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    try (encoder.encode(expected) + Data([0x0A])).write(to: out.appendingPathComponent("expected.json"))
 }
 
 let arguments = Array(CommandLine.arguments.dropFirst())
@@ -217,6 +314,12 @@ do {
     case "verify": try runVerify(rest)
     case "snappy-check": try runSnappyCheck(rest)
     case "reference-strength": try runReferenceStrength(rest)
+    case "corpus":
+        switch rest.first {
+        case "add": try runCorpusAdd(Array(rest.dropFirst()))
+        case "hostile": try runCorpusHostile(Array(rest.dropFirst()))
+        default: fail(usage, code: 2)
+        }
     case "version": print("deckmonkey \(DeckMonkey.version)")
     case "-h", "--help", "help": print(usage)
     default: fail(usage, code: 2)

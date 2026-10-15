@@ -18,7 +18,8 @@ acceptance oracle. The full spec is `docs/spec.md`; sections 5 (invariants), 9 (
   `~/Developer/DeckMonkey-corpus` (a sibling of the repo). Point `DECKMONKEY_CORPUS` at it, or
   write the path into the git-ignored `.deckmonkey-corpus` file at the repo root; the test suite
   and `make roundtrip-corpus` scan it recursively.
-  `Corpus/` in-repo holds only synthetic decks (templates, features, hostile) generated later.
+  `Corpus/` holds only synthetic decks (templates, features, hostile), built locally by
+  `make corpus` and git-ignored: **no deck goes to GitHub** (Jay, 2026-10-14).
 
 ## Invariants (docs/spec.md §5) — a change that breaks one is a design change, not a bug fix
 
@@ -117,21 +118,24 @@ registry recovered statically from the registration calls (Frida/lldb cannot att
 (85 types with a message, 6219 declared deprecated, 0 unresolved). Unknown types are validator
 errors (invariant 8); merge diff descriptors (type 0) and deprecated types are skipped.
 
-References (2026-10-14): `ReferenceDerivation` decodes every payload (54,348, all clean, no unknown
-fields) and collects `TSP.Reference` / `TSP.DataReference` with their fields. Keynote lists strong
-references only. Decided: invariant 4 lists references from fields the learned strength table
-(`make reference-strength`, deterministic: 179 strong, 21 weak, 1 mixed) marks strong; a mixed
-field keeps the stored membership of references already held and lists new ones; an unknown field
-is refused. AT-07 (the rule reproduces all 54,348 stored lists), AT-08 (minus null id 0) and
-AT-06 (strong references resolve; 807 weak ones dangle in Keynote's own files) pass. Open: settle
-`KN.BuildArchive.1` (mixed) with the oracle before Phase 3 edits builds.
+References (2026-10-14): `ReferenceDerivation` decodes every payload and collects `TSP.Reference` /
+`TSP.DataReference` with their fields. Keynote lists strong references only, and strength depends
+on which Keynote archived the record, so `make reference-strength` learns 15.4's rule from
+`Corpus/templates` alone (126 fields: 117 strong, 9 weak, 0 mixed). Invariant 4: strong fields are
+listed; an edit never drops a listed reference still present; an unknown field holding a new
+reference is refused. AT-07 reproduces all 127,028 lists in the 106 templates exactly; in the 28
+older decks 24 lists differ and are preserved. AT-08 (minus null id 0) and AT-06 pass.
+
+Also done 2026-10-14: AT-11, AT-12 (on every deck), AT-25 (file format > 26.4.0 is read-only;
+`write_version` is not a writer stamp), AT-13 (Linux `swift:6.1-noble`, 55 tests), the text
+offset rule (strictly increasing, ≤ UTF-16 length; 0 violations in 30,044 storages), AT-26 over
+`Corpus/hostile` (`deckmonkey corpus hostile`), `Scripts/corpus-gen` (106 template decks from the
+53 built-in themes; user themes, id `CloudKit/…`, are never used) and `deckmonkey corpus add`.
 
 Remaining, in order:
 
-1. `Scripts/corpus-gen` (AppleScript): one deck per built-in theme × two sizes → `Corpus/templates`;
-   hand-author `Corpus/features`; `deckmonkey corpus add` records version + golden PDF; then rerun
-   `make reference-strength` over the larger corpus (new fields must be classified before use).
-2. `Corpus/hostile` files and AT-26; AT-11, AT-12, AT-25.
-3. `make oracle-corpus` 40/40 on the synthetic corpus (AT-10).
+1. `make oracle-corpus` 40/40 (AT-10) over the local corpus (`make corpus` builds it).
+2. Hand-authored `Corpus/features` (Jay): widens reference-strength coverage (tables, charts,
+   builds); rerun `make reference-strength` after adding them.
 
 Do not start Phase 1 (text replace) on a partial Gate 0.

@@ -233,3 +233,27 @@ struct SnappyReferenceTests {
         #expect(report.decksChecked > 0)
     }
 }
+
+@Suite("Corpus manifest")
+struct CorpusManifestTests {
+    static let corpus = Paths.repoRoot.appendingPathComponent("Corpus")
+
+    @Test("every in-repo corpus deck is in Corpus/manifest.json with its current digest", .enabled(if: FileManager.default.fileExists(atPath: CorpusManifestTests.corpus.appendingPathComponent("manifest.json").path)))
+    func manifestMatchesDecks() throws {
+        let manifest = try CorpusManifest.load(Self.corpus.appendingPathComponent("manifest.json"))
+        var listed = Set<String>()
+        for category in ["templates", "features"] {
+            let dir = Self.corpus.appendingPathComponent(category)
+            for name in (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? [] where name.hasSuffix(".key") {
+                let key = "\(category)/\(name)"
+                listed.insert(key)
+                let deck = dir.appendingPathComponent(name)
+                // Without `git lfs pull` a deck is a pointer stub: its digest cannot be checked.
+                if let head = try? FileHandle(forReadingFrom: deck).read(upToCount: 40), head.starts(with: Data("version https://git-lfs".utf8)) { continue }
+                let entry = try #require(manifest.decks[key], "\(key) is not in the manifest: run make goldens")
+                #expect(try CorpusManifest.digest(of: deck) == entry.sha256, "\(key) changed since it was added")
+            }
+        }
+        #expect(Set(manifest.decks.keys) == listed, "manifest lists decks that are not in Corpus/")
+    }
+}

@@ -56,11 +56,11 @@ public struct TypeRegistry: Sendable, Equatable {
     public static let pinnedVersion = "15.4"
     public static let pinnedBuild = "7051.0.79"
 
-    /// What Keynote 15.4 (7051.0.79) writes into `TSP.PackageMetadata` (read 2.4.0, write 4.1.0,
-    /// file format 26.4.0; observed in every deck it saved). A file whose `write_version` or
-    /// `file_format_version` exceeds these was written by a newer Keynote than the schema: it opens
-    /// through the raw store and refuses writes (AT-25).
-    public static let pinnedWriteVersion: [UInt32] = [4, 1, 0]
+    /// The `TSP.PackageMetadata.file_format_version` Keynote 15.4 (7051.0.79) writes: 26.4.0 in every
+    /// file it saved, lower in every file an older Keynote saved. A file whose file format exceeds it
+    /// was written by a newer Keynote than the schema: it opens through the raw store and refuses
+    /// writes (AT-25). `write_version` is not a writer stamp — two 15.4 saves carry 4.1.0 and 11.2.4 —
+    /// so it is not part of the rule.
     public static let pinnedFileFormatVersion: [UInt32] = [26, 4, 0]
 
     /// Version arrays compare component-wise, missing components counting as 0.

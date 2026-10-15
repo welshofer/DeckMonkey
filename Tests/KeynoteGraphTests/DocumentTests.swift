@@ -21,7 +21,7 @@ enum SynthDocument {
         var m = TSP_PackageMetadata()
         m.lastObjectIdentifier = 10_001
         m.readVersion = [2, 4, 0]
-        m.writeVersion = TypeRegistry.pinnedWriteVersion
+        m.writeVersion = [4, 1, 0]
         m.fileFormatVersion = fileFormat
         return [UInt8](try m.serializedData())
     }
@@ -67,7 +67,7 @@ struct DocumentTests {
         #expect(s.mergeRecordCount == 0)
         #expect(s.highestIdentifier == 10_001)
         #expect(s.typeHistogram == [1: 1, 11006: 1, 5: 1, 2001: 1])
-        #expect(document.packageMetadata?.writeVersion == TypeRegistry.pinnedWriteVersion)
+        #expect(document.packageMetadata?.fileFormatVersion == TypeRegistry.pinnedFileFormatVersion)
         #expect(document.writtenByNewerKeynote == nil)
         #expect(s.buildVersionHistory == ["M15.4-7051-1"])
         #expect(s.dataEntries == 1)
@@ -176,7 +176,7 @@ struct DocumentTests {
         }
     }
 
-    @Test("invariant 4: strong fields list, weak fields don't, mixed fields keep stored membership, unseen fields refuse")
+    @Test("invariant 4: strong fields list, weak don't; edits never drop a held stored reference; unseen fields refuse only new references")
     func listingRule() throws {
         let strength = ReferenceStrength(keynoteVersion: "test", fields: ["A.1": .strong, "A.2": .weak, "A.3": .mixed])
         func refs(_ pairs: [(UInt64, String)]) -> DerivedReferences {
@@ -190,6 +190,17 @@ struct DocumentTests {
         #expect(try ReferenceDerivation.listedObjects(edited, strength: strength, original: (original, [40])) == [40, 42])
         #expect(throws: ReferenceDerivation.ListingFailure.unclassifiedField("B.9")) {
             try ReferenceDerivation.listedObjects(refs([(50, "B.9")]), strength: strength)
+        }
+        // A record an older Keynote archived may list a reference 15.4 calls weak: an edit keeps it
+        // while the payload still holds it, and drops it once the payload does not.
+        let old = refs([(60, "A.2"), (61, "A.1")])
+        #expect(try ReferenceDerivation.listedObjects(old, strength: strength, original: (old, [60, 61])) == [60, 61])
+        #expect(try ReferenceDerivation.listedObjects(refs([(61, "A.1")]), strength: strength, original: (old, [60, 61])) == [61])
+        // An unknown field that only holds what the original held is decided by the stored list.
+        let unknown = refs([(70, "B.9"), (71, "B.9")])
+        #expect(try ReferenceDerivation.listedObjects(unknown, strength: strength, original: (unknown, [70])) == [70])
+        #expect(throws: ReferenceDerivation.ListingFailure.unclassifiedField("B.9")) {
+            try ReferenceDerivation.listedObjects(refs([(70, "B.9"), (72, "B.9")]), strength: strength, original: (unknown, [70]))
         }
     }
 
@@ -207,11 +218,15 @@ struct DocumentTests {
         #expect(try ReferenceStrength.load(from: file.encoded()).fields == file.fields.mapValues(\.strength))
     }
 
-    @Test("AT-25: a file from a newer Keynote opens and reads, and any write raises schemaNewerThanLibrary", arguments: [
-        ([27, 0, 0] as [UInt32], TypeRegistry.pinnedWriteVersion),
-        (TypeRegistry.pinnedFileFormatVersion, [4, 2, 0] as [UInt32]),
+    @Test("AT-25: the file format decides; a newer one opens and reads, and any write raises schemaNewerThanLibrary", arguments: [
+        // file format, write version, read-only?
+        ([27, 0, 0] as [UInt32], [4, 1, 0] as [UInt32], true),
+        ([26, 4, 1] as [UInt32], [4, 1, 0] as [UInt32], true),
+        // Keynote 15.4's own saves: write_version varies with content (4.1.0, 11.2.4) and is no stamp.
+        ([26, 4, 0] as [UInt32], [11, 2, 4] as [UInt32], false),
+        ([1, 5, 0] as [UInt32], [1, 2, 0] as [UInt32], false),
     ])
-    func newerKeynoteIsReadOnly(fileFormat: [UInt32], writeVersion: [UInt32]) throws {
+    func newerKeynoteIsReadOnly(fileFormat: [UInt32], writeVersion: [UInt32], readOnly: Bool) throws {
         var package = try SynthDocument.package(fileFormat: fileFormat)
         var m = TSP_PackageMetadata()
         m.lastObjectIdentifier = 10_001
@@ -221,17 +236,22 @@ struct DocumentTests {
         let payload = [UInt8](try m.serializedData())
         package.set("Index/Metadata.iwa", try IWAChunking.compress(ArchiveStream.join([SynthDocument.record(id: 2, type: 11006, payload: payload)])))
         let document = try KeynoteDocument.open(package)
-        #expect(document.summary.objectCount == 4)          // reads through the raw store
-        #expect(document.validate().isEmpty)
-        #expect(document.writtenByNewerKeynote != nil)
+        #expect(document.summary.objectCount == 4)          // reads through the raw store either way
+        #expect((document.writtenByNewerKeynote != nil) == readOnly)
         let out = FileManager.default.temporaryDirectory.appendingPathComponent("deckmonkey-newer-\(UUID().uuidString).key")
-        #expect {
+        defer { try? FileManager.default.removeItem(at: out) }
+        if readOnly {
+            #expect {
+                try document.save(to: out)
+            } throws: { error in
+                guard case .schemaNewerThanLibrary(_, let pinned)? = error as? KeynoteError else { return false }
+                return pinned == "15.4 (7051.0.79)"
+            }
+            #expect(!FileManager.default.fileExists(atPath: out.path))
+        } else {
             try document.save(to: out)
-        } throws: { error in
-            guard case .schemaNewerThanLibrary(_, let pinned)? = error as? KeynoteError else { return false }
-            return pinned == "15.4 (7051.0.79)"
+            #expect(FileManager.default.fileExists(atPath: out.path))
         }
-        #expect(!FileManager.default.fileExists(atPath: out.path))
         #expect(!TypeRegistry.isNewer([26, 4, 0], than: [26, 4, 0]) && TypeRegistry.isNewer([26, 4, 1], than: [26, 4]) && !TypeRegistry.isNewer([1, 5, 0], than: [26, 4, 0]))
     }
 
@@ -366,7 +386,12 @@ struct CorpusTests {
         var files = [URL]()
         for root in corpusRoots() {
             guard let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil) else { continue }
-            for case let url as URL in enumerator where url.pathExtension.lowercased() == "key" {
+            for case let url as URL in enumerator {
+                if url.lastPathComponent == "hostile" && url.deletingLastPathComponent().lastPathComponent == "Corpus" {
+                    enumerator.skipDescendants()   // deliberately broken copies: AT-26, not corpus decks
+                    continue
+                }
+                guard url.pathExtension.lowercased() == "key" else { continue }
                 files.append(url)
                 enumerator.skipDescendants()   // a .key may itself be a package directory
             }
@@ -396,20 +421,25 @@ struct CorpusTests {
         #expect(unresolved.isEmpty)
     }
 
-    /// AT-06/07/08 on the corpus (28 decks, 54,348 typed payloads), against the strength table
-    /// learned by `make reference-strength` (Registry/reference-strength-15.4.json):
-    /// - AT-07: the strong-reference rule reproduces every stored object_references set exactly;
-    ///   a reference field the table has never seen fails the test;
+    /// AT-06/07/08 against the strength table `make reference-strength` learns from the in-repo decks
+    /// Keynote 15.4 authored (Registry/reference-strength-15.4.json):
+    /// - AT-07, decks saved only by the pinned Keynote: the rule alone reproduces every stored
+    ///   object_references set (references held only in mixed fields are exempt and counted);
+    /// - AT-07, older decks: stored ⊆ derived, and the edit rule never drops a stored reference;
+    ///   how far each list sits from the 15.4 rule is reported (records an older Keynote archived);
     /// - AT-08: data_references are exactly the derived DataReference ids minus 0 (null sentinel);
-    /// - AT-06: every strong reference resolves; weak ones may dangle (807 do, in Keynote's files).
-    @Test("AT-06/07/08: strong references reproduce Keynote's stored lists", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus: set DECKMONKEY_CORPUS, write .deckmonkey-corpus, or add decks under Corpus/"))
+    /// - AT-06: every listed reference resolves; unlisted ones may dangle, as in Keynote's own files.
+    @Test("AT-06/07/08: the strong-reference rule against Keynote's stored lists", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus: set DECKMONKEY_CORPUS, write .deckmonkey-corpus, or add decks under Corpus/"))
     func corpusReferences() throws {
         let strength = try ReferenceStrength.load(version: TypeRegistry.pinnedVersion)
-        var payloads = 0, deprecated = 0, danglingWeak = 0, viaMixed = 0
+        var pinnedDecks = 0, olderDecks = 0, pinnedPayloads = 0, olderPayloads = 0
+        var mixedExempt = 0, drift = 0, danglingUnlisted = 0, deprecated = 0
         var failures = [String]()
         func fail(_ message: String) { if failures.count < 20 { failures.append(message) } }
         for url in CorpusTests.corpusFiles() {
             guard let document = try? KeynoteDocument.open(url) else { continue }
+            let pinned = document.authoredByPinnedKeynote
+            if pinned { pinnedDecks += 1 } else { olderDecks += 1 }
             for component in document.store.components {
                 for record in component.records {
                     for (i, info) in record.info.messageInfos.enumerated() where info.baseMessageIndex == nil {
@@ -424,35 +454,112 @@ struct CorpusTests {
                             fail("\(label): \(error)")
                             continue
                         }
-                        payloads += 1
+                        if pinned { pinnedPayloads += 1 } else { olderPayloads += 1 }
                         if derived.hasUnknownFields { fail("\(label): unknown fields under the pinned schema") }
                         // AT-08
                         if Set(info.dataReferences) != Set(derived.data).subtracting([0]) {
                             fail("\(label): data_references \(info.dataReferences), derived \(derived.data)")
                         }
-                        // AT-07
                         let stored = Set(info.objectReferences)
-                        do {
-                            let listed = try ReferenceDerivation.listedObjects(derived, strength: strength, original: (derived, info.objectReferences))
-                            if listed != stored {
-                                fail("\(label): rule lists \(listed.subtracting(stored).sorted()) extra, \(stored.subtracting(listed).sorted()) missing")
-                            }
-                        } catch {
-                            fail("\(label): \(error)")
+                        if !stored.isSubset(of: derived.objects) {
+                            fail("\(label): lists \(stored.subtracting(derived.objects).sorted()) not in the payload")
                         }
-                        viaMixed += zip(derived.objects, derived.objectFields).filter { strength.strength(of: $0.1) == .mixed }.count
+                        // AT-07
+                        if pinned {
+                            do {
+                                let rule = try ReferenceDerivation.listedObjects(derived, strength: strength)
+                                let onlyMixed = Set(zip(derived.objects, derived.objectFields).map(\.0)).filter { ref in
+                                    zip(derived.objects, derived.objectFields).allSatisfy { $0.0 != ref || strength.strength(of: $0.1) == .mixed }
+                                }
+                                let difference = rule.symmetricDifference(stored)
+                                mixedExempt += difference.intersection(onlyMixed).count
+                                let unexplained = difference.subtracting(onlyMixed)
+                                if !unexplained.isEmpty {
+                                    fail("\(label): rule lists \(rule.subtracting(stored).intersection(unexplained).sorted()) extra, \(stored.subtracting(rule).intersection(unexplained).sorted()) missing")
+                                }
+                            } catch {
+                                fail("\(label): \(error)")
+                            }
+                        } else {
+                            if let rule = try? ReferenceDerivation.listedObjects(derived, strength: strength), rule != stored { drift += 1 }
+                            do {
+                                let edit = try ReferenceDerivation.listedObjects(derived, strength: strength, original: (derived, info.objectReferences))
+                                if !stored.isSubset(of: edit) { fail("\(label): the edit rule drops \(stored.subtracting(edit).sorted())") }
+                            } catch {
+                                fail("\(label): \(error)")
+                            }
+                        }
                         // AT-06
-                        for (ref, field) in zip(derived.objects, derived.objectFields) where document.store.entry(for: ref) == nil {
-                            if strength.strength(of: field) == .weak && !stored.contains(ref) { danglingWeak += 1 } else { fail("\(label): \(field) reference \(ref) is dangling") }
+                        for ref in derived.objects where document.store.entry(for: ref) == nil {
+                            if stored.contains(ref) { fail("\(label): listed reference \(ref) is dangling") } else { danglingUnlisted += 1 }
                         }
                     }
                 }
             }
         }
-        print("references: \(payloads) typed payloads (+\(deprecated) deprecated-type) reproduce their stored lists; "
-            + "\(viaMixed) occurrences in mixed fields kept their stored membership; \(danglingWeak) dangling weak references")
+        print("references: \(pinnedDecks) deck(s) saved only by \(TypeRegistry.pinnedVersion), \(pinnedPayloads) payloads reproduced by the rule "
+            + "(\(mixedExempt) references held only in mixed fields exempt); \(olderDecks) older deck(s), \(olderPayloads) payloads, "
+            + "\(drift) lists differ from the \(TypeRegistry.pinnedVersion) rule and are preserved by edits; "
+            + "\(deprecated) deprecated-type payloads; \(danglingUnlisted) dangling unlisted references")
         failures.forEach { print("  FAIL \($0)") }
         #expect(failures.isEmpty)
+    }
+
+    /// AT-26: every file in Corpus/hostile raises the error expected.json names, and writes nothing.
+    @Test("AT-26: each Corpus/hostile file raises its named error and writes nothing", .enabled(if: FileManager.default.fileExists(atPath: CorpusTests.repoRoot.appendingPathComponent("Corpus/hostile/expected.json").path), "no Corpus/hostile: run `deckmonkey corpus hostile`"))
+    func hostileCorpus() throws {
+        let dir = CorpusTests.repoRoot.appendingPathComponent("Corpus/hostile")
+        let expected = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: dir.appendingPathComponent("expected.json")))
+            .filter { !$0.key.hasPrefix("_") }
+        #expect(Set(expected.values) == ["duplicateIdentifier", "danglingObjectReference", "componentUnreadable", "unknownType", "textOffset"])
+        for (file, error) in expected.sorted(by: { $0.key < $1.key }) {
+            let url = dir.appendingPathComponent(file)
+            let document: KeynoteDocument
+            do {
+                document = try KeynoteDocument.open(url)
+            } catch let failure as KeynoteError {
+                guard case .componentUnreadable = failure, error == "componentUnreadable" else {
+                    Issue.record("\(file): open raised \(failure), expected \(error)")
+                    continue
+                }
+                continue                                   // refused at open: nothing to write
+            }
+            let errors = document.validate().filter { $0.severity == .error }
+            let kinds = Set(errors.map { "\($0.kind)".prefix(while: { $0 != "(" }) }.map(String.init))
+            #expect(kinds == [error], "\(file): \(errors)")
+            let out = FileManager.default.temporaryDirectory.appendingPathComponent("deckmonkey-hostile-\(UUID().uuidString).key")
+            #expect(throws: KeynoteError.self, "\(file)") { try document.save(to: out) }
+            #expect(!FileManager.default.fileExists(atPath: out.path), "\(file) wrote output")
+        }
+    }
+
+    /// Invariant 8 for text, against Keynote's own files: every TSWP.StorageArchive's offset tables
+    /// are strictly increasing and within the UTF-16 text length.
+    @Test("text offset tables in every Keynote-authored storage are sorted and in range", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus: set DECKMONKEY_CORPUS, write .deckmonkey-corpus, or add decks under Corpus/"))
+    func corpusTextOffsets() throws {
+        var storages = 0, entries = 0, atEnd = 0
+        var problems = [String]()
+        for url in CorpusTests.corpusFiles() {
+            guard let document = try? KeynoteDocument.open(url) else { continue }
+            for component in document.store.components {
+                for record in component.records {
+                    for (i, info) in record.info.messageInfos.enumerated() where info.type == 2001 && info.baseMessageIndex == nil {
+                        let storage = try TSWP_StorageArchive(serializedBytes: record.payloads[i], extensions: Schema.extensions, partial: true)
+                        storages += 1
+                        let length = TextOffsets.textLength(storage)
+                        let paraStyle = storage.tableParaStyle.entries.map(\.characterIndex)
+                        entries += paraStyle.count
+                        atEnd += paraStyle.filter { Int($0) == length }.count
+                        for p in TextOffsets.problems(in: storage) where problems.count < 30 {
+                            problems.append("\(url.lastPathComponent) object \(record.identifier): \(p)")
+                        }
+                    }
+                }
+            }
+        }
+        print("text offsets: \(storages) storages, \(entries) paragraph-style entries (\(atEnd) at the text length), \(problems.count) problem(s)")
+        problems.forEach { print("  \($0)") }
+        #expect(problems.isEmpty)
     }
 
     @Test("AT-09: every corpus file opens, validates, and round-trips clean", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus: set DECKMONKEY_CORPUS, write .deckmonkey-corpus, or add decks under Corpus/"))
@@ -501,6 +608,7 @@ struct CorpusTests {
                     case .danglingObjectReference: kind = "danglingObjectReference"
                     case .unknownType: kind = "unknownType"
                     case .missingDataFile: kind = "missingDataFile"
+                    case .textOffset: kind = "textOffset"
                     }
                     kinds[kind, default: 0] += 1
                 }

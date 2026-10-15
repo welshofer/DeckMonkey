@@ -1,1214 +1,764 @@
 {
-  "decks" : 28,
+  "decks" : 106,
   "fields" : {
-    "KN.BuildArchive.1" : {
-      "occurrences" : 267,
-      "strength" : "mixed",
-      "unexplainedListed" : 210,
-      "unlisted" : 57
-    },
-    "KN.BuildChunkArchive.1" : {
-      "occurrences" : 309,
-      "strength" : "weak",
-      "unexplainedListed" : 0,
-      "unlisted" : 62
-    },
-    "KN.ClassicThemeRecordArchive.2" : {
-      "occurrences" : 11,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.ClassicThemeRecordArchive.3" : {
-      "occurrences" : 125,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
     "KN.DocumentArchive.2" : {
-      "occurrences" : 28,
+      "occurrences" : 106,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     },
     "KN.LiveVideoSourceCollection.2" : {
-      "occurrences" : 1,
+      "occurrences" : 106,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     },
     "KN.MotionBackgroundFillArchive.1" : {
-      "occurrences" : 1,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.NoteArchive.1" : {
-      "occurrences" : 335,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.ShowArchive.17" : {
-      "occurrences" : 14,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.ShowArchive.2" : {
-      "occurrences" : 28,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.ShowArchive.5" : {
-      "occurrences" : 28,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.SlideArchive.1" : {
-      "occurrences" : 648,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.SlideArchive.17" : {
-      "occurrences" : 335,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.SlideArchive.2" : {
-      "occurrences" : 267,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.SlideArchive.20" : {
-      "occurrences" : 648,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.SlideArchive.27" : {
-      "occurrences" : 335,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.SlideArchive.29" : {
-      "occurrences" : 275,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.SlideArchive.30" : {
-      "occurrences" : 313,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.SlideArchive.31" : {
-      "occurrences" : 1485,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.SlideArchive.35" : {
-      "occurrences" : 1974,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.SlideArchive.36" : {
-      "occurrences" : 648,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.SlideArchive.42" : {
-      "occurrences" : 3337,
-      "strength" : "weak",
-      "unexplainedListed" : 0,
-      "unlisted" : 18
-    },
-    "KN.SlideArchive.43" : {
-      "occurrences" : 62,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.SlideArchive.5" : {
-      "occurrences" : 648,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.SlideArchive.6" : {
-      "occurrences" : 648,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.SlideArchive.7" : {
-      "occurrences" : 3319,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.SlideArchive.SageTagMapEntry.2" : {
-      "occurrences" : 324,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.SlideCollectionSelectionArchive.1" : {
-      "occurrences" : 13,
-      "strength" : "weak",
-      "unexplainedListed" : 0,
-      "unlisted" : 13
-    },
-    "KN.SlideCollectionSelectionArchive.2" : {
-      "occurrences" : 13,
-      "strength" : "weak",
-      "unexplainedListed" : 0,
-      "unlisted" : 13
-    },
-    "KN.SlideNodeArchive.1" : {
-      "occurrences" : 185,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.SlideNodeArchive.2" : {
-      "occurrences" : 648,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.SlideTreeArchive.1" : {
-      "occurrences" : 14,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.SlideTreeArchive.2" : {
-      "occurrences" : 168,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.ThemeArchive.10" : {
-      "occurrences" : 18,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.ThemeArchive.2" : {
-      "occurrences" : 313,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.ThemeArchive.4" : {
-      "occurrences" : 11,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.ThemeArchive.5" : {
-      "occurrences" : 28,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.ThemeArchive.6" : {
-      "occurrences" : 18,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.ThemeArchive.9" : {
-      "occurrences" : 1,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.UIStateArchive.1" : {
-      "occurrences" : 14,
-      "strength" : "weak",
-      "unexplainedListed" : 0,
-      "unlisted" : 14
-    },
-    "KN.UIStateArchive.11" : {
-      "occurrences" : 27,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.UIStateArchive.19" : {
-      "occurrences" : 2,
-      "strength" : "weak",
-      "unexplainedListed" : 0,
-      "unlisted" : 2
-    },
-    "KN.UIStateArchive.30" : {
-      "occurrences" : 6,
-      "strength" : "weak",
-      "unexplainedListed" : 0,
-      "unlisted" : 6
-    },
-    "KN.UIStateArchive.37" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "KN.UIStateArchive.6" : {
-      "occurrences" : 14,
-      "strength" : "weak",
-      "unexplainedListed" : 0,
-      "unlisted" : 14
-    },
-    "TSA.DocumentArchive.12" : {
-      "occurrences" : 14,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSA.DocumentArchive.4" : {
-      "occurrences" : 28,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSA.DocumentArchive.5" : {
-      "occurrences" : 27,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSA.DocumentArchive.6" : {
-      "occurrences" : 28,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSA.DocumentArchive.7" : {
-      "occurrences" : 14,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSA.ThemePresetsArchive.1" : {
-      "occurrences" : 2,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSA.ThemePresetsArchive.2" : {
-      "occurrences" : 1,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSCE.CalculationEngineArchive.14" : {
-      "occurrences" : 1,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSCE.CalculationEngineArchive.15" : {
-      "occurrences" : 1,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSCE.CalculationEngineArchive.3" : {
-      "occurrences" : 28,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSCE.CellDependenciesTiledArchive.1" : {
-      "occurrences" : 1,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSCE.DependencyTrackerArchive.6" : {
-      "occurrences" : 2,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSCE.FormulaOwnerInfoArchive.7" : {
-      "occurrences" : 9,
-      "strength" : "weak",
-      "unexplainedListed" : 0,
-      "unlisted" : 9
-    },
-    "TSCE.NamedReferenceManagerArchive.1" : {
-      "occurrences" : 28,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSCH.ChartArchive.10" : {
-      "occurrences" : 24,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSCH.ChartArchive.11" : {
-      "occurrences" : 24,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSCH.ChartArchive.12" : {
-      "occurrences" : 24,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSCH.ChartArchive.13" : {
-      "occurrences" : 48,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSCH.ChartArchive.14" : {
-      "occurrences" : 48,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSCH.ChartArchive.15" : {
-      "occurrences" : 24,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSCH.ChartArchive.16" : {
-      "occurrences" : 24,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSCH.ChartArchive.17" : {
-      "occurrences" : 140,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSCH.ChartArchive.20" : {
-      "occurrences" : 394,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSCH.ChartArchive.4" : {
-      "occurrences" : 24,
-      "strength" : "weak",
-      "unexplainedListed" : 0,
-      "unlisted" : 24
-    },
-    "TSCH.ChartArchive.9" : {
-      "occurrences" : 24,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSCH.ChartPresetReferenceLineStylesArchive.1" : {
-      "occurrences" : 85,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSCH.ChartPresetsArchive.1" : {
       "occurrences" : 180,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     },
-    "TSCH.ChartReferenceLinesArchive.3" : {
-      "occurrences" : 10,
+    "KN.NoteArchive.1" : {
+      "occurrences" : 1642,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     },
-    "TSCH.ChartStylePreset.1" : {
-      "occurrences" : 192,
+    "KN.ShowArchive.17" : {
+      "occurrences" : 106,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     },
-    "TSCH.ChartStylePreset.2" : {
-      "occurrences" : 192,
+    "KN.ShowArchive.2" : {
+      "occurrences" : 106,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     },
-    "TSCH.ChartStylePreset.3" : {
-      "occurrences" : 384,
+    "KN.ShowArchive.5" : {
+      "occurrences" : 106,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     },
-    "TSCH.ChartStylePreset.4" : {
-      "occurrences" : 192,
+    "KN.SlideArchive.1" : {
+      "occurrences" : 3284,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     },
-    "TSCH.ChartStylePreset.5" : {
-      "occurrences" : 1151,
+    "KN.SlideArchive.17" : {
+      "occurrences" : 1642,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     },
-    "TSCH.ChartStylePreset.6" : {
-      "occurrences" : 2612,
+    "KN.SlideArchive.20" : {
+      "occurrences" : 3284,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     },
-    "TSCH.ChartUIState.1" : {
-      "occurrences" : 102,
+    "KN.SlideArchive.27" : {
+      "occurrences" : 1642,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "KN.SlideArchive.29" : {
+      "occurrences" : 1642,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "KN.SlideArchive.30" : {
+      "occurrences" : 1642,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "KN.SlideArchive.31" : {
+      "occurrences" : 8210,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "KN.SlideArchive.35" : {
+      "occurrences" : 9962,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "KN.SlideArchive.36" : {
+      "occurrences" : 3284,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "KN.SlideArchive.42" : {
+      "occurrences" : 8113,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "KN.SlideArchive.5" : {
+      "occurrences" : 3284,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "KN.SlideArchive.6" : {
+      "occurrences" : 3284,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "KN.SlideArchive.7" : {
+      "occurrences" : 8113,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "KN.SlideArchive.InstructionalTextMap.InstructionalTextMapEntry.1" : {
+      "occurrences" : 1770,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "KN.SlideArchive.SageTagMapEntry.2" : {
+      "occurrences" : 3320,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "KN.SlideCollectionSelectionArchive.1" : {
+      "occurrences" : 106,
       "strength" : "weak",
       "unexplainedListed" : 0,
-      "unlisted" : 102
+      "unlisted" : 106
     },
-    "TSD.DrawableArchive.10" : {
-      "occurrences" : 933,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSD.DrawableArchive.11" : {
-      "occurrences" : 933,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSD.DrawableArchive.2" : {
-      "occurrences" : 16740,
+    "KN.SlideCollectionSelectionArchive.2" : {
+      "occurrences" : 106,
       "strength" : "weak",
       "unexplainedListed" : 0,
-      "unlisted" : 16740
+      "unlisted" : 106
     },
-    "TSD.FreehandDrawingArchive.1" : {
-      "occurrences" : 37,
+    "KN.SlideNodeArchive.2" : {
+      "occurrences" : 3284,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     },
-    "TSD.GroupArchive.2" : {
-      "occurrences" : 11075,
+    "KN.SlideTreeArchive.2" : {
+      "occurrences" : 1642,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     },
-    "TSD.ImageArchive.3" : {
-      "occurrences" : 932,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSD.ImageArchive.5" : {
-      "occurrences" : 721,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSD.MovieArchive.19" : {
-      "occurrences" : 4,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSD.ShapeArchive.2" : {
-      "occurrences" : 14770,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSD.ThemePresetsArchive.4" : {
-      "occurrences" : 192,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSD.ThemePresetsArchive.5" : {
-      "occurrences" : 219,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSD.ThemePresetsArchive.6" : {
-      "occurrences" : 28,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSD.ThemePresetsArchive.7" : {
-      "occurrences" : 173,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSD.ThemePresetsArchive.8" : {
-      "occurrences" : 168,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSD.ThemePresetsArchive.9" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSK.AnnotationAuthorStorageArchive.1" : {
-      "occurrences" : 5,
-      "strength" : "weak",
-      "unexplainedListed" : 0,
-      "unlisted" : 5
-    },
-    "TSK.DocumentArchive.7" : {
-      "occurrences" : 28,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSK.SelectionPathArchive.1" : {
-      "occurrences" : 39,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSK.ViewStateArchive.1" : {
-      "occurrences" : 27,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSP.DataMetadataMap.DataMetadataMapEntry.2" : {
-      "occurrences" : 66,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSP.ObjectContainer.2" : {
-      "occurrences" : 214,
-      "strength" : "weak",
-      "unexplainedListed" : 0,
-      "unlisted" : 214
-    },
-    "TSP.PackageMetadata.10" : {
-      "occurrences" : 8,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSP.SparseReferenceArray.Entry.2" : {
-      "occurrences" : 215,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSS.StyleArchive.3" : {
-      "occurrences" : 6121,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSS.StyleArchive.5" : {
-      "occurrences" : 15640,
-      "strength" : "weak",
-      "unexplainedListed" : 0,
-      "unlisted" : 15640
-    },
-    "TSS.StylesheetArchive.1" : {
-      "occurrences" : 16003,
-      "strength" : "weak",
-      "unexplainedListed" : 0,
-      "unlisted" : 6851
-    },
-    "TSS.StylesheetArchive.3" : {
-      "occurrences" : 14,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSS.StylesheetArchive.IdentifiedStyleEntry.2" : {
-      "occurrences" : 13620,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSS.StylesheetArchive.StyleChildrenEntry.1" : {
-      "occurrences" : 831,
-      "strength" : "weak",
-      "unexplainedListed" : 0,
-      "unlisted" : 303
-    },
-    "TSS.StylesheetArchive.StyleChildrenEntry.2" : {
-      "occurrences" : 6461,
-      "strength" : "weak",
-      "unexplainedListed" : 0,
-      "unlisted" : 6461
-    },
-    "TSS.StylesheetArchive.VersionedStyles.1" : {
-      "occurrences" : 27,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSS.ThemeArchive.1" : {
-      "occurrences" : 14,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSS.ThemeArchive.4" : {
-      "occurrences" : 14,
-      "strength" : "weak",
-      "unexplainedListed" : 0,
-      "unlisted" : 14
-    },
-    "TST.ConditionalStyleSetArchive.ConditionalStyleRulePrePivot.2" : {
-      "occurrences" : 1,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.ConditionalStyleSetArchive.ConditionalStyleRulePrePivot.3" : {
-      "occurrences" : 1,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.DataStore.11" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.DataStore.12" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.DataStore.16" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.DataStore.17" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.DataStore.18" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.DataStore.19" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.DataStore.2" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.DataStore.20" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.DataStore.4" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.DataStore.5" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.DataStore.6" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.HeaderStorage.2" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.RichTextPayloadArchive.1" : {
-      "occurrences" : 1,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.SortRuleReferenceTrackerArchive.1" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.StrokeSidecarArchive.4" : {
-      "occurrences" : 20,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.StrokeSidecarArchive.5" : {
-      "occurrences" : 19,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.StrokeSidecarArchive.6" : {
-      "occurrences" : 66,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.StrokeSidecarArchive.7" : {
-      "occurrences" : 66,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableDataList.ListEntry.4" : {
-      "occurrences" : 156,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableDataList.ListEntry.9" : {
-      "occurrences" : 1,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableInfoArchive.2" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableInfoArchive.3" : {
-      "occurrences" : 2,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableModelArchive.18" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableModelArchive.19" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableModelArchive.20" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableModelArchive.21" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableModelArchive.24" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableModelArchive.25" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableModelArchive.26" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableModelArchive.27" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableModelArchive.3" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableModelArchive.30" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableModelArchive.34" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableModelArchive.35" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableModelArchive.36" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableModelArchive.38" : {
-      "occurrences" : 10,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableModelArchive.46" : {
-      "occurrences" : 8,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableModelArchive.48" : {
-      "occurrences" : 8,
-      "strength" : "weak",
-      "unexplainedListed" : 0,
-      "unlisted" : 8
-    },
-    "TST.TableModelArchive.49" : {
-      "occurrences" : 8,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.1" : {
-      "occurrences" : 195,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.10" : {
-      "occurrences" : 195,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.11" : {
-      "occurrences" : 195,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.13" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.14" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.15" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.16" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.17" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.18" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.19" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.2" : {
-      "occurrences" : 195,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.20" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.21" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.22" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.23" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.24" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.25" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.26" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.27" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.28" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.29" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.3" : {
-      "occurrences" : 195,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.30" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.31" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.32" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.33" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.34" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.35" : {
-      "occurrences" : 6,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.4" : {
-      "occurrences" : 195,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.5" : {
-      "occurrences" : 195,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.6" : {
-      "occurrences" : 195,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.7" : {
-      "occurrences" : 195,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.8" : {
-      "occurrences" : 195,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStyleNetworkArchive.9" : {
-      "occurrences" : 195,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TableStylePresetArchive.3" : {
-      "occurrences" : 189,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.ThemePresetsArchive.1" : {
-      "occurrences" : 189,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TST.TileStorage.Tile.2" : {
-      "occurrences" : 11,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSWP.ObjectAttributeTable.ObjectAttribute.2" : {
-      "occurrences" : 31304,
-      "strength" : "strong",
-      "unexplainedListed" : 0,
-      "unlisted" : 0
-    },
-    "TSWP.ParagraphStylePropertiesArchive.40" : {
+    "KN.ThemeArchive.10" : {
       "occurrences" : 1932,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     },
+    "KN.ThemeArchive.2" : {
+      "occurrences" : 1642,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "KN.ThemeArchive.5" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "KN.ThemeArchive.6" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "KN.ThemeArchive.9" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "KN.UIStateArchive.11" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "KN.UIStateArchive.37" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSA.DocumentArchive.12" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSA.DocumentArchive.4" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSA.DocumentArchive.5" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSA.DocumentArchive.6" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSA.ThemePresetsArchive.1" : {
+      "occurrences" : 212,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSA.ThemePresetsArchive.2" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSCE.CalculationEngineArchive.14" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSCE.CalculationEngineArchive.15" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSCE.CalculationEngineArchive.3" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSCE.CellDependenciesTiledArchive.1" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSCE.DependencyTrackerArchive.6" : {
+      "occurrences" : 212,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSCE.NamedReferenceManagerArchive.1" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSCH.ChartPresetReferenceLineStylesArchive.1" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSCH.ChartPresetsArchive.1" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSCH.ChartStylePreset.1" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSCH.ChartStylePreset.2" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSCH.ChartStylePreset.3" : {
+      "occurrences" : 1272,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSCH.ChartStylePreset.4" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSCH.ChartStylePreset.5" : {
+      "occurrences" : 3816,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSCH.ChartStylePreset.6" : {
+      "occurrences" : 11262,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSD.DrawableArchive.10" : {
+      "occurrences" : 12265,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSD.DrawableArchive.11" : {
+      "occurrences" : 12265,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSD.DrawableArchive.2" : {
+      "occurrences" : 17286,
+      "strength" : "weak",
+      "unexplainedListed" : 0,
+      "unlisted" : 17286
+    },
+    "TSD.GroupArchive.2" : {
+      "occurrences" : 20,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSD.ImageArchive.3" : {
+      "occurrences" : 1823,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSD.ImageArchive.5" : {
+      "occurrences" : 1737,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSD.MovieArchive.19" : {
+      "occurrences" : 423,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSD.ShapeArchive.2" : {
+      "occurrences" : 13296,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSD.ThemePresetsArchive.4" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSD.ThemePresetsArchive.5" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSD.ThemePresetsArchive.6" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSD.ThemePresetsArchive.7" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSD.ThemePresetsArchive.8" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSD.ThemePresetsArchive.9" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSK.DocumentArchive.7" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSK.SelectionPathArchive.1" : {
+      "occurrences" : 318,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSK.ViewStateArchive.1" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSP.DataMetadataMap.DataMetadataMapEntry.2" : {
+      "occurrences" : 1029,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSP.PackageMetadata.10" : {
+      "occurrences" : 106,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSS.StyleArchive.3" : {
+      "occurrences" : 1343,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSS.StyleArchive.5" : {
+      "occurrences" : 48955,
+      "strength" : "weak",
+      "unexplainedListed" : 0,
+      "unlisted" : 48955
+    },
+    "TSS.StylesheetArchive.1" : {
+      "occurrences" : 48955,
+      "strength" : "weak",
+      "unexplainedListed" : 0,
+      "unlisted" : 1771
+    },
+    "TSS.StylesheetArchive.IdentifiedStyleEntry.2" : {
+      "occurrences" : 47184,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSS.StylesheetArchive.StyleChildrenEntry.1" : {
+      "occurrences" : 633,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSS.StylesheetArchive.StyleChildrenEntry.2" : {
+      "occurrences" : 1352,
+      "strength" : "weak",
+      "unexplainedListed" : 0,
+      "unlisted" : 1352
+    },
+    "TSS.StylesheetArchive.VersionedStyles.1" : {
+      "occurrences" : 2895,
+      "strength" : "weak",
+      "unexplainedListed" : 0,
+      "unlisted" : 9
+    },
+    "TSS.ThemeArchive.4" : {
+      "occurrences" : 106,
+      "strength" : "weak",
+      "unexplainedListed" : 0,
+      "unlisted" : 106
+    },
+    "TST.TableStyleNetworkArchive.1" : {
+      "occurrences" : 1272,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.10" : {
+      "occurrences" : 1272,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.11" : {
+      "occurrences" : 1272,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.13" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.14" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.15" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.16" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.17" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.18" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.19" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.2" : {
+      "occurrences" : 1272,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.20" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.21" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.22" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.23" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.24" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.25" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.26" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.27" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.28" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.29" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.3" : {
+      "occurrences" : 1272,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.30" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.31" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.32" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.33" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.34" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.35" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.4" : {
+      "occurrences" : 1272,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.5" : {
+      "occurrences" : 1272,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.6" : {
+      "occurrences" : 1272,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.7" : {
+      "occurrences" : 1272,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.8" : {
+      "occurrences" : 1272,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStyleNetworkArchive.9" : {
+      "occurrences" : 1272,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.TableStylePresetArchive.3" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TST.ThemePresetsArchive.1" : {
+      "occurrences" : 636,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSWP.ObjectAttributeTable.ObjectAttribute.2" : {
+      "occurrences" : 31560,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
+    "TSWP.ParagraphStylePropertiesArchive.40" : {
+      "occurrences" : 7775,
+      "strength" : "strong",
+      "unexplainedListed" : 0,
+      "unlisted" : 0
+    },
     "TSWP.ShapeInfoArchive.2" : {
-      "occurrences" : 14770,
+      "occurrences" : 13296,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     },
     "TSWP.ShapeInfoArchive.4" : {
-      "occurrences" : 11716,
+      "occurrences" : 13296,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     },
     "TSWP.ShapeStylePropertiesArchive.10" : {
-      "occurrences" : 791,
+      "occurrences" : 1802,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     },
     "TSWP.StorageArchive.2" : {
-      "occurrences" : 15106,
+      "occurrences" : 14938,
       "strength" : "weak",
       "unexplainedListed" : 0,
-      "unlisted" : 15106
+      "unlisted" : 14938
     },
     "TSWP.ThemePresetsArchive.1" : {
-      "occurrences" : 142,
+      "occurrences" : 532,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     },
     "TSWP.ThemePresetsArchive.6" : {
-      "occurrences" : 176,
+      "occurrences" : 640,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     },
     "TSWP.ThemePresetsArchive.7" : {
-      "occurrences" : 309,
+      "occurrences" : 1216,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     },
     "TSWP.ThemePresetsArchive.8" : {
-      "occurrences" : 6,
+      "occurrences" : 636,
       "strength" : "strong",
       "unexplainedListed" : 0,
       "unlisted" : 0
     }
   },
   "keynoteVersion" : "15.4",
-  "payloads" : 54348,
-  "source" : "deckmonkey reference-strength over 28 Keynote-authored deck(s)"
+  "payloads" : 127028,
+  "source" : "deckmonkey reference-strength over 106 deck(s) saved only by Keynote 15.4"
 }

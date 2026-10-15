@@ -10,3 +10,10 @@ DerivedData/
 /tmp/
 .deckmonkey-corpus
 .venv/
+# The generated corpus stays local: decks, goldens, manifest and hostile copies are rebuilt
+# from the committed scripts with `make corpus` (macOS, Keynote). No deck goes to GitHub.
+/Corpus/templates/
+/Corpus/features/
+/Corpus/hostile/
+/Corpus/manifest.json
+/Corpus/**/*.golden.pdf

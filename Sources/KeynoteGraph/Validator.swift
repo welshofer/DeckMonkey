@@ -1,5 +1,7 @@
 import Foundation
 import IWAArchive
+import IWASchema
+import SwiftProtobuf
 
 /// A problem the validator found. Errors block `save`; warnings are reported.
 public struct ValidationIssue: Equatable, Sendable, CustomStringConvertible {
@@ -13,6 +15,8 @@ public struct ValidationIssue: Equatable, Sendable, CustomStringConvertible {
         case danglingObjectReference(from: UInt64, to: UInt64)
         case unknownType(UInt32, identifier: UInt64)
         case missingDataFile(String)
+        /// A TSWP.StorageArchive offset table out of order or past its text (invariant 8).
+        case textOffset(identifier: UInt64, TextOffsets.Problem)
     }
 
     public let severity: Severity
@@ -28,13 +32,15 @@ public struct ValidationIssue: Equatable, Sendable, CustomStringConvertible {
             return "\(severity.rawValue): object \(id) has type \(type) not in the pinned registry"
         case .missingDataFile(let name):
             return "\(severity.rawValue): Data/ entry \(name) is missing"
+        case .textOffset(let id, let problem):
+            return "\(severity.rawValue): text storage \(id): \(problem)"
         }
     }
 }
 
-/// The pre-write checks of invariant 8. Phase 0 covers what the raw store can see: identifiers,
-/// header-declared references, merge records. Payload-level checks (offset tables, `DataReference`
-/// → `DataInfo` → file) arrive with the typed layer.
+/// The pre-write checks of invariant 8: duplicate identifiers, dangling strong (listed) references,
+/// unknown types, and text offset tables. `DataReference` → `DataInfo` → file arrives with image
+/// replace (Phase 2), the first operation that can break it.
 public enum Validator {
     public static func validate(_ document: KeynoteDocument) -> [ValidationIssue] {
         var issues = [ValidationIssue]()
@@ -62,6 +68,22 @@ public enum Validator {
                 }
             }
         }
+        // Invariant 8 for text: offset tables strictly increasing and within the UTF-16 text length
+        // (0 violations in 23,248 Keynote-authored storages; an index may equal the length).
+        for component in document.store.components {
+            for record in component.records {
+                for (i, info) in record.info.messageInfos.enumerated() where info.type == storageArchiveType && info.baseMessageIndex == nil {
+                    guard i < record.payloads.count,
+                          let storage = try? TSWP_StorageArchive(serializedBytes: record.payloads[i], extensions: Schema.extensions, partial: true)
+                    else { continue }
+                    for problem in TextOffsets.problems(in: storage) {
+                        issues.append(ValidationIssue(severity: .error, kind: .textOffset(identifier: record.identifier, problem)))
+                    }
+                }
+            }
+        }
         return issues
     }
+
+    static let storageArchiveType: UInt32 = 2001
 }

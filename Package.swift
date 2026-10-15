@@ -41,7 +41,7 @@ let package = Package(
             dependencies: ["IWAArchive", "IWASchema", "IWAContainer", .product(name: "SwiftProtobuf", package: "swift-protobuf")]),
         .target(
             name: "DeckMonkey",
-            dependencies: ["KeynoteGraph", "IWAArchive", "IWAContainer", "IWASnappy", .product(name: "Rostrum", package: "rostrum")]),
+            dependencies: ["KeynoteGraph", "IWAArchive", "IWAContainer", "IWASchema", "IWASnappy", .product(name: "Rostrum", package: "rostrum"), .product(name: "SwiftProtobuf", package: "swift-protobuf")]),
         .executableTarget(name: "DeckMonkeyCLI", dependencies: ["DeckMonkey"], path: "Sources/DeckMonkeyCLI"),
         .testTarget(name: "IWASnappyTests", dependencies: ["IWASnappy"]),
         .testTarget(name: "IWAArchiveTests", dependencies: ["IWAArchive", "IWASnappy"]),
