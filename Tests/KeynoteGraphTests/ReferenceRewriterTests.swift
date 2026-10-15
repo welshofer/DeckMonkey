@@ -1,0 +1,63 @@
+import Foundation
+import IWASchema
+import SwiftProtobuf
+import Testing
+@testable import KeynoteGraph
+
+@Suite("Reference rewriter")
+struct ReferenceRewriterTests {
+    @Test("a rewritten reference re-decodes with the new identifier; unknown fields and other bytes survive")
+    func synthetic() throws {
+        let index = try FieldIndex.load(version: TypeRegistry.pinnedVersion)
+        var node = KN_SlideNodeArchive()
+        node.isSkipped = false
+        node.hasBuilds_p = false
+        node.hasTransition_p = false
+        node.slide = TSP_Reference.with { $0.identifier = 300 }        // 2 varint bytes
+        node.children = [TSP_Reference.with { $0.identifier = 5 }]
+        node.thumbnails = [TSP_DataReference.with { $0.identifier = 300 }] // a data reference: untouched
+        var bytes: Data = try node.serializedData(partial: true)
+        bytes.append(contentsOf: [0xF8, 0x3E, 0x07])                    // field 999: unknown
+        let rewriter = ReferenceRewriter(index: index, identifiers: [300: 1_000_000, 5: 6])
+        let out = try rewriter.rewrite(bytes, message: "KN.SlideNodeArchive")
+        let back = try KN_SlideNodeArchive(serializedBytes: out, partial: true)
+        #expect(back.slide.identifier == 1_000_000 && back.children.map(\.identifier) == [6])
+        #expect(back.thumbnails.map(\.identifier) == [300])
+        #expect(Array(back.unknownFields.data) == [0xF8, 0x3E, 0x07])
+        #expect(try ReferenceRewriter(index: index, identifiers: [:]).rewrite(bytes, message: "KN.SlideNodeArchive") == bytes)
+    }
+
+    /// Completeness against the decoder: every reference the Visitor derives, the rewriter moves.
+    @Test("in every corpus payload, mapping each reference r → r+1 re-derives exactly the shifted list", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus"))
+    func corpusCompleteness() throws {
+        let index = try FieldIndex.load(version: TypeRegistry.pinnedVersion)
+        var payloads = 0, references = 0
+        var failures = [String]()
+        for url in CorpusTests.corpusFiles() {
+            guard let document = try? KeynoteDocument.open(url) else { continue }
+            for component in document.store.components {
+                for record in component.records {
+                    for (i, info) in record.info.messageInfos.enumerated() where info.baseMessageIndex == nil {
+                        guard let type = Schema.messageType(for: info.type),
+                              let derived = try? ReferenceDerivation.derive(type: info.type, payload: record.payloads[i]) else { continue }
+                        payloads += 1
+                        let identity = try ReferenceRewriter(index: index, identifiers: Dictionary(derived.objects.map { ($0, $0) }, uniquingKeysWith: { a, _ in a }))
+                            .rewrite(record.payloads[i], message: type.protoMessageName)
+                        if identity != record.payloads[i], failures.count < 10 { failures.append("\(url.lastPathComponent) \(record.identifier): identity map changed bytes") }
+                        guard !derived.objects.isEmpty else { continue }
+                        references += derived.objects.count
+                        let shift = Dictionary(derived.objects.map { ($0, $0 + 1) }, uniquingKeysWith: { a, _ in a })
+                        let out = try ReferenceRewriter(index: index, identifiers: shift).rewrite(record.payloads[i], message: type.protoMessageName)
+                        let again = try ReferenceDerivation.derive(type: info.type, payload: out)
+                        if again.objects != derived.objects.map({ $0 + 1 }) || again.data != derived.data || again.hasUnknownFields != derived.hasUnknownFields {
+                            if failures.count < 10 { failures.append("\(url.lastPathComponent) \(record.identifier) type \(info.type): \(derived.objects.prefix(4)) → \(again.objects.prefix(4))") }
+                        }
+                    }
+                }
+            }
+        }
+        print("rewriter: \(payloads) payloads, \(references) references shifted and re-derived, \(failures.count) failure(s)")
+        failures.forEach { print("  \($0)") }
+        #expect(failures.isEmpty)
+    }
+}

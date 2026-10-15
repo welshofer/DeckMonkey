@@ -68,6 +68,53 @@ struct SlideEditTests {
         #expect(deleted > 100)
     }
 
+    /// AT-20 shape over the corpus: clone a slide in every deck; the copy shares no identifier with
+    /// its source, every UUID stays unique across components, and the deck saves, reopens, validates.
+    @Test("clone a slide in every corpus deck: fresh identifiers and UUIDs, valid, nothing orphaned", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus"))
+    func corpusClone() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("deckmonkey-clone-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        var cloned = 0, refused = 0
+        var failures = [String]()
+        func fail(_ s: String) { if failures.count < 12 { failures.append(s) } }
+        for (n, url) in CorpusTests.corpusFiles().enumerated() {
+            guard var document = try? KeynoteDocument.open(url), document.writtenByNewerKeynote == nil,
+                  let list = try? document.slideList(), !list.isEmpty else { continue }
+            // The first slide the Phase 3a rules accept.
+            var report: KeynoteDocument.SlideCloneReport?
+            for i in list.indices {
+                if let r = try? document.cloneSlide(at: i) { report = r; break }
+            }
+            guard let report else { refused += 1; continue }
+            do {
+                let out = dir.appendingPathComponent("\(n).key")
+                let sourceIDs = Set(document.store.components.first { $0.name == list.first { $0.slide == report.source }!.component }!.records.map(\.identifier))
+                let copyIDs = Set(document.store.components.first { $0.name == report.component }!.records.map(\.identifier))
+                if !sourceIDs.isDisjoint(with: copyIDs) { fail("\(url.lastPathComponent): the copy shares identifiers with its source") }
+                try document.save(to: out)
+                let reread = try KeynoteDocument.open(out)
+                if let e = reread.validate().first(where: { $0.severity == .error }) { fail("\(url.lastPathComponent): \(e)") }
+                let after = try reread.slideList().map(\.slide)
+                if after.count != list.count + 1 || !after.contains(report.slide) { fail("\(url.lastPathComponent): slide list") }
+                let m = try #require(reread.packageMetadata)
+                let uuids = m.components.flatMap(\.objectUuidMapEntries).map { "\($0.uuid.lower):\($0.uuid.upper)" }
+                if Set(uuids).count != uuids.count { fail("\(url.lastPathComponent): duplicate UUIDs") }
+                if m.lastObjectIdentifier < reread.store.highestIdentifier { fail("\(url.lastPathComponent): last_object_identifier below the store") }
+                var referenced = Set<UInt64>()
+                for c in reread.store.components { for r in c.records { for i in r.info.messageInfos { referenced.formUnion(i.dataReferences) } } }
+                if m.datas.contains(where: { !referenced.contains($0.identifier) }) { fail("\(url.lastPathComponent): orphaned data") }
+                cloned += 1
+            } catch {
+                fail("\(url.lastPathComponent): \(error)")
+            }
+        }
+        print("clone: \(cloned) decks cloned, saved and validated; \(refused) refused; \(failures.count) failure(s)")
+        failures.forEach { print("  \($0)") }
+        #expect(failures.isEmpty)
+        #expect(cloned > 100)
+    }
+
     @Test("refusals: index out of range, the last slide")
     func refusals() throws {
         let url = CorpusTests.repoRoot.appendingPathComponent("Corpus/features/notes-skipped.key")

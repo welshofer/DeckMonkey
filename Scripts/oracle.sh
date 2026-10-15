@@ -190,8 +190,10 @@ PDFBOUNDS="null"
 START=$(date +"%Y-%m-%d %H:%M:%S")
 RUN_START=$(date +%s)
 
-# Seconds since the last keyboard or mouse event anywhere on the machine (IOHIDSystem).
-hid_idle() { ioreg -c IOHIDSystem | awk '/HIDIdleTime/ { printf "%d", $NF / 1000000000; exit }'; }
+# Seconds since the last keyboard or mouse event anywhere on the machine (IOHIDSystem). awk reads
+# all of ioreg's output: an early `exit` gives ioreg SIGPIPE, which pipefail turns into a failure
+# and the guard into a silent no-op.
+hid_idle() { ioreg -c IOHIDSystem | awk '/HIDIdleTime/ && !seen { printf "%d", $NF / 1000000000; seen = 1 }'; }
 
 BEFORE=$(applescript "$AS_DIALOGS" || true)
 trap 'applescript "$AS_CLOSE" "$TOKEN" "$BEFORE" >/dev/null || true' EXIT
@@ -239,7 +241,8 @@ fi
 # A person's keyboard or mouse input during the run makes the verdict untrustworthy: Keynote is in
 # front, so typing lands in the copy, and Keynote's `modified` flag does not flip while a text edit
 # is still open. The oracle itself posts no input until cleanup, which runs after this check.
-IDLE=$(hid_idle || echo "")
+IDLE=$(hid_idle)
+[[ -n "$IDLE" ]] || { echo "oracle: cannot read the HID idle time" >&2; exit 1; }
 ELAPSED=$(( $(date +%s) - RUN_START ))
 if [[ -n "$IDLE" && "$IDLE" -lt "$ELAPSED" ]]; then
   rm -f "$PDF"

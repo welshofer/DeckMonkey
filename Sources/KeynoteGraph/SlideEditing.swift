@@ -8,8 +8,10 @@ import SwiftProtobuf
 /// points at its slide), and every slide lives in its own component, `Index/Slide-<id>.iwa`. In the
 /// decks 15.4 alone saved, nothing outside a slide's component holds a strong reference into it but
 /// its node: moving a slide reorders the list; deleting one removes the node, the slide's component,
-/// its `ComponentInfo` and the references other components keep to it, and any data only the
-/// deleted objects used (DataInfo, file, data-metadata entry).
+/// its `ComponentInfo` and the references other components keep to it, the objects elsewhere that
+/// only the slide kept alive (as Keynote's own save collects them: a table's model and tiles, a
+/// chart's non-style archives), components that leaves empty, and any data only the removed
+/// objects used (DataInfo, file, data-metadata entry).
 ///
 /// Refused rather than guessed: a tree kept under a root node (Keynote 6.5) or nodes with children
 /// (nested slides), deleting the last slide, and deleting a slide whose component something else
@@ -102,10 +104,90 @@ extension KeynoteDocument {
             }
         }
 
-        // Data the doomed objects used: candidates for removal once they are gone.
+        // What only the slide kept alive goes with it, as Keynote's own save would collect it: an
+        // object outside the component whose every strong referrer is going (a table's model and
+        // tiles, a chart's non-style archives, their captions). Strong references are the header
+        // lists (invariant 4); the document and package metadata are roots.
+        var referrers = [UInt64: Set<UInt64>]()
+        for component in store.components {
+            for record in component.records {
+                for info in record.info.messageInfos {
+                    for target in info.objectReferences { referrers[target, default: []].insert(record.identifier) }
+                }
+            }
+        }
+        var gone = doomed
+        var frontier = Array(doomed)
+        while let next = frontier.popLast() {
+            guard let record = store.record(for: next) else { continue }
+            for target in record.info.messageInfos.flatMap(\.objectReferences)
+            where !gone.contains(target) && target > 2 && target != showID && store.entry(for: target) != nil {
+                if let from = referrers[target], from.isSubset(of: gone) {
+                    gone.insert(target)
+                    frontier.append(target)
+                }
+            }
+        }
+        // The calculation engine tracks each formula owner (a table, a chart) through a dependency
+        // record that names its owner; Keynote drops the records of owners that are gone. Drop them
+        // from the tracker's list, then collect them and what only they kept alive (their tiles).
+        // Known limit: after deleting a table, Keynote's next save also rebuilds a few dependency
+        // records of the tables that remain (tables.key: 17 of ours become 14 of its own); the deck
+        // opens clean and renders identically, and that cache is Keynote's to maintain.
+        let calcEngineType: UInt32 = 4000, ownerDependenciesType: UInt32 = 4008
+        if let engineID = store.identifiers.first(where: { store.record(for: $0)?.info.messageInfos.first?.type == calcEngineType }),
+           !gone.contains(engineID), var engine = decoded(TSCE_CalculationEngineArchive.self, engineID) {
+            // Owners are named by reference or by UUID (a table registers several owners, each with
+            // a UUID inside the table's archives): collect the UUIDs the removed objects carry.
+            var goneUUIDs = Set<ReferenceRewriter.UUIDValue>()
+            for id in gone {
+                guard let record = store.record(for: id) else { continue }
+                for (i, info) in record.info.messageInfos.enumerated() where info.baseMessageIndex == nil {
+                    if let d = try? ReferenceDerivation.derive(type: info.type, payload: record.payloads[i]) { goneUUIDs.formUnion(d.uuids) }
+                }
+            }
+            let orphaned = engine.dependencyTracker.formulaOwnerDependencies.map(\.identifier).filter { id in
+                guard store.record(for: id)?.info.messageInfos.first?.type == ownerDependenciesType,
+                      let deps = decoded(TSCE_FormulaOwnerDependenciesArchive.self, id) else { return false }
+                if deps.hasFormulaOwner && gone.contains(deps.formulaOwner.identifier) { return true }
+                let owner = ReferenceRewriter.UUIDValue(lower: deps.formulaOwnerUid.lower, upper: deps.formulaOwnerUid.upper)
+                if goneUUIDs.contains(owner) { return true }
+                // Sub-owners (filters, summaries, categories) name the table as their base owner.
+                return deps.hasBaseOwnerUid && goneUUIDs.contains(.init(lower: deps.baseOwnerUid.lower, upper: deps.baseOwnerUid.upper))
+            }
+            if !orphaned.isEmpty {
+                engine.dependencyTracker.formulaOwnerDependencies.removeAll { orphaned.contains($0.identifier) }
+                try replacePayload(of: engineID, with: try engine.serializedData(partial: true))
+                referrers = [:]
+                for component in store.components {
+                    for record in component.records {
+                        for info in record.info.messageInfos {
+                            for target in info.objectReferences { referrers[target, default: []].insert(record.identifier) }
+                        }
+                    }
+                }
+                for id in orphaned where referrers[id, default: []].isSubset(of: gone) {
+                    gone.insert(id)
+                    frontier.append(id)
+                }
+                while let next = frontier.popLast() {
+                    guard let record = store.record(for: next) else { continue }
+                    for target in record.info.messageInfos.flatMap(\.objectReferences)
+                    where !gone.contains(target) && target > 2 && target != showID && store.entry(for: target) != nil {
+                        if let from = referrers[target], from.isSubset(of: gone) {
+                            gone.insert(target)
+                            frontier.append(target)
+                        }
+                    }
+                }
+            }
+        }
+        let collected = gone.subtracting(doomed)
+
+        // Data the removed objects used: candidates for removal once they are gone.
         var candidates = [UInt64]()
         for component in store.components {
-            for record in component.records where doomed.contains(record.identifier) {
+            for record in component.records where gone.contains(record.identifier) {
                 for info in record.info.messageInfos { candidates += info.dataReferences }
             }
         }
@@ -115,21 +197,31 @@ extension KeynoteDocument {
         store.removeRecords([entry.node])
         store.removeComponent(entry.component)
         package.remove(entry.component)
+        store.removeRecords(collected)
+        // Components the collection emptied go too.
+        let emptied = store.components.filter { $0.records.isEmpty }.map(\.name)
+        for name in emptied {
+            store.removeComponent(name)
+            package.remove(name)
+        }
 
         // The component's ComponentInfo, other components' references to it, and data-index
         // entries for objects that no longer exist.
-        let locator = String(entry.component.dropFirst("Index/".count).dropLast(".iwa".count))
-        let removedComponentIDs = Set(metadata.components.filter { ($0.locator.isEmpty ? $0.preferredLocator : $0.locator) == locator }.map(\.identifier))
+        let locators = Set(([entry.component] + emptied).map { String($0.dropFirst("Index/".count).dropLast(".iwa".count)) })
+        let removedComponentIDs = Set(metadata.components.filter { locators.contains($0.locator.isEmpty ? $0.preferredLocator : $0.locator) }.map(\.identifier))
         metadata.components.removeAll { removedComponentIDs.contains($0.identifier) }
         for c in metadata.components.indices {
-            metadata.components[c].externalReferences.removeAll { removedComponentIDs.contains($0.componentIdentifier) }
+            metadata.components[c].externalReferences.removeAll {
+                removedComponentIDs.contains($0.componentIdentifier) || ($0.hasObjectIdentifier && gone.contains($0.objectIdentifier))
+            }
+            metadata.components[c].objectUuidMapEntries.removeAll { gone.contains($0.identifier) }
             for d in metadata.components[c].dataReferences.indices {
-                metadata.components[c].dataReferences[d].objectReferenceList.removeAll { doomed.contains($0.objectIdentifier) }
+                metadata.components[c].dataReferences[d].objectReferenceList.removeAll { gone.contains($0.objectIdentifier) }
             }
             metadata.components[c].dataReferences.removeAll { $0.objectReferenceList.isEmpty }
         }
         let removed = try commitData([], replacing: candidates, metadata: &metadata)
-        return SlideDeleteReport(slide: entry.slide, component: entry.component, removedObjects: doomed.count,
+        return SlideDeleteReport(slide: entry.slide, component: entry.component, removedObjects: gone.count,
                                  removedData: removed.data, removedFiles: removed.files)
     }
 }

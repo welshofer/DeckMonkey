@@ -62,6 +62,19 @@ public struct ObjectStore: Sendable {
         reindex()
     }
 
+    /// Adds a new component (one `.iwa`) holding these records, then re-indexes.
+    public mutating func addComponent(_ name: String, records: [ArchiveRecord]) {
+        components.append(Component(name: name, records: records))
+        reindex()
+    }
+
+    /// Appends a record to an existing component, then re-indexes.
+    public mutating func append(_ record: ArchiveRecord, to component: String) {
+        guard let c = components.firstIndex(where: { $0.name == component }) else { return }
+        components[c].records.append(record)
+        reindex()
+    }
+
     /// Rebuilds the identifier index from the components, by the same two-pass rules as loading.
     private mutating func reindex() {
         byIdentifier.removeAll()

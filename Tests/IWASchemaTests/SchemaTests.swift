@@ -27,7 +27,7 @@ struct SchemaTests {
         let strength = try ReferenceStrength.load(version: TypeRegistry.pinnedVersion)
         #expect(strength.keynoteVersion == "15.4")
         // Learned from the 118 Corpus/templates and Corpus/features decks Keynote 15.4 authored.
-        #expect(strength.fields.count == 210)
+        #expect(strength.fields.count == 214)
         #expect(strength.strength(of: "TSCH.ChartArchive.4") == .weak)
         #expect(strength.strength(of: "TST.TableModelArchive.48") == .weak)
         #expect(strength.strength(of: "KN.SlideNodeArchive.2") == .strong)     // the slide a node shows

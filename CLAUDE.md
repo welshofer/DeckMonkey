@@ -158,4 +158,13 @@ runner that does not exist yet. Open: Keynote-edited images (kept originals, adj
 refused; `PackageMetadata.components[].external_references` is not yet re-derived (no edit so far
 changes a cross-component reference).
 
+Phase 3a (2026-10-15): `deckmonkey slide list | move | delete | clone`. Delete removes the slide's
+component and collects what only it kept alive (table and chart internals, their calculation-engine
+dependency records); clone copies the component with fresh identifiers and UUIDs through the
+schema-driven ReferenceRewriter (complete on 686,910 corpus references) and refuses slides with
+tables, charts or builds. `Scripts/gate1/gate3.py`: 25/26 with every page pixel-identical and
+Keynote's re-save idempotent (AT-23, `Scripts/resave.sh`); the exception is deleting a slide that
+holds a table, after which Keynote's save rebuilds a few dependency records of the remaining tables
+(17 → 14). Open: cross-deck clone (3b), cloning tables/charts/builds, corpus ≥ 150 for Gate 3.
+
 Leave the machine alone while the oracle runs: input during a run fails the verdict ("rerun").

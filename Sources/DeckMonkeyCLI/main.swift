@@ -48,8 +48,10 @@ enum CLI {
       slide list <file>              the slides in show order: index, node, slide, component
       slide move <file> --index <n> --to <m> -o <out.key>
       slide delete <file> --index <n> -o <out.key>
-                                     move or delete a slide (0-based indexes, show order); delete
-                                     removes the slide's component and data only it used
+      slide clone <file> --index <n> [--to <m>] -o <out.key>
+                                     move, delete or duplicate a slide (0-based indexes, show order);
+                                     delete removes the slide's component and data only it used; a
+                                     clone goes after its source unless --to says where
       version
 
     Exit codes: 0 pass, 1 fail, 2 usage, 3 refused (Keynote '09 APXL, out of scope).
@@ -485,6 +487,9 @@ func runSlide(_ args: [String]) throws {
         guard let to = option("--to", in: args).flatMap(Int.init) else { fail(CLI.usage, code: 2) }
         try document.moveSlide(from: i, to: to)
         print("moved slide \(i) to \(to)")
+    case "clone":
+        let report = try document.cloneSlide(at: i, to: option("--to", in: args).flatMap(Int.init))
+        print("cloned slide \(i) (\(report.source)) as \(report.slide) in \(report.component): \(report.copiedObjects) objects")
     case "delete":
         let report = try document.deleteSlide(at: i)
         print("deleted slide \(i) (\(report.slide), \(report.component)): \(report.removedObjects) objects"

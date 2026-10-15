@@ -116,7 +116,8 @@ schema: schema-tools
 	  $(SCHEMA_TOOLS)/protodump extract "$$app" --out $(SCHEMA_PROTO) | tail -1 && \
 	  $(SCHEMA_TOOLS)/protodump generate $(SCHEMA_PROTO)/descriptors.pb --plugin $(SCHEMA_TOOLS)/protoc-gen-swift --out $(SCHEMA_SWIFT) && \
 	  python3 -I Scripts/schema/registry-dump.py "$$app" $(SCHEMA_PROTO)/descriptors.pb --out $(SCHEMA_REGISTRY) && \
-	  $(SCHEMA_TOOLS)/protodump dispatch $(SCHEMA_PROTO)/descriptors.pb $(SCHEMA_REGISTRY) $(SCHEMA_SWIFT) --out $(SCHEMA_SWIFT)/Dispatch.swift
+	  $(SCHEMA_TOOLS)/protodump dispatch $(SCHEMA_PROTO)/descriptors.pb $(SCHEMA_REGISTRY) $(SCHEMA_SWIFT) --out $(SCHEMA_SWIFT)/Dispatch.swift && \
+	  cp $(SCHEMA_PROTO)/descriptors.pb Sources/IWASchema/Registry/descriptors-$(SCHEMA_VERSION).pb
 
 ## Learn which reference fields the pinned Keynote lists (invariant 4) from the decks it authored
 ## (Corpus/templates and Corpus/features, built by `make corpus`); decks with any other save in

@@ -12,6 +12,8 @@ public struct DerivedReferences: Equatable, Sendable {
     public var data: [UInt64] = []
     /// Where each entry of `objects` was found: `<message full name>.<field number>`.
     public var objectFields: [String] = []
+    /// Every `TSP.UUID` in the payload, as (lower, upper).
+    public var uuids: [ReferenceRewriter.UUIDValue] = []
     /// True when the decoded payload kept unknown fields: references inside them cannot be seen.
     public var hasUnknownFields = false
 }
@@ -64,6 +66,8 @@ struct ReferenceCollector: Visitor {
             found.objectFields.append("\(enclosing.last ?? "").\(fieldNumber)")
         } else if let reference = value as? TSP_DataReference {
             found.data.append(reference.identifier)
+        } else if let uuid = value as? TSP_UUID {
+            found.uuids.append(.init(lower: uuid.lower, upper: uuid.upper))
         } else {
             enclosing.append(M.protoMessageName)
             defer { enclosing.removeLast() }
