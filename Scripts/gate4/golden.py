@@ -32,7 +32,15 @@ def slide_script(slide, meta):
     def body_(text):
         if text is not None: out.append(f"set object text of default body item of s to {q(text)}")
     def box(text):
-        if text is not None: out.append(f"set object text of text item 1 of s to {q(text)}")
+        # Text items include the placeholders (the body twice, a hidden title at width 0): the free
+        # text box is the first item still empty, with a width, once the body is set (called after).
+        if text is None: return
+        out.append("set box to missing value")
+        out.append("repeat with i from 1 to count of text items of s")
+        out.append("  if box is missing value and (object text of text item i of s) is \"\" and (width of text item i of s) > 0 then set box to text item i of s")
+        out.append("end repeat")
+        out.append('if box is missing value then error "no free text box on this master"')
+        out.append(f"set object text of box to {q(text)}")
     if layout == "title":
         title_(title or meta.get("title")); body_(body.get("subtitle") or (meta.get("subtitle") if title is None else None))
     elif layout == "sectionHeader":
