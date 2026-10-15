@@ -29,3 +29,10 @@ Corpus/features/tables.key	clone 0	AT-20
 Corpus/features/tables.key	clone 1	AT-20
 Corpus/features/charts.key	clone 1	AT-20
 Corpus/features/charts.key	clone 9	AT-20
+Corpus/features/cross-table.key	clone 0	AT-20
+Corpus/features/cross-table.key	clone 1	AT-20
+Corpus/features/cross-table.key	delete 1	AT-21
+Corpus/features/cross-table.key	move 1 0	AT-22
+Corpus/features/mixed.key	clone 0	AT-20
+Corpus/features/layouts.key	clone 5	AT-20
+Corpus/features/layouts.key	delete 3	AT-21

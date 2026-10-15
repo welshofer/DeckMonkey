@@ -171,10 +171,21 @@ builds. Charts copy like any drawable (Keynote's duplicate registers nothing for
 a fresh `table_id`, moves its owner family in every UUID and CFUUID, and registers it as Keynote's
 own duplicate does (owner-map twins, dependency records and tiles with remapped internal owner
 ids): same internal ids and records as Keynote's duplicate, and the copy recalculates on its own
-(checked through AppleScript cell edits). **Gate 3a passed 30/30** (`Scripts/gate1/gate3.py`, 2026-10-15, table and chart clones included) with every
+(checked through AppleScript cell edits). **Gate 3a passed 30/30** (`Scripts/gate1/gate3.py`, 2026-10-15, table and chart clones included; 6 of 7 later cases on the new feature decks passed, and `layouts.key delete 3` awaits a Keynote restart, see below) with every
 page pixel-identical and Keynote's re-save idempotent (AT-23, `Scripts/resave.sh`). A deleted
 table's calculation-engine owners go as a family: its `table_id` UUID is the base owner, the
 others sit at a small offset in the low word, and sub-owners name it as `base_owner_uid`; their
 dependency records, owner-ID map entries and UUID-map entries are removed. Open: cross-deck clone (3b), cloning builds, corpus ≥ 150 for Gate 3.
+
+Corpus at 150 (2026-10-15): four more feature decks (`cross-table`: a formula on one slide
+reading a table on another, which needs the slide-qualified `Slide 1::Inputs::B2`; `layouts`: every
+master layout; `mixed`: table, chart, image and shape on one slide; `text-styles`). Clone and delete
+keep cross-table formulas working (AppleScript cell edits: a cloned dependent recalculates from its
+source; a cloned source is independent; deleting a referenced table gives `#REF!`, exactly as
+Keynote's own delete). The strength table now has 215 fields from 122 decks.
+
+Keynote on the M4 began refusing every oracle copy ("can't be opened right now | Operation not
+permitted") after several hundred opens in one session; only a Keynote restart clears it, and the
+user's own documents are open in Keynote, so that restart is the user's call.
 
 Leave the machine alone while the oracle runs: input during a run fails the verdict ("rerun").

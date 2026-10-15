@@ -243,6 +243,65 @@ feature many-slides '
           if body showing of x then set object text of default body item of x to ("Body text for slide " & i)
         end repeat'
 
+# A formula on one slide reading a table on another: clone and delete must keep cross-table
+# references (and the calculation engine's view of them) straight. Across slides Keynote wants
+# the slide-qualified form (`Slide 1::Inputs::B2`); `Inputs::B2` alone becomes #REF!.
+feature cross-table '
+        set base layout of s to blank
+        tell s to set inputs to make new table with properties {row count:4, column count:3, name:"Inputs"}
+        set value of cell "B2" of inputs to 5
+        set value of cell "C2" of inputs to 7
+        set value of cell "B3" of inputs to 11
+        set value of cell "C3" of inputs to 13
+        set value of cell "B4" of inputs to "=B2+B3"
+        tell d to set s2 to make new slide with properties {base layout:blank}
+        tell s2 to set totals to make new table with properties {row count:3, column count:2, name:"Totals"}
+        set value of cell "A2" of totals to "Sum"
+        set value of cell "B2" of totals to "=SUM(Slide 1::Inputs::B2:C3)"
+        set value of cell "A3" of totals to "Product"
+        set value of cell "B3" of totals to "=Slide 1::Inputs::B2*Slide 1::Inputs::C2"'
+
+# Every slide layout of the theme, one slide each, with whatever placeholders it shows filled.
+feature layouts '
+        set ls to slide layouts of d
+        set first_ to true
+        repeat with l in ls
+          if first_ then
+            set target to s
+            set base layout of target to l
+            set first_ to false
+          else
+            tell d to set target to make new slide with properties {base layout:l}
+          end if
+          if title showing of target then set object text of default title item of target to "Layout " & (name of l)
+          if body showing of target then set object text of default body item of target to "Body of " & (name of l)
+        end repeat'
+
+# A table, a chart, an image and a shape sharing one slide.
+feature mixed '
+        set base layout of s to blank
+        tell s to set t to make new table with properties {row count:3, column count:3, position:{80, 80}, width:700, height:300}
+        set value of cell "B2" of t to 3
+        set value of cell "C2" of t to 4
+        set value of cell "C3" of t to "=B2*C2"
+        add chart s row names {"a", "b", "c"} column names {"x"} data {{1}, {2}, {3}} type vertical_bar_2d group by chart row
+        tell s to set i to make new image with properties {file:(POSIX file (assets & "/gradient.png"))}
+        set position of i to {80, 500}
+        tell s to make new shape with properties {position:{1000, 600}, width:400, height:300, object text:"A shape"}'
+
+# Several text items in different fonts, sizes and colors.
+feature text-styles '
+        set base layout of s to blank
+        set specs to {{"Helvetica", 24, {0, 0, 0}}, {"Georgia", 48, {0, 0, 65535}}, {"Courier", 18, {0, 32768, 0}}, {"Avenir Next", 64, {65535, 0, 32768}}}
+        set y to 80
+        repeat with sp in specs
+          tell s to set ti to make new text item with properties {object text:"Text in " & (item 1 of sp), position:{100, y}}
+          set font of object text of ti to (item 1 of sp)
+          set size of object text of ti to (item 2 of sp)
+          set color of object text of ti to (item 3 of sp)
+          set y to y + 200
+        end repeat'
+
 # --- Movie asset (a Keynote export of a template) and the run --------------------------------------
 
 if wants media; then
