@@ -19,8 +19,8 @@ struct DeckIRWriterTests {
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }
         var built = 0
-        let partsURL = Self.root.appendingPathComponent("Corpus/features/drawables.key")
-        let parts = FileManager.default.fileExists(atPath: partsURL.path) ? try KeynoteDocument.open(partsURL) : nil
+        let parts = try ["drawables", "charts"].map { Self.root.appendingPathComponent("Corpus/features/\($0).key") }
+            .filter { FileManager.default.fileExists(atPath: $0.path) }.map { try KeynoteDocument.open($0) }
         for template in Self.templates {
             let base = try KeynoteDocument.open(template)
             for fixture in Self.fixtures {
@@ -40,6 +40,13 @@ struct DeckIRWriterTests {
                     }
                 }
                 let joined = all.joined(separator: "\n").replacingOccurrences(of: "\u{2028}", with: "\n")
+                for (s, entry) in zip(ir.slides, try reread.slideList()) {
+                    if let c = s.body?.chart {
+                        let grids = reread.slideDrawables(entry.slide).compactMap { reread.chartGrid($0) }
+                        #expect(grids.count == 1 && grids[0].rows == c.series.map(\.name) && grids[0].columns == c.categories
+                                && grids[0].values == c.series.map(\.values), "\(fixture.lastPathComponent) \(s.id): chart data")
+                    }
+                }
                 for s in ir.slides {
                     let b = s.body
                     let strings = [b?.subtitle, b?.value, b?.label, b?.quote, b?.attribution, b?.claim, b?.contact, b?.callToAction, b?.kicker].compactMap { $0 }
@@ -60,8 +67,8 @@ struct DeckIRWriterTests {
     @Test("an unsupported layout and an empty deck are refused with typed errors", .enabled(if: !templates.isEmpty, "no Corpus/templates"))
     func refusals() throws {
         let base = try KeynoteDocument.open(Self.templates[0])
-        let chart = DeckIR(meta: Meta(title: "x"), slides: [IRSlide(id: "a", layout: "chart")])
-        #expect(throws: DeckIRWriter.Failure.unsupportedLayout(slide: "a", layout: "chart")) { try DeckIRWriter.build(chart, template: base) }
+        let chart = DeckIR(meta: Meta(title: "x"), slides: [IRSlide(id: "a", layout: "table")])
+        #expect(throws: DeckIRWriter.Failure.unsupportedLayout(slide: "a", layout: "table")) { try DeckIRWriter.build(chart, template: base) }
         #expect(throws: DeckIRWriter.Failure.emptyDeck) { try DeckIRWriter.build(DeckIR(meta: Meta(title: "x"), slides: []), template: base) }
     }
 }

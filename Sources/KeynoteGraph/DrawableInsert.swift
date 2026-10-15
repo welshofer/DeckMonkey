@@ -34,12 +34,15 @@ extension KeynoteDocument {
     @discardableResult
     public mutating func insertDrawable(_ drawable: UInt64, from source: KeynoteDocument, onto slide: UInt64, frame: Frame,
                                         paragraphs: [TextParagraphs.Paragraph]? = nil) throws -> UInt64 {
-        guard source.store.record(for: drawable)?.info.messageInfos.first?.type == Self.shapeInfoType else {
+        let sourceType = source.store.record(for: drawable)?.info.messageInfos.first?.type
+        guard sourceType == Self.shapeInfoType || sourceType == Self.chartDrawableType else {
             throw DrawableInsertFailure.notADrawable(drawable)
         }
         guard var slideArchive = decoded(KN_SlideArchive.self, slide), let component = store.entry(for: slide)?.component,
               var metadata = packageMetadata else { throw DrawableInsertFailure.noSlide(slide) }
-        let sourceSlide = source.decoded(TSWP_ShapeInfoArchive.self, drawable)?.super.super.parent.identifier ?? 0
+        let sourceSlide = sourceType == Self.chartDrawableType
+            ? source.decoded(TSCH_ChartDrawableArchive.self, drawable)?.super.parent.identifier ?? 0
+            : source.decoded(TSWP_ShapeInfoArchive.self, drawable)?.super.super.parent.identifier ?? 0
         var keep: Set<UInt64> = [sourceSlide]
         if let show = source.showIdentifier { keep.insert(show) }
         let copied = source.heldOnly(by: [drawable], referrers: source.referrerIndex(), keeping: keep)
@@ -98,6 +101,18 @@ extension KeynoteDocument {
         // its height automatic (size w × 0, flags 1, natural width w); a shape with a size has it
         // fixed (flags 3), its natural size and path scaled to match.
         let new = identifiers[drawable]!
+        if sourceType == Self.chartDrawableType {
+            // A chart: its geometry is fixed at the frame (flags 3, as AppleScript stores it).
+            guard var chart = decoded(TSCH_ChartDrawableArchive.self, new) else { throw DrawableInsertFailure.notADrawable(drawable) }
+            chart.super.geometry.position = .with { $0.x = Float(frame.x); $0.y = Float(frame.y) }
+            if frame.width > 0, frame.height > 0 {
+                chart.super.geometry.size = .with { $0.width = Float(frame.width); $0.height = Float(frame.height) }
+                chart.super.geometry.flags = 3
+            }
+            try replacePayload(of: new, with: try chart.serializedData(partial: true))
+            try finishInsert(new, onto: slide, slideArchive: &slideArchive, component: component, entries: entries, allocator: allocator)
+            return new
+        }
         guard var shape = decoded(TSWP_ShapeInfoArchive.self, new) else { throw DrawableInsertFailure.notADrawable(drawable) }
         var geometry = shape.super.super.geometry
         geometry.position = .with { $0.x = Float(frame.x); $0.y = Float(frame.y) }
@@ -130,16 +145,59 @@ extension KeynoteDocument {
             try setParagraphs(in: shape.ownedStorage.identifier, paragraphs)
         }
 
+        try finishInsert(new, onto: slide, slideArchive: &slideArchive, component: component, entries: entries, allocator: allocator)
+        return new
+    }
+
+    /// The new drawable joins the slide's drawables, last in z order; its UUID-map entries and the
+    /// identifier high-water mark go into the package metadata.
+    mutating func finishInsert(_ new: UInt64, onto slide: UInt64, slideArchive: inout KN_SlideArchive, component: String,
+                               entries: [TSP_ObjectUUIDMapEntry], allocator: IDAllocator) throws {
         slideArchive.ownedDrawables.append(TSP_Reference.with { $0.identifier = new })
         slideArchive.drawablesZOrder.append(TSP_Reference.with { $0.identifier = new })
         try replacePayload(of: slide, with: try slideArchive.serializedData(partial: true))
-        metadata = packageMetadata ?? metadata
+        guard var metadata = packageMetadata else { return }
         let locator = String(component.dropFirst("Index/".count).dropLast(".iwa".count))
         if let c = metadata.components.firstIndex(where: { ($0.locator.isEmpty ? $0.preferredLocator : $0.locator) == locator }) {
             metadata.components[c].objectUuidMapEntries += entries
         }
         metadata.lastObjectIdentifier = max(metadata.lastObjectIdentifier, allocator.highWaterMark)
         try replacePayload(of: 2, with: try metadata.serializedData(partial: true))
-        return new
+    }
+
+    static let chartDrawableType: UInt32 = 5021
+
+    /// The chart type of chart drawable `drawable`, nil when it is not a chart.
+    public func chartType(of drawable: UInt64) -> Int? {
+        guard store.record(for: drawable)?.info.messageInfos.first?.type == Self.chartDrawableType,
+              let chart = decoded(TSCH_ChartDrawableArchive.self, drawable) else { return nil }
+        return chart.TSCH_ChartArchive_unity.chartType.rawValue
+    }
+
+    /// Chart `drawable`'s data: series names (grid rows), categories (columns), values[row][column].
+    public func chartGrid(_ drawable: UInt64) -> (rows: [String], columns: [String], values: [[Double]])? {
+        guard store.record(for: drawable)?.info.messageInfos.first?.type == Self.chartDrawableType,
+              let chart = decoded(TSCH_ChartDrawableArchive.self, drawable) else { return nil }
+        let g = chart.TSCH_ChartArchive_unity.grid
+        return (g.rowName, g.columnName, g.gridRow.map { $0.value.map(\.numericValue) })
+    }
+
+    /// Replaces chart `drawable`'s data: series are the grid's rows (`rows` their names), categories
+    /// its columns, `values[row][column]`; each row and column gets a fresh unique id, as Keynote
+    /// gives the rows and columns `add chart` makes.
+    public mutating func setChartData(_ drawable: UInt64, rows: [String], columns: [String], values: [[Double]]) throws {
+        guard var chart = decoded(TSCH_ChartDrawableArchive.self, drawable) else { throw DrawableInsertFailure.notADrawable(drawable) }
+        var unity = chart.TSCH_ChartArchive_unity
+        var grid = unity.grid
+        grid.rowName = rows
+        grid.columnName = columns
+        grid.gridRow = values.map { row in TSCH_GridRow.with { $0.value = row.map { v in TSCH_GridValue.with { $0.numericValue = v } } } }
+        var ids = TSCH_ChartGridArchive.ChartGridRowColumnIdMap()
+        ids.rowIDMap = rows.indices.map { i in .with { $0.uniqueID = Foundation.UUID().uuidString; $0.index = UInt32(i) } }
+        ids.columnIDMap = columns.indices.map { i in .with { $0.uniqueID = Foundation.UUID().uuidString; $0.index = UInt32(i) } }
+        grid.idMap = ids
+        unity.grid = grid
+        chart.TSCH_ChartArchive_unity = unity
+        try replacePayload(of: drawable, with: try chart.serializedData(partial: true))
     }
 }

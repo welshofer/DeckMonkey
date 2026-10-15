@@ -1,0 +1,44 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Charts"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "chart",
+   "title": "Revenue by region",
+   "body": {
+    "chart": {
+     "kind": "bar",
+     "categories": [
+      "North",
+      "South",
+      "East",
+      "West"
+     ],
+     "series": [
+      {
+       "name": "2025",
+       "values": [
+        4,
+        6,
+        3,
+        7
+       ]
+      },
+      {
+       "name": "2026",
+       "values": [
+        6,
+        2,
+        5,
+        9
+       ]
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

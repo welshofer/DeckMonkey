@@ -1,0 +1,44 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Charts"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "chart",
+   "title": "Usage",
+   "body": {
+    "chart": {
+     "kind": "area",
+     "categories": [
+      "W1",
+      "W2",
+      "W3",
+      "W4"
+     ],
+     "series": [
+      {
+       "name": "Mobile",
+       "values": [
+        3,
+        4,
+        5,
+        6
+       ]
+      },
+      {
+       "name": "Desktop",
+       "values": [
+        5,
+        5,
+        4,
+        4
+       ]
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

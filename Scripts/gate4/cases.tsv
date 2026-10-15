@@ -35,3 +35,8 @@ Corpus/ir/32-cycle.json	Corpus/templates/minimalist-light_wide.key
 Corpus/ir/33-bands.json	Corpus/templates/showcase_wide.key
 Corpus/ir/34-two-column.json	Corpus/templates/color-gradient-light_wide.key
 Corpus/ir/35-callout.json	Corpus/templates/feature-story_wide.key
+Corpus/ir/36-chart-bar.json	Corpus/templates/basic-black_wide.key
+Corpus/ir/37-chart-line.json	Corpus/templates/basic-white_wide.key
+Corpus/ir/38-chart-pie.json	Corpus/templates/academy_wide.key
+Corpus/ir/39-chart-area.json	Corpus/templates/minimalist-dark_wide.key
+Corpus/ir/40-chart-stacked.json	Corpus/templates/showcase_wide.key

@@ -22,8 +22,9 @@ import RostrumLayout
 /// quadrant → Title Only with one theme-default shape per item in Rostrum's StructuredLayout
 /// cells over the theme's body area (and an arrow between ordered steps); twoColumn and
 /// comparison → Title Only with two text boxes; callout → Title Only with a band shape and a text
-/// box. Styles stay the theme's (invariant 6: no overrides are created). Chart and table are
-/// refused for now; content with no place is reported.
+/// box; chart → Title Only with a copy of a Keynote-made chart of that type (charts.key) over the
+/// body area, its data replaced. Styles stay the theme's (invariant 6: no overrides are created).
+/// Table is refused for now; content with no place is reported.
 public enum DeckIRWriter {
     // MARK: Plan
 
@@ -34,12 +35,34 @@ public enum DeckIRWriter {
     }
 
     public struct DrawablePlan: Codable, Equatable, Sendable {
-        public enum Kind: String, Codable, Sendable { case shape, textBox }
+        public enum Kind: String, Codable, Sendable { case shape, textBox, chart }
         public var kind: Kind
         /// Points. A text box has height 0: its width is fixed and its height automatic.
         public var x, y, width, height: Double
         public var paragraphs: [Paragraph]
+        /// A chart's data: Keynote's chart type (TSCH.ChartType) and its AppleScript name, the series
+        /// (grid rows) and categories (grid columns), values[series][category].
+        public var chart: ChartPlan?
+
+        public init(kind: Kind, x: Double, y: Double, width: Double, height: Double, paragraphs: [Paragraph], chart: ChartPlan? = nil) {
+            self.kind = kind; self.x = x; self.y = y; self.width = width; self.height = height; self.paragraphs = paragraphs; self.chart = chart
+        }
     }
+
+    public struct ChartPlan: Codable, Equatable, Sendable {
+        public var chartType: Int
+        public var appleScriptType: String
+        public var rows: [String]
+        public var columns: [String]
+        public var values: [[Double]]
+    }
+
+    /// IR chart kind → Keynote chart type and AppleScript's name for it (the kinds the parts deck,
+    /// Corpus/features/charts.key, holds).
+    static let chartKinds: [String: (type: Int, appleScript: String)] = [
+        "bar": (1, "vertical_bar_2d"), "column": (1, "vertical_bar_2d"), "line": (3, "line_2d"), "area": (4, "area_2d"),
+        "pie": (5, "pie_2d"), "stackedbar": (6, "stacked_vertical_bar_2d"),
+    ]
 
     public struct SlidePlan: Codable, Equatable, Sendable {
         public var id: String
@@ -83,7 +106,7 @@ public enum DeckIRWriter {
             case .noSampleSlide(let slide, let masters):
                 return "slide \(slide): the template has no sample slide on \(masters.map { "“\($0)”" }.joined(separator: " or "))"
             case .noPlaceholder(let slide, let role): return "slide \(slide): its master has no \(role)"
-            case .noParts(let slide): return "slide \(slide) needs new shapes or text boxes: pass a parts deck (Corpus/features/drawables.key, `make corpus`)"
+            case .noParts(let slide): return "slide \(slide) needs a new shape, text box or chart the parts decks do not hold (Corpus/features/drawables.key and charts.key, `make corpus`)"
             case .noContentRegion: return "the template has no Title & Bullets sample slide to take the content area from"
             case .layout(let slide, let detail): return "slide \(slide): \(detail)"
             case .emptyDeck: return "the IR has no slides"
@@ -97,6 +120,7 @@ public enum DeckIRWriter {
         "bigNumber": ["Big Fact"], "quote": ["Quote"], "closing": ["Title"],
         "metrics": ["Title Only"], "bands": ["Title Only"], "diagram": ["Title Only"], "timeline": ["Title Only"],
         "quadrant": ["Title Only"], "twoColumn": ["Title Only"], "comparison": ["Title Only"], "callout": ["Title Only"],
+        "chart": ["Title Only"],
     ]
     public static var supportedLayouts: [String] { masters.keys.sorted() }
 
@@ -213,6 +237,19 @@ public enum DeckIRWriter {
             }
             ignore("lead", body?.lead != nil)
             ignore("kicker", body?.kicker != nil)
+        case "chart":
+            s.title = lines(slide.title)
+            guard let c = body?.chart, !c.categories.isEmpty, !c.series.isEmpty,
+                  c.series.allSatisfy({ $0.values.count == c.categories.count }) else {
+                throw Failure.layout(slide: slide.id, "the chart needs categories and one value per category in every series")
+            }
+            guard let kind = chartKinds[c.kind.lowercased()] else {
+                throw Failure.layout(slide: slide.id, "chart kind “\(c.kind)” has no Keynote counterpart yet (\(chartKinds.keys.sorted().joined(separator: ", ")))")
+            }
+            let r = try area()
+            s.drawables.append(.init(kind: .chart, x: r.x, y: r.y, width: r.width, height: r.height, paragraphs: [],
+                                     chart: ChartPlan(chartType: kind.type, appleScriptType: kind.appleScript, rows: c.series.map(\.name),
+                                                      columns: c.categories, values: c.series.map(\.values))))
         default:
             throw Failure.unsupportedLayout(slide: slide.id, layout: slide.layout)
         }
@@ -250,16 +287,27 @@ public enum DeckIRWriter {
 
     /// Builds `plan` on `template`, copying new drawables from `parts` (needed only when a slide
     /// has some).
-    public static func apply(_ plan: DeckPlan, template: KeynoteDocument, parts: KeynoteDocument?) throws -> (KeynoteDocument, Report) {
+    public static func apply(_ plan: DeckPlan, template: KeynoteDocument, parts: [KeynoteDocument]) throws -> (KeynoteDocument, Report) {
         var document = template
         var report = Report(slides: [], ignored: plan.ignored)
         let originals = try document.slideList().count
         let sampleMasters = try document.slideMasters()
-        // The parts deck's plain text item (slide 1) and shape (slide 2).
-        var textItem: UInt64?, shape: UInt64?
-        if let parts, let list = try? parts.slideList(), list.count >= 2 {
-            textItem = parts.slideDrawables(list[0].slide).first
-            shape = parts.slideDrawables(list[1].slide).first
+        // The parts: the drawables deck's plain text item (slide 1) and shape (slide 2), and the
+        // first chart of each type any parts deck holds.
+        var textItem: (KeynoteDocument, UInt64)?, shape: (KeynoteDocument, UInt64)?
+        var charts = [Int: (KeynoteDocument, UInt64)]()
+        for deck in parts {
+            guard let list = try? deck.slideList() else { continue }
+            if textItem == nil, list.count >= 2, deck.chartType(of: deck.slideDrawables(list[0].slide).first ?? 0) == nil,
+               let t = deck.slideDrawables(list[0].slide).first, let sh = deck.slideDrawables(list[1].slide).first,
+               deck.chartType(of: sh) == nil {
+                textItem = (deck, t); shape = (deck, sh)
+            }
+            for entry in list {
+                for id in deck.slideDrawables(entry.slide) {
+                    if let type = deck.chartType(of: id), charts[type] == nil { charts[type] = (deck, id) }
+                }
+            }
         }
         for s in plan.slides {
             guard let index = sampleMasters.firstIndex(of: s.master) else { throw Failure.noSampleSlide(slide: s.id, masters: [s.master]) }
@@ -278,10 +326,17 @@ public enum DeckIRWriter {
                 if targets.notes == nil { report.ignored.append("\(s.id): notes") } else { try set(targets.notes, "notes", s.notes) }
             }
             for d in s.drawables {
-                guard let parts, let source = d.kind == .shape ? shape : textItem else { throw Failure.noParts(slide: s.id) }
-                try document.insertDrawable(source, from: parts, onto: clone.slide,
-                                            frame: .init(x: d.x, y: d.y, width: d.width, height: d.height),
-                                            paragraphs: d.paragraphs.map { TextParagraphs.Paragraph($0.text, level: $0.level) })
+                let source: (KeynoteDocument, UInt64)?
+                switch d.kind {
+                case .shape: source = shape
+                case .textBox: source = textItem
+                case .chart: source = d.chart.flatMap { charts[$0.chartType] }
+                }
+                guard let (deck, part) = source else { throw Failure.noParts(slide: s.id) }
+                let new = try document.insertDrawable(part, from: deck, onto: clone.slide,
+                                                      frame: .init(x: d.x, y: d.y, width: d.width, height: d.height),
+                                                      paragraphs: d.kind == .chart ? nil : d.paragraphs.map { TextParagraphs.Paragraph($0.text, level: $0.level) })
+                if let c = d.chart { try document.setChartData(new, rows: c.rows, columns: c.columns, values: c.values) }
             }
             report.slides.append((s.id, s.master))
         }
@@ -290,7 +345,7 @@ public enum DeckIRWriter {
     }
 
     /// Plan and apply.
-    public static func build(_ ir: DeckIR, template: KeynoteDocument, parts: KeynoteDocument? = nil) throws -> (KeynoteDocument, Report) {
+    public static func build(_ ir: DeckIR, template: KeynoteDocument, parts: [KeynoteDocument] = []) throws -> (KeynoteDocument, Report) {
         try apply(try plan(ir, template: template), template: template, parts: parts)
     }
 }

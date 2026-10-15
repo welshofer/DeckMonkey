@@ -42,8 +42,16 @@ def slide_lines(slide):
                 'if box is missing value then error "no free text box on this master"',
                 f"set object text of box to {q(slide['box'])}"]
     if slide.get("notes") is not None: out.append(f"set presenter notes of s to {q(slide['notes'])}")
+    def strings(xs): return "{" + ", ".join('"' + x.replace("\\", "\\\\").replace('"', '\\"') + '"' for x in xs) + "}"
     for d in slide.get("drawables", []):
-        if d["kind"] == "shape":
+        if d["kind"] == "chart":
+            c = d["chart"]
+            data = "{" + ", ".join("{" + ", ".join(repr(v) for v in row) + "}" for row in c["values"]) + "}"
+            out += [f"add chart s row names {strings(c['rows'])} column names {strings(c['columns'])} data {data} type {c['appleScriptType']} group by chart row",
+                    "set n to last chart of s",
+                    f"set width of n to {d['width']!r}", f"set height of n to {d['height']!r}",
+                    f"set position of n to {{{d['x']!r}, {d['y']!r}}}"]
+        elif d["kind"] == "shape":
             out += [f"tell s to set n to make new shape with properties {{object text:{q(d['paragraphs'])}}}",
                     f"set width of n to {d['width']!r}", f"set height of n to {d['height']!r}",
                     f"set position of n to {{{d['x']!r}, {d['y']!r}}}"]

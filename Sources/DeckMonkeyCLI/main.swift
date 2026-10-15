@@ -50,7 +50,7 @@ enum CLI {
       slide delete <file> --index <n> -o <out.key>
       slide clone <file> --index <n> [--to <m>] -o <out.key>
       slide import <file> --from <source.key> --index <n> [--to <m>] -o <out.key>
-      from-ir <deck.json> --template <t.key> [--parts <drawables.key>] [--plan-out <plan.json>] -o <out.key>
+      from-ir <deck.json> --template <t.key> [--parts <deck.key>]... [--plan-out <plan.json>] -o <out.key>
                                      build a .key from a lectern.deck/1 Deck IR on a template's masters
                                      move, delete or duplicate a slide (0-based indexes, show order);
                                      delete removes the slide's component and data only it used; a
@@ -487,9 +487,11 @@ func runFromIR(_ args: [String]) throws {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try encoder.encode(plan).write(to: url(planOut))
     }
-    // New shapes and text boxes are copied from a parts deck of plain Keynote-made drawables.
-    let partsPath = option("--parts", in: args) ?? "Corpus/features/drawables.key"
-    let parts = FileManager.default.fileExists(atPath: url(partsPath).path) ? try DeckMonkey.open(url(partsPath)) : nil
+    // New shapes, text boxes and charts are copied from parts decks of Keynote-made drawables.
+    var partsPaths = [String](), i = 0
+    while i < args.count { if args[i] == "--parts", i + 1 < args.count { partsPaths.append(args[i + 1]); i += 2 } else { i += 1 } }
+    if partsPaths.isEmpty { partsPaths = ["Corpus/features/drawables.key", "Corpus/features/charts.key"] }
+    let parts = try partsPaths.filter { FileManager.default.fileExists(atPath: url($0).path) }.map { try DeckMonkey.open(url($0)) }
     let (document, report) = try DeckIRWriter.apply(plan, template: base, parts: parts)
     try FileManager.default.createDirectory(at: url(out).deletingLastPathComponent(), withIntermediateDirectories: true)
     try document.save(to: url(out))
