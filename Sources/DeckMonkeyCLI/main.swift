@@ -366,7 +366,8 @@ func runLocate(_ args: [String]) throws {
     if let value = option("--object", in: args), let id = UInt64(value) {
         guard let at = document.location(ofDrawable: id) else { fail("error: \(id) is not an image or shape") }
         let frame = at.frame.map { "{\"x\":\(num($0.x)),\"y\":\(num($0.y)),\"width\":\(num($0.width)),\"height\":\(num($0.height)),\"angle\":\(num($0.angle))}" } ?? "null"
-        print("{\"object\":\(id),\"slide\":\(at.slide.map(String.init) ?? "null"),\"page\":\(at.page.map(String.init) ?? "null"),\"frame\":\(frame)}")
+        let e = document.mediaEffects(ofImage: id)
+        print("{\"object\":\(id),\"slide\":\(at.slide.map(String.init) ?? "null"),\"page\":\(at.page.map(String.init) ?? "null"),\"frame\":\(frame),\"reflection\":\(e.reflection),\"shadow\":\(e.shadow),\"stroke\":\(e.stroke)}")
         return
     }
     guard let value = option("--storage", in: args), let id = UInt64(value) else { fail(CLI.usage, code: 2) }

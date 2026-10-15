@@ -146,4 +146,15 @@ still need hand-authored decks (Jay), and Phase 1's AT-17 needs smart fields and
 Objects are created with `tell s to make new …`. The strength table now covers 210 fields (169 of
 the 201 in the older decks, 99% of their reference occurrences).
 
-Phase 1 (text replace) may start: Gate 0 is complete.
+Phase 1 (2026-10-15): text replace (`deckmonkey replace`, KeynoteDocument.replaceAll) with the
+offset-table remap of spec §9; **Gate 1 passed 25/25** (`make gate1`: 22 cases on the generated
+corpus, 3 AT-17 hyperlink cases from private decks in the git-ignored cases.local.tsv).
+
+Phase 2 (2026-10-15, in progress): image replace (`deckmonkey image`), SHA-1 DataInfo, orphan
+removal, the per-component data index rebuilt at save. `Scripts/gate1/gate2.py` runs AT-18/AT-19
+through the oracle. AT-27 (iPad oracle) needs an iOS runner that does not exist yet. Open: movie
+and audio replace through the same path; Keynote-edited images (kept originals, adjustments) are
+refused; `PackageMetadata.components[].external_references` is not yet re-derived (no edit so far
+changes a cross-component reference).
+
+Leave the machine alone while the oracle runs: input during a run fails the verdict ("rerun").

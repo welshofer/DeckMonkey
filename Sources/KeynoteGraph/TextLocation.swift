@@ -73,6 +73,18 @@ extension KeynoteDocument {
         return frame(of: drawable)
     }
 
+    /// Effects of an image's own media style that paint outside its frame.
+    public struct MediaEffects: Equatable, Sendable {
+        public var reflection = false, shadow = false, stroke = false
+    }
+
+    public func mediaEffects(ofImage id: UInt64) -> MediaEffects {
+        guard let image = decoded(TSD_ImageArchive.self, id), image.hasStyle,
+              let style = decoded(TSD_MediaStyleArchive.self, image.style.identifier), style.hasMediaProperties else { return MediaEffects() }
+        let p = style.mediaProperties
+        return MediaEffects(reflection: p.hasReflection, shadow: p.hasShadow, stroke: p.hasStroke)
+    }
+
     func frame(of drawable: TSD_DrawableArchive) -> (slide: UInt64?, page: Int?, frame: Frame?) {
         let parent = drawable.hasParent ? drawable.parent.identifier : nil
         let onSlide = parent.flatMap { store.record(for: $0)?.info.messageInfos.first?.type } == Self.slideType
