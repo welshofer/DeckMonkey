@@ -199,13 +199,13 @@ struct PreservationTests {
         try original.save(to: output)
         let reread = try KeynoteDocument.open(output)
         for name in original.package.entryNames where name.hasPrefix("Metadata/") {
-            #expect(original.package.data(name) == reread.package.data(name), name)
+            #expect(original.package.data(name) == reread.package.data(name), "\(name)")
         }
         #expect(original.package.buildVersionHistory == reread.package.buildVersionHistory)
         #expect(original.package.properties == reread.package.properties)
         for component in original.store.components {
             let after = reread.store.records(in: component.name) ?? []
-            #expect(after.count == component.records.count, component.name)
+            #expect(after.count == component.records.count, "\(component.name)")
             for (a, b) in zip(component.records, after) {
                 #expect(a.info.messageInfos.map(\.version) == b.info.messageInfos.map(\.version), "\(component.name) \(a.identifier)")
                 #expect(a.info.messageInfos.map(\.type) == b.info.messageInfos.map(\.type), "\(component.name) \(a.identifier)")
