@@ -6,7 +6,7 @@ CORPUS ?= $(shell if [ -n "$$DECKMONKEY_CORPUS" ]; then echo "$$DECKMONKEY_CORPU
 
 PYTHON ?= .venv/bin/python
 
-.PHONY: gate1 corpus goldens reference-strength build test gate roundtrip-corpus oracle-corpus snappy-reference snappy-check snappy-vectors schema schema-tools schema-diff clean
+.PHONY: gates gate2 gate3 gate1 corpus goldens reference-strength build test gate roundtrip-corpus oracle-corpus snappy-reference snappy-check snappy-vectors schema schema-tools schema-diff clean
 
 build:
 	$(SWIFT) build
@@ -70,6 +70,18 @@ goldens:
 gate1:
 	@$(SWIFT) build --product deckmonkey >/dev/null
 	python3 -I Scripts/gate1/gate1.py
+
+## Gate 2 (images and media) and Gate 3a (slide move, delete, clone) through the oracle.
+gate2:
+	@$(SWIFT) build --product deckmonkey >/dev/null
+	python3 -I Scripts/gate1/gate2.py
+
+gate3:
+	@$(SWIFT) build --product deckmonkey >/dev/null
+	python3 -I Scripts/gate1/gate3.py
+
+## Every oracle gate in sequence (about an hour of Keynote; leave the machine alone).
+gates: gate1 gate2 gate3
 
 ## AT-01 (docs/spec.md §14). The reference Snappy decoder is cramjam, in a local venv.
 .venv/bin/python:
