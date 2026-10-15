@@ -45,6 +45,11 @@ enum CLI {
       media <file> --object <id> --with <path> [--poster <image>] -o <out.key>
                                      replace a movie's or audio clip's media (MPEG-4/QuickTime);
                                      a movie needs a poster image; the frame is kept
+      slide list <file>              the slides in show order: index, node, slide, component
+      slide move <file> --index <n> --to <m> -o <out.key>
+      slide delete <file> --index <n> -o <out.key>
+                                     move or delete a slide (0-based indexes, show order); delete
+                                     removes the slide's component and data only it used
       version
 
     Exit codes: 0 pass, 1 fail, 2 usage, 3 refused (Keynote '09 APXL, out of scope).
@@ -465,6 +470,33 @@ func runMedia(_ args: [String]) throws {
     print("output: \(url(out).path)")
 }
 
+func runSlide(_ args: [String]) throws {
+    guard let verb = args.first, args.count >= 2, !args[1].hasPrefix("-") else { fail(CLI.usage, code: 2) }
+    var document = try DeckMonkey.open(url(args[1]))
+    if verb == "list" {
+        for (i, s) in try document.slideList().enumerated() {
+            print("\(i)\tnode \(s.node)\tslide \(s.slide)\t\(s.component)\(s.skipped ? "\tskipped" : "")")
+        }
+        return
+    }
+    guard let i = option("--index", in: args).flatMap(Int.init), let out = option("-o", in: args) else { fail(CLI.usage, code: 2) }
+    switch verb {
+    case "move":
+        guard let to = option("--to", in: args).flatMap(Int.init) else { fail(CLI.usage, code: 2) }
+        try document.moveSlide(from: i, to: to)
+        print("moved slide \(i) to \(to)")
+    case "delete":
+        let report = try document.deleteSlide(at: i)
+        print("deleted slide \(i) (\(report.slide), \(report.component)): \(report.removedObjects) objects"
+            + (report.removedFiles.isEmpty ? "" : ", files \(report.removedFiles.joined(separator: ", "))"))
+    default:
+        fail(CLI.usage, code: 2)
+    }
+    try FileManager.default.createDirectory(at: url(out).deletingLastPathComponent(), withIntermediateDirectories: true)
+    try document.save(to: url(out))
+    print("output: \(url(out).path)")
+}
+
 let arguments = Array(CommandLine.arguments.dropFirst())
 guard let command = arguments.first else { fail(usage, code: 2) }
 let rest = Array(arguments.dropFirst())
@@ -483,6 +515,7 @@ do {
     case "data": try runData(rest)
     case "image": try runImage(rest)
     case "media": try runMedia(rest)
+    case "slide": try runSlide(rest)
     case "corpus":
         switch rest.first {
         case "add": try runCorpusAdd(Array(rest.dropFirst()))

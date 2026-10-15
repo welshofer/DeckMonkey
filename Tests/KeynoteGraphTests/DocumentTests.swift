@@ -727,6 +727,7 @@ struct CorpusTests {
                     case .missingDataFile: kind = "missingDataFile"
                     case .textOffset: kind = "textOffset"
                     case .danglingDataReference: kind = "danglingDataReference"
+                    case .componentList: kind = "componentList"
                     }
                     kinds[kind, default: 0] += 1
                 }

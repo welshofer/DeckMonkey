@@ -19,6 +19,8 @@ public struct ValidationIssue: Equatable, Sendable, CustomStringConvertible {
         case textOffset(identifier: UInt64, TextOffsets.Problem)
         /// A header data reference with no DataInfo in PackageMetadata (invariant 8).
         case danglingDataReference(from: UInt64, to: UInt64)
+        /// A component file without a ComponentInfo, or a ComponentInfo without its file.
+        case componentList(unlisted: [String], missing: [String])
     }
 
     public let severity: Severity
@@ -38,6 +40,8 @@ public struct ValidationIssue: Equatable, Sendable, CustomStringConvertible {
             return "\(severity.rawValue): text storage \(id): \(problem)"
         case .danglingDataReference(let from, let to):
             return "\(severity.rawValue): object \(from) references data \(to), which has no DataInfo"
+        case .componentList(let unlisted, let missing):
+            return "\(severity.rawValue): components not in PackageMetadata \(unlisted), listed but absent \(missing)"
         }
     }
 }
@@ -97,6 +101,16 @@ public enum Validator {
                         }
                     }
                 }
+            }
+            // Every component file has a ComponentInfo and every ComponentInfo its file; Metadata.iwa,
+            // which holds PackageMetadata itself, is never listed (all 146 corpus decks). A package that
+            // lists no components at all (a synthetic test package) is not checked.
+            let files = Set(document.store.componentNames.map { String($0.dropFirst("Index/".count).dropLast(".iwa".count)) })
+                .subtracting(["Metadata"])
+            let listed = Set(metadata.components.map { $0.locator.isEmpty ? $0.preferredLocator : $0.locator })
+            if !listed.isEmpty, files != listed {
+                issues.append(ValidationIssue(severity: .error, kind: .componentList(
+                    unlisted: files.subtracting(listed).sorted(), missing: listed.subtracting(files).sorted())))
             }
             for d in metadata.datas {
                 if let name = d.storedFileName, document.package.data("Data/" + name) == nil {

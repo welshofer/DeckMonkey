@@ -49,6 +49,38 @@ public struct ObjectStore: Sendable {
         }
     }
 
+    /// Removes every record (base and merges) of these identifiers, then re-indexes.
+    public mutating func removeRecords(_ identifiers: Set<UInt64>) {
+        guard !identifiers.isEmpty else { return }
+        for c in components.indices { components[c].records.removeAll { identifiers.contains($0.identifier) } }
+        reindex()
+    }
+
+    /// Removes a whole component (one `.iwa`) and its records, then re-indexes.
+    public mutating func removeComponent(_ name: String) {
+        components.removeAll { $0.name == name }
+        reindex()
+    }
+
+    /// Rebuilds the identifier index from the components, by the same two-pass rules as loading.
+    private mutating func reindex() {
+        byIdentifier.removeAll()
+        issues.removeAll()
+        pendingMerges.removeAll()
+        for component in components {
+            for (i, record) in component.records.enumerated() {
+                if record.shouldMerge {
+                    pendingMerges.append((record.identifier, component.name, i))
+                } else if let existing = byIdentifier[record.identifier] {
+                    issues.append(.duplicateIdentifier(record.identifier, components: [existing.component, component.name]))
+                } else {
+                    byIdentifier[record.identifier] = Entry(component: component.name, index: i, merges: [])
+                }
+            }
+        }
+        finalize()
+    }
+
     /// Attaches merge records to their base objects; a merge with no base becomes the base.
     public mutating func finalize() {
         for merge in pendingMerges {

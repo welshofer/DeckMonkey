@@ -57,7 +57,7 @@ extension KeynoteError: CustomStringConvertible {
 /// generated module. Everything that works today works without one (invariants 1 and 2).
 public struct KeynoteDocument: Sendable {
     public internal(set) var package: IWAPackage
-    public private(set) var store: ObjectStore
+    public internal(set) var store: ObjectStore
     public let registry: TypeRegistry?
 
     /// The Keynote build that last saved this file, from `BuildVersionHistory.plist` (e.g. "M15.4-7051-1").

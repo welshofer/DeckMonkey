@@ -1,0 +1,17 @@
+# deck	operation	kind — Gate 3a cases (tab-separated); indexes are 0-based, in show order.
+Corpus/features/notes-skipped.key	move 0 3	AT-22
+Corpus/features/notes-skipped.key	delete 2	AT-21
+Corpus/features/notes-skipped.key	delete 1	AT-21
+Corpus/templates/basic-white_wide.key	move 0 16	AT-22
+Corpus/templates/basic-white_wide.key	move 16 0	AT-22
+Corpus/templates/basic-white_wide.key	delete 5	AT-21
+Corpus/templates/photo-essay_wide.key	move 3 7	AT-22
+Corpus/templates/photo-essay_wide.key	delete 0	AT-21
+Corpus/templates/kyoto_standard.key	delete 13	AT-21
+Corpus/features/tables.key	delete 0	AT-21
+Corpus/features/charts.key	move 2 10	AT-22
+Corpus/features/charts.key	delete 4	AT-21
+Corpus/features/images.key	delete 1	AT-21
+Corpus/features/media.key	delete 0	AT-21
+Corpus/features/transitions.key	move 1 40	AT-22
+Corpus/features/many-slides.key	delete 40	AT-21
