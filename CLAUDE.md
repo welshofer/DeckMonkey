@@ -60,8 +60,9 @@ schema at all. Generated protos arrive in `IWASchema` and are used only for payl
 - Tests are swift-testing (`import Testing`, `@Test`, `#expect`), one suite per module, plus
   `CorpusTests` which is skipped when no corpus is configured.
 - **Merge gate:** `make gate` — `swift test` green, `deckmonkey roundtrip` CLEAN on every
-  corpus deck, and AT-01 (`make snappy-check`: our decoder against cached reference hashes, the
-  reference decoder against our compressor). Gate 0 additionally needs `make oracle-corpus` at
+  corpus deck, AT-01 (`make snappy-check`: our decoder against cached reference hashes, the
+  reference decoder against our compressor), and AT-26 (`make hostile`: the CLI refuses every
+  file in `Corpus/hostile` and writes nothing). Gate 0 additionally needs `make oracle-corpus` at
   40/40 with 0 mismatched pixels.
 - **Reference Snappy:** cramjam (Rust `snap`, format-identical to Google's) in a local `.venv`,
   driven only by `Scripts/snappy-crosscheck.py`. It runs once per corpus change
@@ -90,6 +91,13 @@ objects (stylesheet components are full of them) and in these decks every merge 
 `BuildVersionHistory` entries look like `M15.4-7051.0.79-2`, `T2.5.1 (1715)` (iOS), `G-r11-2A396`
 (iCloud).
 
+AT-26 / AT-25 / AT-11 / AT-12 (2026-10-14): `Corpus/hostile/` holds 14 generated files
+(`Scripts/make-hostile-corpus.py`, from the synthetic deck) with a manifest naming the typed error
+and stage for each; `HostileCorpusTests` proves each is refused and nothing is written, and
+`make hostile` proves the same through the CLI. `KeynoteDocument.save` now refuses a file whose
+last macOS build stamp is above the pinned 15.4 (`KeynoteBuild`, AT-25). AT-11 and AT-12 hold on
+the synthetic deck; the corpus round-trip being byte-identical covers AT-11 on real decks.
+
 AT-01 (2026-10-14): `Tests/DeckMonkeyTests` decodes 33 cramjam-compressed vectors (literal-length
 escapes, 1/2-byte copy offsets at 2047/2048/65535, 64 KiB block edges, multi-block) and the
 synthetic deck's reference manifest; CI feeds our compression of the vectors back to the reference
@@ -100,8 +108,7 @@ Remaining, in order:
 
 1. The oracle, first run (step 4 of docs/HANDOFF.md): `Scripts/oracle.sh` on a round-trip output,
    repair the AppleScript until the verdict is trustworthy, then `make oracle-corpus`.
-2. AT-01 on the corpus: `make snappy-reference && make snappy-check` (needs python3; the venv is
-   created on first use). Expect MATCH on 28 decks; investigate any mismatch as a codec bug.
+2. (done on the M4, 2026-10-14: `snappy-check MATCH: 1302 chunks in 1002 components of 28 deck(s)`)
 3. Schema pipeline per `Scripts/schema/README.md`: protodump, render, `protoc`, registry dump,
    dispatch generator. Commit `Generated/15.4` and `registry-15.4.json`. AT-05.
 4. AT-06, AT-07, AT-08 on the corpus (derive references with a SwiftProtobuf `Visitor` over the
@@ -109,7 +116,9 @@ Remaining, in order:
    already errors; AT-06 extends that to payload-level `TSP.Reference`.
 5. `Scripts/corpus-gen` (AppleScript): one deck per built-in theme × two sizes → `Corpus/templates`;
    hand-author `Corpus/features`; `deckmonkey corpus add` records version + golden PDF.
-6. `Corpus/hostile` files and AT-26; AT-11, AT-12, AT-25.
+6. Hostile cases the raw store cannot judge: unknown type ID (file exists, test skips until the
+   registry is populated), text offsets past storage length, `Data/` without a `DataInfo`. Add each
+   as a line in `make-hostile-corpus.py`, a matcher in `HostileCorpusTests`, and nothing looser.
 7. Oracle harness verified end to end on the M4: `make oracle-corpus` 40/40.
 
 Do not start Phase 1 (text replace) on a partial Gate 0.

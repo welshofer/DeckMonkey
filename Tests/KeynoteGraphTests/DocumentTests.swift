@@ -125,9 +125,16 @@ struct CorpusTests {
 
     static func corpusFiles() -> [URL] {
         var files = [URL]()
+        // Corpus/hostile holds files that must fail (AT-26); they are not round-trip decks.
+        let hostile = repoRoot.appendingPathComponent("Corpus/hostile").standardizedFileURL.path
         for root in corpusRoots() {
             guard let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil) else { continue }
-            for case let url as URL in enumerator where url.pathExtension.lowercased() == "key" {
+            for case let url as URL in enumerator {
+                if url.standardizedFileURL.path == hostile {
+                    enumerator.skipDescendants()
+                    continue
+                }
+                guard url.pathExtension.lowercased() == "key" else { continue }
                 files.append(url)
                 enumerator.skipDescendants()   // a .key may itself be a package directory
             }
