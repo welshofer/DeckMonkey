@@ -9,7 +9,7 @@ AppleScript cannot do exactly, so those fixtures need a deck built by hand in Ke
 - **Text boxes at an exact position.** AppleScript rounds a text box's position before Keynote
   adjusts it, so it can't land on the exact point DeckMonkey writes. The Arrange inspector can.
 
-Six decks. Each takes a few minutes. Save each one **beside its fixture** as
+Seven decks. Each takes a few minutes. Save each one **beside its fixture** as
 `Corpus/ir/<fixture>.golden.key`. `Scripts/gate4/gate4.py` picks it up instead of building one.
 These files are git-ignored: like every deck, they never go to GitHub.
 
@@ -28,11 +28,11 @@ These files are git-ignored: like every deck, they never go to GitHub.
 6. **Leave placeholders not listed empty.** Don't type into them or delete them.
 7. **Save** (⌘S). Keep the default single-file format.
 
-**Text boxes** (cases 4–6): Insert ▸ Text Box, type the text, then in the Format sidebar's
+**Text boxes** (cases 4–7): Insert ▸ Text Box, type the text, then in the Format sidebar's
 **Arrange** tab type the exact **X**, **Y** and **Width** listed. Leave the height alone; it
 follows the text.
 
-**Shapes** (cases 4 and 6): the Shape button in the toolbar ▸ Basic ▸ the plain square (first
+**Shapes** (cases 4, 6 and 7): the Shape button in the toolbar ▸ Basic ▸ the plain square (first
 one). In the **Arrange** tab, type the exact **X**, **Y**, **Width** and **Height**, then
 double-click the shape and type its text.
 
@@ -132,15 +132,34 @@ Then a text box, two paragraphs:
 | --- | --- | --- | --- |
 | `Price is fixed` / `Volume is the lever` | 136 | 536 | 1648 |
 
+## 7. `30-process.golden.key` — template `briefing_wide.key`
+
+One slide, layout **Title Only**. Title: `Process`.
+
+Three shapes (plain square, theme default style), each with two paragraphs:
+
+| Text (one paragraph per line) | X | Y | Width | Height |
+| --- | --- | --- | --- | --- |
+| `Collect` / `gather inputs` | 164 | 330 | 520 | 495 |
+| `Analyse` / `find patterns` | 700 | 330 | 520 | 495 |
+| `Decide` / `choose a path` | 1235 | 330 | 520 | 495 |
+
+Then two text boxes, each holding `→`, width 16:
+
+| Text | X | Y | Width |
+| --- | --- | --- | --- |
+| `→` | 684 | 566 | 16 |
+| `→` | 1219 | 566 | 16 |
+
 ---
 
 ## Checking your work
 
 Run `python3 -I Scripts/gate4/gate4.py` with the machine left alone (about 70 minutes for all
-cases), or only these six:
+cases), or only these seven:
 
 ```sh
-grep -E "^Corpus/ir/(23|24|25|32|34|35)-" Scripts/gate4/cases.tsv > /tmp/hand.tsv
+grep -E "^Corpus/ir/(23|24|25|30|32|34|35)-" Scripts/gate4/cases.tsv > /tmp/hand.tsv
 python3 -I Scripts/gate4/gate4.py /tmp/hand.tsv
 ```
 
