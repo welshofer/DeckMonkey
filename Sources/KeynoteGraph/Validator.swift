@@ -50,11 +50,15 @@ public enum Validator {
         for dangling in document.store.danglingObjectReferences {
             issues.append(ValidationIssue(severity: .error, kind: .danglingObjectReference(from: dangling.from, to: dangling.to)))
         }
+        // Invariant 8: an unknown type is an error. Two things in a Keynote file are not typed
+        // messages and are skipped: a merge archive's diff descriptor (`MessageInfo [1]`, type 0,
+        // carrying base_message_index; spec §4 row 3a), and a type this Keynote declares deprecated
+        // (it knows it and has no schema; 6219 in decks last saved by 6.5). Corpus: 0 unknown.
         if let registry = document.registry, !registry.isEmpty {
             for identifier in document.store.identifiers {
                 guard let record = document.store.record(for: identifier) else { continue }
-                for info in record.info.messageInfos where registry.name(for: info.type) == nil {
-                    issues.append(ValidationIssue(severity: .warning, kind: .unknownType(info.type, identifier: identifier)))
+                for info in record.info.messageInfos where info.baseMessageIndex == nil && !registry.resolves(info.type) {
+                    issues.append(ValidationIssue(severity: .error, kind: .unknownType(info.type, identifier: identifier)))
                 }
             }
         }

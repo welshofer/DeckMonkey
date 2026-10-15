@@ -1,23 +1,31 @@
 import Foundation
 import SwiftProtobuf
 
-/// Maps IWA message type numbers to archive class names for one Keynote build.
+/// Maps IWA message type numbers to protobuf message names for one Keynote build.
 ///
-/// Keynote keeps this table in its `TSPRegistry` runtime object; `Scripts/registry-dump` extracts
-/// it (docs/spec.md §7 step 4) into `Registry/registry-<version>.json`. The generated SwiftProtobuf
-/// sources for the same build live under `Generated/<version>/` and are produced by `make schema`;
-/// neither is hand-edited. Until the first extraction runs, the shipped registry is empty and
-/// every type decodes through the raw store only.
+/// Keynote fills this table in its `TSPRegistry` at launch. `Scripts/schema/registry-dump.py`
+/// recovers it statically from the registration calls in the binary (docs/spec.md §7 step 4)
+/// into `Registry/registry-<version>.json`; the generated SwiftProtobuf sources for the same build
+/// live under `Generated/<version>/`. Neither is hand-edited.
 public struct TypeRegistry: Sendable, Equatable {
     public let keynoteVersion: String
+    /// Type number → full proto message name, e.g. 1 → "KN.DocumentArchive".
     public let types: [UInt32: String]
+    /// Types this Keynote registers as deprecated (`-[TSPRegistry setDeprecatedMessageType:]`): it
+    /// knows them and has no schema for them. Old files carry them (6219 in decks last saved by
+    /// Keynote 6.5); they live on in the raw store, byte for byte, like anything not understood.
+    public let deprecatedTypes: Set<UInt32>
 
-    public init(keynoteVersion: String, types: [UInt32: String]) {
+    public init(keynoteVersion: String, types: [UInt32: String], deprecatedTypes: Set<UInt32> = []) {
         self.keynoteVersion = keynoteVersion
         self.types = types
+        self.deprecatedTypes = deprecatedTypes
     }
 
     public func name(for type: UInt32) -> String? { types[type] }
+
+    /// AT-05: a type resolves when this Keynote has a message for it or declares it deprecated.
+    public func resolves(_ type: UInt32) -> Bool { types[type] != nil || deprecatedTypes.contains(type) }
 
     public var isEmpty: Bool { types.isEmpty }
 
@@ -33,6 +41,7 @@ public struct TypeRegistry: Sendable, Equatable {
         struct File: Decodable {
             let keynoteVersion: String
             let types: [String: String]
+            let deprecatedTypes: [UInt32]?
         }
         let file = try JSONDecoder().decode(File.self, from: json)
         var types = [UInt32: String]()
@@ -40,7 +49,7 @@ public struct TypeRegistry: Sendable, Equatable {
             guard let number = UInt32(key) else { throw SchemaError.badTypeNumber(key) }
             types[number] = value
         }
-        return TypeRegistry(keynoteVersion: file.keynoteVersion, types: types)
+        return TypeRegistry(keynoteVersion: file.keynoteVersion, types: types, deprecatedTypes: Set(file.deprecatedTypes ?? []))
     }
 
     /// The registry pinned for Phase 0 (docs/spec.md OQ-2).

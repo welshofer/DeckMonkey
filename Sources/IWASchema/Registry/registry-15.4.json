@@ -1,5 +1,5694 @@
 {
-  "keynoteVersion": "15.4 (7051.0.79)",
-  "source": "placeholder — replace with the TSPRegistry dump from Scripts/registry-dump (docs/spec.md §7 step 4)",
-  "types": {}
+ "keynoteVersion": "15.4",
+ "keynoteBuild": "7051.0.79",
+ "source": "Scripts/schema/registry-dump.py (static: arm64 TSPRegistry registration calls)",
+ "types": {
+  "1": "KN.DocumentArchive",
+  "2": "KN.ShowArchive",
+  "3": "KN.UIStateArchive",
+  "4": "KN.SlideNodeArchive",
+  "5": "KN.SlideArchive",
+  "7": "KN.PlaceholderArchive",
+  "8": "KN.BuildArchive",
+  "9": "KN.SlideStyleArchive",
+  "10": "KN.ThemeArchive",
+  "11": "KN.PasteboardNativeStorageArchive",
+  "15": "KN.NoteArchive",
+  "16": "KN.RecordingArchive",
+  "17": "KN.RecordingEventTrackArchive",
+  "18": "KN.RecordingMovieTrackArchive",
+  "19": "KN.ClassicStylesheetRecordArchive",
+  "20": "KN.ClassicThemeRecordArchive",
+  "21": "KN.Soundtrack",
+  "22": "KN.SlideNumberAttachmentArchive",
+  "23": "KN.DesktopUILayoutArchive",
+  "24": "KN.CanvasSelectionArchive",
+  "25": "KN.SlideCollectionSelectionArchive",
+  "26": "KN.MotionBackgroundStyleArchive",
+  "100": "KN.CommandBuildSetValueArchive",
+  "101": "KN.CommandShowInsertSlideArchive",
+  "102": "KN.CommandShowMoveSlideArchive",
+  "103": "KN.CommandShowRemoveSlideArchive",
+  "104": "KN.CommandSlideInsertDrawablesArchive",
+  "105": "KN.CommandSlideRemoveDrawableArchive",
+  "106": "KN.CommandSlideNodeSetPropertyArchive",
+  "107": "KN.CommandSlideInsertBuildArchive",
+  "109": "KN.CommandSlideRemoveBuildArchive",
+  "110": "KN.CommandSlideInsertBuildChunkArchive",
+  "111": "KN.CommandSlideMoveBuildChunksArchive",
+  "112": "KN.CommandSlideRemoveBuildChunkArchive",
+  "114": "KN.CommandTransitionSetValueArchive",
+  "118": "KN.CommandSlideMoveDrawableZOrderArchive",
+  "119": "KN.CommandChangeTemplateSlideArchive",
+  "123": "KN.CommandShowSetSlideNumberVisibilityArchive",
+  "124": "KN.CommandShowSetValueArchive",
+  "128": "KN.CommandShowMarkOutOfSyncRecordingArchive",
+  "129": "KN.CommandShowRemoveRecordingArchive",
+  "130": "KN.CommandShowReplaceRecordingArchive",
+  "131": "KN.CommandShowSetSoundtrack",
+  "132": "KN.CommandSoundtrackSetValue",
+  "134": "KN.CommandMoveTemplatesArchive",
+  "135": "KN.CommandInsertTemplateArchive",
+  "136": "KN.CommandSlideSetStyleArchive",
+  "137": "KN.CommandSlideSetPlaceholdersForTagsArchive",
+  "138": "KN.CommandBuildChunkSetValueArchive",
+  "140": "KN.CommandRemoveTemplateArchive",
+  "142": "KN.CommandTemplateSetThumbnailTextArchive",
+  "143": "KN.CommandShowChangeThemeArchive",
+  "144": "KN.CommandSlidePrimitiveSetTemplateArchive",
+  "145": "KN.CommandTemplateSetBodyStylesArchive",
+  "146": "KNSOS.CommandSlideReapplyTemplateSlideArchive",
+  "148": "KN.ChartInfoGeometryCommandArchive",
+  "150": "KN.CommandSlideUpdateTemplateDrawables",
+  "152": "KN.CommandSlideSetBackgroundFillArchive",
+  "153": "KN.BuildChunkArchive",
+  "156": "KN.CommandSlideNodeSetViewStatePropertyArchive",
+  "157": "KN.CommandBuildUpdateChunkCountArchive",
+  "158": "KN.CommandBuildUpdateChunkReferentsArchive",
+  "159": "KN.BuildAttributeTupleArchive",
+  "160": "KN.CommandSetThemeCustomEffectTimingCurveArchive",
+  "161": "KN.CommandShowChangeSlideSizeArchive",
+  "162": "KN.InsertBuildDescriptionArchive",
+  "163": "KN.RemoveBuildDescriptionArchive",
+  "164": "KN.DocumentSelectionTransformerArchive",
+  "165": "KN.SlideCollectionSelectionTransformerArchive",
+  "166": "KN.OutlineCanvasSelectionTransformerArchive",
+  "167": "KN.NoteCanvasSelectionTransformerArchive",
+  "168": "KN.CanvasSelectionTransformerArchive",
+  "169": "KN.OutlineSelectionTransformerArchive",
+  "170": "KN.UndoObjectArchive",
+  "172": "KN.PrototypeForUndoTemplateChangeArchive",
+  "173": "KN.CommandShowMarkOutOfSyncRecordingIfNeededArchive",
+  "174": "KNSOS.InducedVerifyDocumentWithServerCommandArchive",
+  "175": "KNSOS.InducedVerifyDrawableZOrdersWithServerCommandArchive",
+  "176": "KN.CommandPrimitiveInsertTemplateArchive",
+  "177": "KN.CommandPrimitiveRemoveTemplateArchive",
+  "178": "KN.CommandTemplateSlideSetPlaceholderForTagArchive",
+  "179": "KN.CommandSlidePropagateSetPlaceholderForTagArchive",
+  "180": "KN.ActionGhostSelectionArchive",
+  "181": "KN.ActionGhostSelectionTransformerArchive",
+  "182": "KN.CommandSlideResetTemplateBackgroundObjectsArchive",
+  "184": "KN.LiveVideoSource",
+  "185": "KN.LiveVideoSourceCollection",
+  "186": "KN.CommandLiveVideoInfoApplyPreset",
+  "187": "KN.CommandLiveVideoInfoSetSource",
+  "188": "KN.CommandLiveVideoInfoSetValue",
+  "189": "KN.CommandLiveVideoSourceSetValue",
+  "190": "KN.CommandLiveVideoStyleSetValue",
+  "191": "KN.CommandThemeAddLiveVideoSource",
+  "192": "KN.CommandThemeRemoveLiveVideoSource",
+  "194": "KN.CommandMotionBackgroundStyleSetValueArchive",
+  "195": "KN.CommandMotionBackgroundStyleUpdatePosterFrameDataArchive",
+  "200": "TSK.DocumentArchive",
+  "201": "TSK.LocalCommandHistory",
+  "202": "TSK.CommandGroupArchive",
+  "203": "TSK.CommandContainerArchive",
+  "205": "TSK.TreeNode",
+  "210": "TSK.ViewStateArchive",
+  "211": "TSK.DocumentSupportArchive",
+  "212": "TSK.AnnotationAuthorArchive",
+  "213": "TSK.AnnotationAuthorStorageArchive",
+  "215": "TSCK.SetAnnotationAuthorColorCommandArchive",
+  "218": "TSCK.CollaborationCommandHistory",
+  "219": "TSK.DocumentSelectionArchive",
+  "220": "TSK.CommandSelectionBehaviorArchive",
+  "221": "TSK.NullCommandArchive",
+  "222": "TSK.CustomFormatListArchive",
+  "223": "TSK.GroupCommitCommandArchive",
+  "224": "TSK.InducedCommandCollectionArchive",
+  "225": "TSK.InducedCommandCollectionCommitCommandArchive",
+  "226": "TSCK.CollaborationDocumentSessionState",
+  "227": "TSCK.CollaborationCommandHistoryCoalescingGroup",
+  "228": "TSCK.CollaborationCommandHistoryCoalescingGroupNode",
+  "229": "TSCK.CollaborationCommandHistoryOriginatingCommandAcknowledgementObserver",
+  "230": "TSCK.DocumentSupportCollaborationState",
+  "231": "TSK.ChangeDocumentPackageTypeCommandArchive",
+  "232": "TSK.UpgradeDocPostProcessingCommandArchive",
+  "233": "TSK.FinalCommandPairArchive",
+  "234": "TSK.OutgoingCommandQueueItem",
+  "235": "TSCK.TransformerEntry",
+  "238": "TSCK.CreateLocalStorageSnapshotCommandArchive",
+  "240": "TSK.SelectionPathTransformerArchive",
+  "241": "TSK.NativeContentDescription",
+  "242": "TSD.PencilAnnotationStorageArchive",
+  "245": "TSCK.OperationStorage",
+  "246": "TSCK.OperationStorageEntryArray",
+  "247": "TSCK.OperationStorageEntryArraySegment",
+  "248": "TSCK.BlockDiffsAtCurrentRevisionCommand",
+  "249": "TSCK.OutgoingCommandQueue",
+  "250": "TSCK.OutgoingCommandQueueSegment",
+  "251": "TSK.PropagatedCommandCollectionArchive",
+  "252": "TSK.LocalCommandHistoryItem",
+  "253": "TSK.LocalCommandHistoryArray",
+  "254": "TSK.LocalCommandHistoryArraySegment",
+  "255": "TSCK.CollaborationCommandHistoryItem",
+  "256": "TSCK.CollaborationCommandHistoryArray",
+  "257": "TSCK.CollaborationCommandHistoryArraySegment",
+  "258": "TSK.PencilAnnotationUIState",
+  "259": "TSCKSOS.FixCorruptedDataCommandArchive",
+  "260": "TSCK.CommandAssetChunkArchive",
+  "261": "TSCK.AssetUploadStatusCommandArchive",
+  "262": "TSCK.AssetUnmaterializedOnServerCommandArchive",
+  "263": "TSK.CommandBehaviorArchive",
+  "264": "TSK.CommandBehaviorSelectionPathStorageArchive",
+  "265": "TSCK.CommandActivityBehaviorArchive",
+  "273": "TSCK.ActivityOnlyCommandArchive",
+  "275": "TSCK.SetActivityAuthorShareParticipantIDCommandArchive",
+  "279": "TSCK.ActivityAuthorCacheArchive",
+  "280": "TSCK.ActivityStreamArchive",
+  "281": "TSCK.ActivityArchive",
+  "282": "TSCK.ActivityCommitCommandArchive",
+  "283": "TSCK.ActivityStreamActivityArray",
+  "284": "TSCK.ActivityStreamActivityArraySegment",
+  "285": "TSCK.ActivityStreamRemovedAuthorAuditorPendingStateArchive",
+  "286": "TSCK.ActivityAuthorArchive",
+  "287": "TSCKSOS.ResetActivityStreamCommandArchive",
+  "288": "TSCKSOS.RemoveAuthorIdentifiersCommandArchive",
+  "289": "TSCK.ActivityCursorCollectionPersistenceWrapperArchive",
+  "290": "TSK.AIGeneratedContentCommandArchive",
+  "291": "TSK.SetLastPremiumUserActivityTimestampCommandArchive",
+  "400": "TSS.StyleArchive",
+  "401": "TSS.StylesheetArchive",
+  "402": "TSS.ThemeArchive",
+  "412": "TSS.StyleUpdatePropertyMapCommandArchive",
+  "413": "TSS.ThemeReplacePresetCommandArchive",
+  "414": "TSS.ThemeAddStylePresetCommandArchive",
+  "415": "TSS.ThemeRemoveStylePresetCommandArchive",
+  "416": "TSS.ThemeReplaceColorPresetCommandArchive",
+  "417": "TSS.ThemeMovePresetCommandArchive",
+  "419": "TSS.ThemeReplaceStylePresetAndDisconnectStylesCommandArchive",
+  "600": "TSA.DocumentArchive",
+  "601": "TSA.FunctionBrowserStateArchive",
+  "602": "TSA.PropagatePresetCommandArchive",
+  "603": "TSA.ShortcutControllerArchive",
+  "604": "TSA.ShortcutCommandArchive",
+  "605": "TSA.AddCustomFormatCommandArchive",
+  "606": "TSA.UpdateCustomFormatCommandArchive",
+  "607": "TSA.ReplaceCustomFormatCommandArchive",
+  "611": "TSASOS.VerifyObjectsWithServerCommandArchive",
+  "612": "TSA.InducedVerifyObjectsWithServerCommandArchive",
+  "613": "TSASOS.VerifyDocumentWithServerCommandArchive",
+  "614": "TSASOS.VerifyDrawableZOrdersWithServerCommandArchive",
+  "615": "TSASOS.InducedVerifyDrawableZOrdersWithServerCommandArchive",
+  "616": "TSA.NeedsMediaCompatibilityUpgradeCommandArchive",
+  "617": "TSA.ChangeDocumentLocaleCommandArchive",
+  "618": "TSA.StyleUpdatePropertyMapCommandArchive",
+  "619": "TSA.RemoteDataChangeCommandArchive",
+  "623": "TSA.GalleryItem",
+  "624": "TSA.GallerySelectionTransformer",
+  "625": "TSA.GalleryItemSelection",
+  "626": "TSA.GalleryItemSelectionTransformer",
+  "627": "TSA.GalleryInfoSetValueCommandArchive",
+  "628": "TSA.GalleryItemSetGeometryCommand",
+  "629": "TSA.GalleryItemSetValueCommand",
+  "630": "TSA.InducedVerifyTransformHistoryWithServerCommandArchive",
+  "631": "TSASOS.CommandReapplyMasterArchive",
+  "632": "TSASOS.PropagateMasterChangeCommandArchive",
+  "633": "TSA.CaptionInfoArchive",
+  "634": "TSA.CaptionPlacementArchive",
+  "635": "TSA.TitlePlacementCommandArchive",
+  "636": "TSA.GalleryInfoInsertItemsCommandArchive",
+  "637": "TSA.GalleryInfoRemoveItemsCommandArchive",
+  "638": "TSASOS.VerifyActivityStreamWithServerCommandArchive",
+  "639": "TSASOS.InducedVerifyActivityStreamWithServerCommandArchive",
+  "640": "TSASOS.VerifyTransformHistoryWithServerCommandArchive",
+  "641": "TSA.Object3DInfoSetValueCommandArchive",
+  "642": "TSA.Object3DInfoCommandArchive",
+  "2001": "TSWP.StorageArchive",
+  "2002": "TSWP.SelectionArchive",
+  "2003": "TSWP.DrawableAttachmentArchive",
+  "2004": "TSWP.TextualAttachmentArchive",
+  "2006": "TSWP.UIGraphicalAttachment",
+  "2008": "TSWP.FootnoteReferenceAttachmentArchive",
+  "2010": "TSWP.TSWPTOCPageNumberAttachmentArchive",
+  "2011": "TSWP.ShapeInfoArchive",
+  "2013": "TSWP.HighlightArchive",
+  "2014": "TSWP.CommentInfoArchive",
+  "2015": "TSWP.EquationInfoArchive",
+  "2016": "TSWP.PencilAnnotationArchive",
+  "2021": "TSWP.CharacterStyleArchive",
+  "2022": "TSWP.ParagraphStyleArchive",
+  "2023": "TSWP.ListStyleArchive",
+  "2024": "TSWP.ColumnStyleArchive",
+  "2025": "TSWP.ShapeStyleArchive",
+  "2026": "TSWP.TOCEntryStyleArchive",
+  "2031": "TSWP.PlaceholderSmartFieldArchive",
+  "2032": "TSWP.HyperlinkFieldArchive",
+  "2033": "TSWP.FilenameSmartFieldArchive",
+  "2034": "TSWP.DateTimeSmartFieldArchive",
+  "2035": "TSWP.BookmarkFieldArchive",
+  "2036": "TSWP.MergeSmartFieldArchive",
+  "2037": "TSWP.CitationRecordArchive",
+  "2038": "TSWP.CitationSmartFieldArchive",
+  "2039": "TSWP.UnsupportedHyperlinkFieldArchive",
+  "2040": "TSWP.BibliographySmartFieldArchive",
+  "2041": "TSWP.TOCSmartFieldArchive",
+  "2042": "TSWP.RubyFieldArchive",
+  "2043": "TSWP.NumberAttachmentArchive",
+  "2050": "TSWP.TextStylePresetArchive",
+  "2051": "TSWP.TOCSettingsArchive",
+  "2052": "TSWP.TOCEntryInstanceArchive",
+  "2053": "TSWPSOS.StyleDiffArchive",
+  "2060": "TSWP.ChangeArchive",
+  "2062": "TSWP.ChangeSessionArchive",
+  "2101": "TSWP.TextCommandArchive",
+  "2107": "TSWP.ApplyPlaceholderTextCommandArchive",
+  "2116": "TSWP.ApplyRubyTextCommandArchive",
+  "2118": "TSWP.ModifyRubyTextCommandArchive",
+  "2120": "TSWP.ModifyTOCSettingsBaseCommandArchive",
+  "2121": "TSWP.ModifyTOCSettingsForTOCInfoCommandArchive",
+  "2123": "TSWP.SetObjectPropertiesCommandArchive",
+  "2124": "TSWP.UpdateFlowInfoCommandArchive",
+  "2125": "TSWP.AddFlowInfoCommandArchive",
+  "2126": "TSWP.RemoveFlowInfoCommandArchive",
+  "2127": "TSWP.ContainedObjectsCommandArchive",
+  "2128": "TSWP.EquationInfoGeometryCommandArchive",
+  "2206": "TSWP.AnchorAttachmentCommandArchive",
+  "2217": "TSWP.TextCommentReplyCommandArchive",
+  "2231": "TSWP.ShapeApplyPresetCommandArchive",
+  "2240": "TSWP.TOCInfoArchive",
+  "2241": "TSWP.TOCAttachmentArchive",
+  "2242": "TSWP.TOCLayoutHintArchive",
+  "2400": "TSWP.StyleBaseCommandArchive",
+  "2401": "TSWP.StyleCreateCommandArchive",
+  "2402": "TSWP.StyleRenameCommandArchive",
+  "2404": "TSWP.StyleDeleteCommandArchive",
+  "2405": "TSWP.StyleReorderCommandArchive",
+  "2406": "TSWP.StyleUpdatePropertyMapCommandArchive",
+  "2407": "TSWP.StorageActionCommandArchive",
+  "2408": "TSWP.ShapeStyleSetValueCommandArchive",
+  "2409": "TSWP.HyperlinkSelectionArchive",
+  "2410": "TSWP.FlowInfoArchive",
+  "2411": "TSWP.FlowInfoContainerArchive",
+  "2412": "TSWP.PencilAnnotationSelectionTransformerArchive",
+  "2413": "TSWP.DateTimeSelectionArchive",
+  "3002": "TSD.DrawableArchive",
+  "3003": "TSD.ContainerArchive",
+  "3004": "TSD.ShapeArchive",
+  "3005": "TSD.ImageArchive",
+  "3006": "TSD.MaskArchive",
+  "3007": "TSD.MovieArchive",
+  "3008": "TSD.GroupArchive",
+  "3009": "TSD.ConnectionLineArchive",
+  "3015": "TSD.ShapeStyleArchive",
+  "3016": "TSD.MediaStyleArchive",
+  "3021": "TSD.InfoGeometryCommandArchive",
+  "3022": "TSD.DrawablePathSourceCommandArchive",
+  "3024": "TSD.ImageMaskCommandArchive",
+  "3025": "TSD.ImageMediaCommandArchive",
+  "3026": "TSD.ImageReplaceCommandArchive",
+  "3027": "TSD.MediaOriginalSizeCommandArchive",
+  "3028": "TSD.ShapeStyleSetValueCommandArchive",
+  "3030": "TSD.MediaStyleSetValueCommandArchive",
+  "3031": "TSD.ShapeApplyPresetCommandArchive",
+  "3032": "TSD.MediaApplyPresetCommandArchive",
+  "3034": "TSD.MovieSetValueCommandArchive",
+  "3036": "TSD.ExteriorTextWrapCommandArchive",
+  "3037": "TSD.MediaFlagsCommandArchive",
+  "3040": "TSD.DrawableHyperlinkCommandArchive",
+  "3041": "TSD.ConnectionLineConnectCommandArchive",
+  "3042": "TSD.InstantAlphaCommandArchive",
+  "3043": "TSD.DrawableLockCommandArchive",
+  "3044": "TSD.ImageNaturalSizeCommandArchive",
+  "3045": "TSD.CanvasSelectionArchive",
+  "3047": "TSD.GuideStorageArchive",
+  "3048": "TSD.StyledInfoSetStyleCommandArchive",
+  "3049": "TSD.DrawableInfoCommentCommandArchive",
+  "3050": "TSD.GuideCommandArchive",
+  "3051": "TSD.DrawableAspectRatioLockedCommandArchive",
+  "3052": "TSD.ContainerRemoveChildrenCommandArchive",
+  "3053": "TSD.ContainerInsertChildrenCommandArchive",
+  "3054": "TSD.ContainerReorderChildrenCommandArchive",
+  "3055": "TSD.ImageAdjustmentsCommandArchive",
+  "3056": "TSD.CommentStorageArchive",
+  "3057": "TSD.ThemeReplaceFillPresetCommandArchive",
+  "3058": "TSD.DrawableAccessibilityDescriptionCommandArchive",
+  "3059": "TSD.PasteStyleCommandArchive",
+  "3061": "TSD.DrawableSelectionArchive",
+  "3062": "TSD.GroupSelectionArchive",
+  "3063": "TSD.PathSelectionArchive",
+  "3064": "TSD.CommentInvalidatingCommandSelectionBehaviorArchive",
+  "3065": "TSD.ImageInfoAbstractGeometryCommandArchive",
+  "3066": "TSD.ImageInfoGeometryCommandArchive",
+  "3067": "TSD.ImageInfoMaskGeometryCommandArchive",
+  "3068": "TSD.UndoObjectArchive",
+  "3070": "TSD.ReplaceAnnotationAuthorCommandArchive",
+  "3071": "TSD.DrawableSelectionTransformerArchive",
+  "3072": "TSD.GroupSelectionTransformerArchive",
+  "3073": "TSD.ShapeSelectionTransformerArchive",
+  "3074": "TSD.PathSelectionTransformerArchive",
+  "3080": "TSD.MediaInfoGeometryCommandArchive",
+  "3082": "TSD.GroupUngroupInformativeCommandArchive",
+  "3083": "TSD.DrawableContentDescription",
+  "3084": "TSD.ContainerRemoveDrawablesCommandArchive",
+  "3085": "TSD.ContainerInsertDrawablesCommandArchive",
+  "3086": "TSD.PencilAnnotationArchive",
+  "3087": "TSD.FreehandDrawingOpacityCommandArchive",
+  "3088": "TSD.DrawablePencilAnnotationCommandArchive",
+  "3089": "TSD.PencilAnnotationSelectionArchive",
+  "3090": "TSD.FreehandDrawingContentDescription",
+  "3091": "TSD.FreehandDrawingToolkitUIState",
+  "3092": "TSD.PencilAnnotationSelectionTransformerArchive",
+  "3094": "TSD.FreehandDrawingAnimationCommandArchive",
+  "3095": "TSD.InsertCaptionOrTitleCommandArchive",
+  "3096": "TSD.RemoveCaptionOrTitleCommandArchive",
+  "3097": "TSD.StandinCaptionArchive",
+  "3098": "TSD.SetCaptionOrTitleVisibilityCommandArchive",
+  "4000": "TSCE.CalculationEngineArchive",
+  "4001": "TSCE.FormulaRewriteCommandArchive",
+  "4003": "TSCE.NamedReferenceManagerArchive",
+  "4004": "TSCE.TrackedReferenceStoreArchive",
+  "4005": "TSCE.TrackedReferenceArchive",
+  "4007": "TSCE.RemoteDataStoreArchive",
+  "4008": "TSCE.FormulaOwnerDependenciesArchive",
+  "4009": "TSCE.CellRecordTileArchive",
+  "4010": "TSCE.RangePrecedentsTileArchive",
+  "4011": "TSCE.ReferencesToDirtyArchive",
+  "5000": "TSCH.PreUFF.ChartInfoArchive",
+  "5002": "TSCH.PreUFF.ChartGridArchive",
+  "5004": "TSCH.ChartMediatorArchive",
+  "5010": "TSCH.PreUFF.ChartStyleArchive",
+  "5011": "TSCH.PreUFF.ChartSeriesStyleArchive",
+  "5012": "TSCH.PreUFF.ChartAxisStyleArchive",
+  "5013": "TSCH.PreUFF.LegendStyleArchive",
+  "5014": "TSCH.PreUFF.ChartNonStyleArchive",
+  "5015": "TSCH.PreUFF.ChartSeriesNonStyleArchive",
+  "5016": "TSCH.PreUFF.ChartAxisNonStyleArchive",
+  "5017": "TSCH.PreUFF.LegendNonStyleArchive",
+  "5020": "TSCH.ChartStylePreset",
+  "5021": "TSCH.ChartDrawableArchive",
+  "5022": "TSCH.ChartStyleArchive",
+  "5023": "TSCH.ChartNonStyleArchive",
+  "5024": "TSCH.LegendStyleArchive",
+  "5025": "TSCH.LegendNonStyleArchive",
+  "5026": "TSCH.ChartAxisStyleArchive",
+  "5027": "TSCH.ChartAxisNonStyleArchive",
+  "5028": "TSCH.ChartSeriesStyleArchive",
+  "5029": "TSCH.ChartSeriesNonStyleArchive",
+  "5030": "TSCH.ReferenceLineStyleArchive",
+  "5031": "TSCH.ReferenceLineNonStyleArchive",
+  "5103": "TSCH.CommandSetChartTypeArchive",
+  "5104": "TSCH.CommandSetSeriesNameArchive",
+  "5105": "TSCH.CommandSetCategoryNameArchive",
+  "5107": "TSCH.CommandSetScatterFormatArchive",
+  "5108": "TSCH.CommandSetLegendFrameArchive",
+  "5109": "TSCH.CommandSetGridValueArchive",
+  "5110": "TSCH.CommandSetGridDirectionArchive",
+  "5115": "TSCH.CommandAddGridRowsArchive",
+  "5116": "TSCH.CommandAddGridColumnsArchive",
+  "5118": "TSCH.CommandMoveGridRowsArchive",
+  "5119": "TSCH.CommandMoveGridColumnsArchive",
+  "5122": "TSCH.CommandSetPieWedgeExplosion",
+  "5123": "TSCH.CommandStyleSwapArchive",
+  "5125": "TSCH.CommandChartApplyPreset",
+  "5126": "TSCH.ChartCommandArchive",
+  "5127": "TSCH.CommandReplaceGridValuesArchive",
+  "5129": "TSCH.StylePasteboardDataArchive",
+  "5130": "TSCH.CommandSetMultiDataSetIndexArchive",
+  "5131": "TSCH.CommandReplaceThemePresetArchive",
+  "5132": "TSCH.CommandInvalidateWPCaches",
+  "5135": "TSCH.CommandMutatePropertiesArchive",
+  "5136": "TSCH.CommandScaleAllTextArchive",
+  "5137": "TSCH.CommandSetFontFamilyArchive",
+  "5138": "TSCH.CommandApplyFillSetArchive",
+  "5139": "TSCH.CommandReplaceCustomFormatArchive",
+  "5140": "TSCH.CommandAddReferenceLineArchive",
+  "5141": "TSCH.CommandDeleteReferenceLineArchive",
+  "5142": "TSCH.CommandDeleteGridColumnsArchive",
+  "5143": "TSCH.CommandDeleteGridRowsArchive",
+  "5145": "TSCH.ChartSelectionArchive",
+  "5146": "TSCH.ChartTextSelectionTransformerArchive",
+  "5147": "TSCH.ChartSubselectionTransformerArchive",
+  "5148": "TSCH.ChartDrawableSelectionTransformerArchive",
+  "5149": "TSCH.ChartSubselectionTransformerHelperArchive",
+  "5150": "TSCH.ChartRefLineSubselectionTransformerHelperArchive",
+  "5151": "TSCH.CDESelectionTransformerArchive",
+  "5152": "TSCH.ChartSubselectionIdentityTransformerHelperArchive",
+  "5154": "TSCH.CommandPasteStyleArchive",
+  "5155": "TSCH.CommandInducedReplaceChartGrid",
+  "5156": "TSCH.CommandReplaceImageDataArchive",
+  "5157": "TSCH.CommandInduced3DChartGeometry",
+  "6000": "TST.TableInfoArchive",
+  "6001": "TST.TableModelArchive",
+  "6002": "TST.Tile",
+  "6003": "TST.TableStyleArchive",
+  "6004": "TST.CellStyleArchive",
+  "6005": "TST.TableDataList",
+  "6006": "TST.HeaderStorageBucket",
+  "6007": "TST.WPTableInfoArchive",
+  "6008": "TST.TableStylePresetArchive",
+  "6009": "TST.TableStrokePresetArchive",
+  "6010": "TST.ConditionalStyleSetArchive",
+  "6011": "TST.TableDataListSegment",
+  "6030": "TST.SelectionArchive",
+  "6031": "TST.CellMapArchive",
+  "6032": "TST.DeathhawkRdar39989167CellSelectionArchive",
+  "6033": "TST.ConcurrentCellMapArchive",
+  "6034": "TST.ConcurrentCellListArchive",
+  "6100": "TST.TableCommandArchive",
+  "6101": "TST.CommandDeleteCellsArchive",
+  "6102": "TST.CommandInsertColumnsOrRowsArchive",
+  "6103": "TST.CommandRemoveColumnsOrRowsArchive",
+  "6104": "TST.CommandResizeColumnOrRowArchive",
+  "6107": "TST.CommandSetTableNameArchive",
+  "6111": "TST.CommandChangeFreezeHeaderStateArchive",
+  "6114": "TST.CommandSetTableNameEnabledArchive",
+  "6117": "TST.CommandApplyTableStylePresetArchive",
+  "6120": "TST.CommandSetRepeatingHeaderEnabledArchive",
+  "6123": "TST.CommandSortArchive",
+  "6125": "TST.CommandStyleTableArchive",
+  "6126": "TST.CommandSetNumberOfDecimalPlacesArchive",
+  "6127": "TST.CommandSetShowThousandsSeparatorArchive",
+  "6128": "TST.CommandSetNegativeNumberStyleArchive",
+  "6129": "TST.CommandSetFractionAccuracyArchive",
+  "6131": "TST.CommandSetCurrencyCodeArchive",
+  "6132": "TST.CommandSetUseAccountingStyleArchive",
+  "6136": "TST.CommandSetTableFontNameArchive",
+  "6137": "TST.CommandSetTableFontSizeArchive",
+  "6142": "TST.CommandSetTableNameHeightArchive",
+  "6144": "TST.MergeRegionMapArchive",
+  "6145": "TST.CommandHideShowArchive",
+  "6146": "TST.CommandSetBaseArchive",
+  "6147": "TST.CommandSetBasePlacesArchive",
+  "6148": "TST.CommandSetBaseUseMinusSignArchive",
+  "6149": "TST.CommandSetTextStylePropertiesArchive",
+  "6150": "TST.CommandCategoryChangeSummaryAggregateType",
+  "6152": "TST.CommandCategoryResizeColumnOrRowArchive",
+  "6153": "TST.CommandCategoryMoveRowsArchive",
+  "6156": "TST.CommandSetPencilAnnotationsArchive",
+  "6157": "TST.CommandCategoryWillChangeGroupValue",
+  "6158": "TST.CommandApplyConcurrentCellMapArchive",
+  "6159": "TST.CommandSetGroupSortOrderArchive",
+  "6179": "TST.FormulaEqualsTokenAttachmentArchive",
+  "6181": "TST.TokenAttachmentArchive",
+  "6182": "TST.ExpressionNodeArchive",
+  "6183": "TST.BooleanNodeArchive",
+  "6184": "TST.NumberNodeArchive",
+  "6185": "TST.StringNodeArchive",
+  "6186": "TST.ArrayNodeArchive",
+  "6187": "TST.ListNodeArchive",
+  "6188": "TST.OperatorNodeArchive",
+  "6189": "TST.FunctionNodeArchive",
+  "6190": "TST.DateNodeArchive",
+  "6191": "TST.ReferenceNodeArchive",
+  "6192": "TST.DurationNodeArchive",
+  "6193": "TST.ArgumentPlaceholderNodeArchive",
+  "6194": "TST.PostfixOperatorNodeArchive",
+  "6195": "TST.PrefixOperatorNodeArchive",
+  "6196": "TST.FunctionEndNodeArchive",
+  "6197": "TST.EmptyExpressionNodeArchive",
+  "6198": "TST.LayoutHintArchive",
+  "6199": "TST.CompletionTokenAttachmentArchive",
+  "6204": "TST.HiddenStateFormulaOwnerArchive",
+  "6205": "TST.CommandSetAutomaticDurationUnitsArchive",
+  "6206": "TST.PopUpMenuModel",
+  "6218": "TST.RichTextPayloadArchive",
+  "6220": "TST.FilterSetArchive",
+  "6221": "TST.CommandSetFiltersEnabledArchive",
+  "6224": "TST.CommandRewriteFilterFormulasForTableResizeArchive",
+  "6226": "TST.CommandTextPreflightInsertCellArchive",
+  "6228": "TST.CommandDeleteCellContentsArchive",
+  "6229": "TST.CommandPostflightSetCellArchive",
+  "6235": "TST.IdentifierNodeArchive",
+  "6238": "TST.CommandSetDateTimeFormatArchive",
+  "6239": "TST.TableCommandSelectionBehaviorArchive",
+  "6244": "TST.CommandApplyCellCommentArchive",
+  "6246": "TST.CommandSetFormulaTokenizationArchive",
+  "6247": "TST.TableStyleNetworkArchive",
+  "6250": "TST.CommandSetFilterSetTypeArchive",
+  "6255": "TST.CommandSetTextStyleArchive",
+  "6256": "TST.CommandJustForNotifyingArchive",
+  "6258": "TST.CommandSetSortOrderArchive",
+  "6262": "TST.CommandAddTableStylePresetArchive",
+  "6264": "TST.CellDiffMapArchive",
+  "6265": "TST.CommandApplyCellContentsArchive",
+  "6266": "TST.CommandRemoveTableStylePresetArchive",
+  "6267": "TST.ColumnRowUIDMapArchive",
+  "6268": "TST.CommandMoveColumnsOrRowsArchive",
+  "6269": "TST.CommandReplaceCustomFormatArchive",
+  "6270": "TST.CommandReplaceTableStylePresetArchive",
+  "6271": "TST.FormulaSelectionArchive",
+  "6273": "TST.CellListArchive",
+  "6275": "TST.CommandApplyCellDiffMapArchive",
+  "6276": "TST.CommandSetFilterSetArchive",
+  "6277": "TST.CommandMutateCellFormatArchive",
+  "6278": "TST.CommandSetStorageLanguageArchive",
+  "6280": "TST.CommandMergeArchive",
+  "6281": "TST.CommandUnmergeArchive",
+  "6282": "TST.CommandApplyCellMapArchive",
+  "6283": "TST.ControlCellSelectionArchive",
+  "6284": "TST.TableNameSelectionArchive",
+  "6285": "TST.CommandRewriteFormulasForTransposeArchive",
+  "6287": "TST.CommandTransposeTableArchive",
+  "6289": "TST.CommandSetDurationStyleArchive",
+  "6290": "TST.CommandSetDurationUnitSmallestLargestArchive",
+  "6291": "TST.CommandRewriteTableFormulasForRewriteSpecArchive",
+  "6292": "TST.CommandRewriteConditionalStylesForRewriteSpecArchive",
+  "6293": "TST.CommandRewriteFilterFormulasForRewriteSpecArchive",
+  "6294": "TST.CommandRewriteSortOrderForRewriteSpecArchive",
+  "6295": "TST.StrokeSelectionArchive",
+  "6298": "TST.VariableNodeArchive",
+  "6300": "TST.CommandInverseMergeArchive",
+  "6301": "TST.CommandMoveCellsArchive",
+  "6302": "TST.DefaultCellStylesContainerArchive",
+  "6303": "TST.CommandRewriteMergeFormulasArchive",
+  "6304": "TST.CommandChangeTableAreaForColumnOrRowArchive",
+  "6305": "TST.StrokeSidecarArchive",
+  "6306": "TST.StrokeLayerArchive",
+  "6307": "TST.CommandChooseTableIdRemapperArchive",
+  "6310": "TST.CommandSetWasCutArchive",
+  "6311": "TST.AutofillSelectionArchive",
+  "6312": "TST.StockCellSelectionArchive",
+  "6313": "TST.CommandSetNowArchive",
+  "6314": "TST.CommandSetStructuredTextImportRecordArchive",
+  "6315": "TST.CommandRewriteCategoryFormulasArchive",
+  "6316": "TST.SummaryModelArchive",
+  "6317": "TST.SummaryCellVendorArchive",
+  "6318": "TST.CategoryOrderArchive",
+  "6320": "TST.CommandCategoryCollapseExpandGroupArchive",
+  "6321": "TST.CommandCategorySetGroupingColumnsArchive",
+  "6323": "TST.CommandRewriteHiddenStatesForGroupByChangeArchive",
+  "6350": "TST.IdempotentSelectionTransformerArchive",
+  "6351": "TST.TableSubSelectionTransformerBaseArchive",
+  "6352": "TST.TableNameSelectionTransformerArchive",
+  "6353": "TST.RegionSelectionTransformerArchive",
+  "6354": "TST.RowColumnSelectionTransformerArchive",
+  "6355": "TST.ControlCellSelectionTransformerArchive",
+  "6357": "TST.ChangePropagationMapWrapper",
+  "6358": "TST.WPSelectionTransformerArchive",
+  "6359": "TST.StockCellSelectionTransformerArchive",
+  "6360": "TST.CommandSetRangeControlMinMaxIncArchive",
+  "6361": "TST.CommandCategorySetLabelRowVisibility",
+  "6362": "TST.CommandRewritePencilAnnotationFormulasArchive",
+  "6363": "TST.PencilAnnotationArchive",
+  "6364": "TST.StrokeSelectionTransformerArchive",
+  "6365": "TST.HeaderNameMgrTileArchive",
+  "6366": "TST.HeaderNameMgrArchive",
+  "6367": "TST.CellDiffArray",
+  "6368": "TST.CellDiffArraySegment",
+  "6369": "TST.PivotOrderArchive",
+  "6370": "TST.PivotOwnerArchive",
+  "6371": "TST.CommandPivotSetPivotRulesArchive",
+  "6372": "TST.CategoryOwnerRefArchive",
+  "6373": "TST.GroupByArchive",
+  "6374": "TST.PivotGroupingColumnOptionsMapArchive",
+  "6375": "TST.CommandPivotSetGroupingColumnOptionsArchive",
+  "6376": "TST.CommandPivotHideShowGrandTotalsArchive",
+  "6377": "TST.CommandPivotSortArchive",
+  "6379": "TST.CommandRewritePivotOwnerFormulasArchive",
+  "6380": "TST.CommandRewriteTrackedReferencesArchive",
+  "6381": "TST.CommandExtendTableIDHistoryArchive",
+  "6382": "TST.GroupByArchive.AggregatorArchive",
+  "6383": "TST.GroupByArchive.GroupNodeArchive",
+  "6384": "TST.SpillOriginRefNodeArchive",
+  "10011": "TSWP.SectionPlaceholderArchive",
+  "10020": "TSWP.ShapeSelectionTransformerArchive",
+  "10021": "TSWP.SelectionTransformerArchive",
+  "10022": "TSWP.ShapeContentDescription",
+  "10023": "TSWP.TateChuYokoFieldArchive",
+  "10024": "TSWP.DropCapStyleArchive",
+  "11000": "TSP.PasteboardObject",
+  "11006": "TSP.PackageMetadata",
+  "11007": "TSP.PasteboardMetadata",
+  "11008": "TSP.ObjectContainer",
+  "11009": "TSP.ViewStateMetadata",
+  "11010": "TSP.ObjectCollection",
+  "11011": "TSP.DocumentMetadata",
+  "11012": "TSP.SupportMetadata",
+  "11013": "TSP.ObjectSerializationMetadata",
+  "11014": "TSP.DataMetadata",
+  "11015": "TSP.DataMetadataMap",
+  "11016": "TSP.LargeNumberArraySegment",
+  "11017": "TSP.LargeStringArraySegment",
+  "11018": "TSP.LargeLazyObjectArraySegment",
+  "11019": "TSP.LargeNumberArray",
+  "11020": "TSP.LargeStringArray",
+  "11021": "TSP.LargeLazyObjectArray",
+  "11024": "TSP.LargeUUIDArraySegment",
+  "11025": "TSP.LargeUUIDArray",
+  "11026": "TSP.LargeObjectArraySegment",
+  "11027": "TSP.LargeObjectArray"
+ },
+ "deprecatedTypes": [
+  171,
+  204,
+  608,
+  609,
+  610,
+  2012,
+  2102,
+  2104,
+  2105,
+  2106,
+  2108,
+  2109,
+  2110,
+  2111,
+  2112,
+  2113,
+  2114,
+  2115,
+  2117,
+  2119,
+  2122,
+  2201,
+  2202,
+  2203,
+  2204,
+  2205,
+  2207,
+  2208,
+  2209,
+  2210,
+  2232,
+  2300,
+  2403,
+  3023,
+  5114,
+  6105,
+  6106,
+  6108,
+  6109,
+  6110,
+  6112,
+  6113,
+  6119,
+  6121,
+  6122,
+  6124,
+  6130,
+  6133,
+  6134,
+  6135,
+  6138,
+  6139,
+  6140,
+  6141,
+  6143,
+  6200,
+  6202,
+  6203,
+  6207,
+  6208,
+  6209,
+  6210,
+  6211,
+  6212,
+  6213,
+  6214,
+  6215,
+  6216,
+  6217,
+  6219,
+  6222,
+  6223,
+  6225,
+  6227,
+  6230,
+  6231,
+  6232,
+  6236,
+  6237,
+  6240,
+  6241,
+  6242,
+  6245,
+  6248,
+  6249,
+  6251,
+  6252,
+  6253,
+  6254,
+  6257,
+  6259,
+  6260,
+  6261,
+  6263,
+  6272,
+  6274,
+  6279,
+  6286,
+  6288,
+  11022,
+  11023
+ ],
+ "registrations": [
+  {
+   "type": 1,
+   "kind": "register",
+   "message": "KN.DocumentArchive",
+   "unarchiveClassname": "KNDocumentRoot",
+   "binary": "Keynote"
+  },
+  {
+   "type": 2,
+   "kind": "register",
+   "message": "KN.ShowArchive",
+   "unarchiveClassname": "KNShow",
+   "binary": "Keynote"
+  },
+  {
+   "type": 3,
+   "kind": "register",
+   "message": "KN.UIStateArchive",
+   "unarchiveClassname": "KNArchivedUIState",
+   "binary": "Keynote"
+  },
+  {
+   "type": 4,
+   "kind": "register",
+   "message": "KN.SlideNodeArchive",
+   "unarchiveClassname": "KNSlideNode",
+   "binary": "Keynote"
+  },
+  {
+   "type": 5,
+   "kind": "register",
+   "message": "KN.SlideArchive",
+   "unarchiveClassname": "KNAbstractSlide",
+   "binary": "Keynote"
+  },
+  {
+   "type": 6,
+   "kind": "upgrade",
+   "unarchiveClassname": "KNAbstractSlide",
+   "binary": "Keynote"
+  },
+  {
+   "type": 7,
+   "kind": "register",
+   "message": "KN.PlaceholderArchive",
+   "unarchiveClassname": "KNPlaceholderInfo",
+   "binary": "Keynote"
+  },
+  {
+   "type": 8,
+   "kind": "register",
+   "message": "KN.BuildArchive",
+   "unarchiveClassname": "KNBuild",
+   "binary": "Keynote"
+  },
+  {
+   "type": 9,
+   "kind": "register",
+   "message": "KN.SlideStyleArchive",
+   "unarchiveClassname": "KNSlideStyle",
+   "binary": "Keynote"
+  },
+  {
+   "type": 10,
+   "kind": "register",
+   "message": "KN.ThemeArchive",
+   "unarchiveClassname": "KNTheme",
+   "binary": "Keynote"
+  },
+  {
+   "type": 11,
+   "kind": "register",
+   "message": "KN.PasteboardNativeStorageArchive",
+   "unarchiveClassname": "KNPasteboardNativeStorage",
+   "binary": "Keynote"
+  },
+  {
+   "type": 12,
+   "kind": "upgrade",
+   "unarchiveClassname": "KNPlaceholderInfo",
+   "binary": "Keynote"
+  },
+  {
+   "type": 14,
+   "kind": "upgrade",
+   "unarchiveClassname": "KNSlideNumberAttachment",
+   "binary": "Keynote"
+  },
+  {
+   "type": 15,
+   "kind": "register",
+   "message": "KN.NoteArchive",
+   "unarchiveClassname": "KNNoteInfo",
+   "binary": "Keynote"
+  },
+  {
+   "type": 16,
+   "kind": "register",
+   "message": "KN.RecordingArchive",
+   "unarchiveClassname": "KNRecording",
+   "binary": "Keynote"
+  },
+  {
+   "type": 17,
+   "kind": "register",
+   "message": "KN.RecordingEventTrackArchive",
+   "unarchiveClassname": "KNRecordingEventTrack",
+   "binary": "Keynote"
+  },
+  {
+   "type": 18,
+   "kind": "register",
+   "message": "KN.RecordingMovieTrackArchive",
+   "unarchiveClassname": "KNRecordingMovieTrack",
+   "binary": "Keynote"
+  },
+  {
+   "type": 19,
+   "kind": "register",
+   "message": "KN.ClassicStylesheetRecordArchive",
+   "unarchiveClassname": "KNClassicStylesheetRecord",
+   "binary": "Keynote"
+  },
+  {
+   "type": 20,
+   "kind": "register",
+   "message": "KN.ClassicThemeRecordArchive",
+   "unarchiveClassname": "KNClassicThemeRecord",
+   "binary": "Keynote"
+  },
+  {
+   "type": 21,
+   "kind": "register",
+   "message": "KN.Soundtrack",
+   "unarchiveClassname": "KNSoundtrack",
+   "binary": "Keynote"
+  },
+  {
+   "type": 22,
+   "kind": "register",
+   "message": "KN.SlideNumberAttachmentArchive",
+   "unarchiveClassname": "KNSlideNumberAttachment",
+   "binary": "Keynote"
+  },
+  {
+   "type": 23,
+   "kind": "register",
+   "message": "KN.DesktopUILayoutArchive",
+   "unarchiveClassname": "KNMacArchivedUILayout",
+   "binary": "Keynote"
+  },
+  {
+   "type": 24,
+   "kind": "register",
+   "message": "KN.CanvasSelectionArchive",
+   "unarchiveClassname": "KNArchivedCanvasSelection",
+   "binary": "Keynote"
+  },
+  {
+   "type": 25,
+   "kind": "register",
+   "message": "KN.SlideCollectionSelectionArchive",
+   "unarchiveClassname": "KNArchivedSlideCollectionSelection",
+   "binary": "Keynote"
+  },
+  {
+   "type": 26,
+   "kind": "register",
+   "message": "KN.MotionBackgroundStyleArchive",
+   "unarchiveClassname": "KNMotionBackgroundStyle",
+   "binary": "Keynote"
+  },
+  {
+   "type": 100,
+   "kind": "register",
+   "message": "KN.CommandBuildSetValueArchive",
+   "unarchiveClassname": "KNCommandBuildSetValue",
+   "binary": "Keynote"
+  },
+  {
+   "type": 101,
+   "kind": "register",
+   "message": "KN.CommandShowInsertSlideArchive",
+   "unarchiveClassname": "KNCommandShowInsertSlide",
+   "binary": "Keynote"
+  },
+  {
+   "type": 102,
+   "kind": "register",
+   "message": "KN.CommandShowMoveSlideArchive",
+   "unarchiveClassname": "KNCommandShowMoveSlide",
+   "binary": "Keynote"
+  },
+  {
+   "type": 103,
+   "kind": "register",
+   "message": "KN.CommandShowRemoveSlideArchive",
+   "unarchiveClassname": "KNCommandShowRemoveSlide",
+   "binary": "Keynote"
+  },
+  {
+   "type": 104,
+   "kind": "register",
+   "message": "KN.CommandSlideInsertDrawablesArchive",
+   "unarchiveClassname": "KNCommandSlideInsertDrawables",
+   "binary": "Keynote"
+  },
+  {
+   "type": 105,
+   "kind": "register",
+   "message": "KN.CommandSlideRemoveDrawableArchive",
+   "unarchiveClassname": "KNCommandSlideRemoveDrawables",
+   "binary": "Keynote"
+  },
+  {
+   "type": 106,
+   "kind": "register",
+   "message": "KN.CommandSlideNodeSetPropertyArchive",
+   "unarchiveClassname": "KNCommandSlideNodeSetProperty",
+   "binary": "Keynote"
+  },
+  {
+   "type": 107,
+   "kind": "register",
+   "message": "KN.CommandSlideInsertBuildArchive",
+   "unarchiveClassname": "KNCommandSlideInsertBuild",
+   "binary": "Keynote"
+  },
+  {
+   "type": 109,
+   "kind": "register",
+   "message": "KN.CommandSlideRemoveBuildArchive",
+   "unarchiveClassname": "KNCommandSlideRemoveBuild",
+   "binary": "Keynote"
+  },
+  {
+   "type": 110,
+   "kind": "register",
+   "message": "KN.CommandSlideInsertBuildChunkArchive",
+   "unarchiveClassname": "KNCommandSlideInsertBuildChunk",
+   "binary": "Keynote"
+  },
+  {
+   "type": 111,
+   "kind": "register",
+   "message": "KN.CommandSlideMoveBuildChunksArchive",
+   "unarchiveClassname": "KNCommandSlideMoveBuildChunks",
+   "binary": "Keynote"
+  },
+  {
+   "type": 112,
+   "kind": "register",
+   "message": "KN.CommandSlideRemoveBuildChunkArchive",
+   "unarchiveClassname": "KNCommandSlideRemoveBuildChunk",
+   "binary": "Keynote"
+  },
+  {
+   "type": 114,
+   "kind": "register",
+   "message": "KN.CommandTransitionSetValueArchive",
+   "unarchiveClassname": "KNCommandTransitionSetValue",
+   "binary": "Keynote"
+  },
+  {
+   "type": 118,
+   "kind": "register",
+   "message": "KN.CommandSlideMoveDrawableZOrderArchive",
+   "unarchiveClassname": "KNCommandSlideMoveDrawableZOrder",
+   "binary": "Keynote"
+  },
+  {
+   "type": 119,
+   "kind": "register",
+   "message": "KN.CommandChangeTemplateSlideArchive",
+   "unarchiveClassname": "KNCommandChangeTemplateSlide",
+   "binary": "Keynote"
+  },
+  {
+   "type": 123,
+   "kind": "register",
+   "message": "KN.CommandShowSetSlideNumberVisibilityArchive",
+   "unarchiveClassname": "KNCommandShowSetSlideNumberVisibility",
+   "binary": "Keynote"
+  },
+  {
+   "type": 124,
+   "kind": "register",
+   "message": "KN.CommandShowSetValueArchive",
+   "unarchiveClassname": "KNCommandShowSetValue",
+   "binary": "Keynote"
+  },
+  {
+   "type": 128,
+   "kind": "register",
+   "message": "KN.CommandShowMarkOutOfSyncRecordingArchive",
+   "unarchiveClassname": "KNCommandShowMarkOutOfSyncRecording",
+   "binary": "Keynote"
+  },
+  {
+   "type": 129,
+   "kind": "register",
+   "message": "KN.CommandShowRemoveRecordingArchive",
+   "unarchiveClassname": "KNCommandShowRemoveRecording",
+   "binary": "Keynote"
+  },
+  {
+   "type": 130,
+   "kind": "register",
+   "message": "KN.CommandShowReplaceRecordingArchive",
+   "unarchiveClassname": "KNCommandShowReplaceRecording",
+   "binary": "Keynote"
+  },
+  {
+   "type": 131,
+   "kind": "register",
+   "message": "KN.CommandShowSetSoundtrack",
+   "unarchiveClassname": "KNCommandShowSetSoundtrack",
+   "binary": "Keynote"
+  },
+  {
+   "type": 132,
+   "kind": "register",
+   "message": "KN.CommandSoundtrackSetValue",
+   "unarchiveClassname": "KNCommandSoundtrackSetValue",
+   "binary": "Keynote"
+  },
+  {
+   "type": 134,
+   "kind": "register",
+   "message": "KN.CommandMoveTemplatesArchive",
+   "unarchiveClassname": "KNCommandThemeMoveTemplateSlideNodes",
+   "binary": "Keynote"
+  },
+  {
+   "type": 135,
+   "kind": "register",
+   "message": "KN.CommandInsertTemplateArchive",
+   "unarchiveClassname": "KNCommandThemeInsertTemplateSlideNode",
+   "binary": "Keynote"
+  },
+  {
+   "type": 136,
+   "kind": "register",
+   "message": "KN.CommandSlideSetStyleArchive",
+   "unarchiveClassname": "KNCommandSlideSetStyle",
+   "binary": "Keynote"
+  },
+  {
+   "type": 137,
+   "kind": "register",
+   "message": "KN.CommandSlideSetPlaceholdersForTagsArchive",
+   "unarchiveClassname": "KNCommandSlideSetPlaceholdersForTags",
+   "binary": "Keynote"
+  },
+  {
+   "type": 138,
+   "kind": "register",
+   "message": "KN.CommandBuildChunkSetValueArchive",
+   "unarchiveClassname": "KNCommandBuildChunkSetValue",
+   "binary": "Keynote"
+  },
+  {
+   "type": 140,
+   "kind": "register",
+   "message": "KN.CommandRemoveTemplateArchive",
+   "unarchiveClassname": "KNCommandThemeRemoveTemplateSlideNode",
+   "binary": "Keynote"
+  },
+  {
+   "type": 142,
+   "kind": "register",
+   "message": "KN.CommandTemplateSetThumbnailTextArchive",
+   "unarchiveClassname": "KNCommandTemplateSlideSetThumbnailText",
+   "binary": "Keynote"
+  },
+  {
+   "type": 143,
+   "kind": "register",
+   "message": "KN.CommandShowChangeThemeArchive",
+   "unarchiveClassname": "KNCommandShowChangeTheme",
+   "binary": "Keynote"
+  },
+  {
+   "type": 144,
+   "kind": "register",
+   "message": "KN.CommandSlidePrimitiveSetTemplateArchive",
+   "unarchiveClassname": "KNCommandSlidePrimitiveSetTemplateSlide",
+   "binary": "Keynote"
+  },
+  {
+   "type": 145,
+   "kind": "register",
+   "message": "KN.CommandTemplateSetBodyStylesArchive",
+   "unarchiveClassname": "KNCommandTemplateSlideSetBodyStyles",
+   "binary": "Keynote"
+  },
+  {
+   "type": 146,
+   "kind": "register",
+   "message": "KNSOS.CommandSlideReapplyTemplateSlideArchive",
+   "unarchiveClassname": "KNCommandSlideReapplyTemplateSlide",
+   "binary": "Keynote"
+  },
+  {
+   "type": 148,
+   "kind": "register",
+   "message": "KN.ChartInfoGeometryCommandArchive",
+   "unarchiveClassname": "KNCommandSetChartInfoGeometry",
+   "binary": "Keynote"
+  },
+  {
+   "type": 150,
+   "kind": "register",
+   "message": "KN.CommandSlideUpdateTemplateDrawables",
+   "unarchiveClassname": "KNCommandSlideUpdateTemplateSlideDrawables",
+   "binary": "Keynote"
+  },
+  {
+   "type": 152,
+   "kind": "register",
+   "message": "KN.CommandSlideSetBackgroundFillArchive",
+   "unarchiveClassname": "KNCommandSlideSetBackgroundFill",
+   "binary": "Keynote"
+  },
+  {
+   "type": 153,
+   "kind": "register",
+   "message": "KN.BuildChunkArchive",
+   "unarchiveClassname": "KNBuildChunk",
+   "binary": "Keynote"
+  },
+  {
+   "type": 156,
+   "kind": "register",
+   "message": "KN.CommandSlideNodeSetViewStatePropertyArchive",
+   "unarchiveClassname": "KNCommandSlideNodeSetViewStateProperty",
+   "binary": "Keynote"
+  },
+  {
+   "type": 157,
+   "kind": "register",
+   "message": "KN.CommandBuildUpdateChunkCountArchive",
+   "unarchiveClassname": "KNCommandBuildUpdateChunkCount",
+   "binary": "Keynote"
+  },
+  {
+   "type": 158,
+   "kind": "register",
+   "message": "KN.CommandBuildUpdateChunkReferentsArchive",
+   "unarchiveClassname": "KNCommandBuildUpdateChunkReferents",
+   "binary": "Keynote"
+  },
+  {
+   "type": 159,
+   "kind": "register",
+   "message": "KN.BuildAttributeTupleArchive",
+   "unarchiveClassname": "KNBuildAttributeTuple",
+   "binary": "Keynote"
+  },
+  {
+   "type": 160,
+   "kind": "register",
+   "message": "KN.CommandSetThemeCustomEffectTimingCurveArchive",
+   "unarchiveClassname": "KNCommandThemeSetCustomEffectTimingCurve",
+   "binary": "Keynote"
+  },
+  {
+   "type": 161,
+   "kind": "register",
+   "message": "KN.CommandShowChangeSlideSizeArchive",
+   "unarchiveClassname": "KNCommandShowChangeSlideSize",
+   "binary": "Keynote"
+  },
+  {
+   "type": 162,
+   "kind": "register",
+   "message": "KN.InsertBuildDescriptionArchive",
+   "unarchiveClassname": "KNInsertBuildDescription",
+   "binary": "Keynote"
+  },
+  {
+   "type": 163,
+   "kind": "register",
+   "message": "KN.RemoveBuildDescriptionArchive",
+   "unarchiveClassname": "KNRemoveBuildDescription",
+   "binary": "Keynote"
+  },
+  {
+   "type": 164,
+   "kind": "register",
+   "message": "KN.DocumentSelectionTransformerArchive",
+   "unarchiveClassname": "KNDocumentSelectionTransformer",
+   "binary": "Keynote"
+  },
+  {
+   "type": 165,
+   "kind": "register",
+   "message": "KN.SlideCollectionSelectionTransformerArchive",
+   "unarchiveClassname": "KNSlideCollectionSelectionTransformer",
+   "binary": "Keynote"
+  },
+  {
+   "type": 166,
+   "kind": "register",
+   "message": "KN.OutlineCanvasSelectionTransformerArchive",
+   "unarchiveClassname": "KNOutlineCanvasSelectionTransformer",
+   "binary": "Keynote"
+  },
+  {
+   "type": 167,
+   "kind": "register",
+   "message": "KN.NoteCanvasSelectionTransformerArchive",
+   "unarchiveClassname": "KNNoteCanvasSelectionTransformer",
+   "binary": "Keynote"
+  },
+  {
+   "type": 168,
+   "kind": "register",
+   "message": "KN.CanvasSelectionTransformerArchive",
+   "unarchiveClassname": "KNCanvasSelectionTransformer",
+   "binary": "Keynote"
+  },
+  {
+   "type": 169,
+   "kind": "register",
+   "message": "KN.OutlineSelectionTransformerArchive",
+   "unarchiveClassname": "KNOutlineSelectionTransformer",
+   "binary": "Keynote"
+  },
+  {
+   "type": 170,
+   "kind": "register",
+   "message": "KN.UndoObjectArchive",
+   "unarchiveClassname": "KNUndoObject",
+   "binary": "Keynote"
+  },
+  {
+   "type": 171,
+   "kind": "deprecated",
+   "binary": "Keynote"
+  },
+  {
+   "type": 172,
+   "kind": "register",
+   "message": "KN.PrototypeForUndoTemplateChangeArchive",
+   "unarchiveClassname": "KNPrototypeForUndoTemplateSlideChange",
+   "binary": "Keynote"
+  },
+  {
+   "type": 173,
+   "kind": "register",
+   "message": "KN.CommandShowMarkOutOfSyncRecordingIfNeededArchive",
+   "unarchiveClassname": "KNCommandShowMarkOutOfSyncRecordingIfNeeded",
+   "binary": "Keynote"
+  },
+  {
+   "type": 174,
+   "kind": "register",
+   "message": "KNSOS.InducedVerifyDocumentWithServerCommandArchive",
+   "unarchiveClassname": "KNInducedVerifyDocumentWithServerCommand",
+   "binary": "Keynote"
+  },
+  {
+   "type": 175,
+   "kind": "register",
+   "message": "KNSOS.InducedVerifyDrawableZOrdersWithServerCommandArchive",
+   "unarchiveClassname": "KNInducedVerifyDrawableZOrdersWithServerCommand",
+   "binary": "Keynote"
+  },
+  {
+   "type": 176,
+   "kind": "register",
+   "message": "KN.CommandPrimitiveInsertTemplateArchive",
+   "unarchiveClassname": "KNCommandThemePrimitiveInsertTemplateSlideNode",
+   "binary": "Keynote"
+  },
+  {
+   "type": 177,
+   "kind": "register",
+   "message": "KN.CommandPrimitiveRemoveTemplateArchive",
+   "unarchiveClassname": "KNCommandThemePrimitiveRemoveTemplateSlideNode",
+   "binary": "Keynote"
+  },
+  {
+   "type": 178,
+   "kind": "register",
+   "message": "KN.CommandTemplateSlideSetPlaceholderForTagArchive",
+   "unarchiveClassname": "KNCommandTemplateSlideSetPlaceholderForTag",
+   "binary": "Keynote"
+  },
+  {
+   "type": 179,
+   "kind": "register",
+   "message": "KN.CommandSlidePropagateSetPlaceholderForTagArchive",
+   "unarchiveClassname": "KNCommandSlidePropagateSetPlaceholderForTag",
+   "binary": "Keynote"
+  },
+  {
+   "type": 180,
+   "kind": "register",
+   "message": "KN.ActionGhostSelectionArchive",
+   "unarchiveClassname": "KNArchivedActionGhostSelection",
+   "binary": "Keynote"
+  },
+  {
+   "type": 181,
+   "kind": "register",
+   "message": "KN.ActionGhostSelectionTransformerArchive",
+   "unarchiveClassname": "KNActionGhostSelectionTransformer",
+   "binary": "Keynote"
+  },
+  {
+   "type": 182,
+   "kind": "register",
+   "message": "KN.CommandSlideResetTemplateBackgroundObjectsArchive",
+   "unarchiveClassname": "KNCommandSlideResetTemplateSlideBackgroundObjects",
+   "binary": "Keynote"
+  },
+  {
+   "type": 184,
+   "kind": "register",
+   "message": "KN.LiveVideoSource",
+   "unarchiveClassname": "KNLiveVideoSource",
+   "binary": "Keynote"
+  },
+  {
+   "type": 185,
+   "kind": "register",
+   "message": "KN.LiveVideoSourceCollection",
+   "unarchiveClassname": "KNLiveVideoSourceCollection",
+   "binary": "Keynote"
+  },
+  {
+   "type": 186,
+   "kind": "register",
+   "message": "KN.CommandLiveVideoInfoApplyPreset",
+   "unarchiveClassname": "KNCommandLiveVideoInfoApplyPreset",
+   "binary": "Keynote"
+  },
+  {
+   "type": 187,
+   "kind": "register",
+   "message": "KN.CommandLiveVideoInfoSetSource",
+   "unarchiveClassname": "KNCommandLiveVideoInfoSetSource",
+   "binary": "Keynote"
+  },
+  {
+   "type": 188,
+   "kind": "register",
+   "message": "KN.CommandLiveVideoInfoSetValue",
+   "unarchiveClassname": "KNCommandLiveVideoInfoSetValue",
+   "binary": "Keynote"
+  },
+  {
+   "type": 189,
+   "kind": "register",
+   "message": "KN.CommandLiveVideoSourceSetValue",
+   "unarchiveClassname": "KNCommandLiveVideoSourceSetValue",
+   "binary": "Keynote"
+  },
+  {
+   "type": 190,
+   "kind": "register",
+   "message": "KN.CommandLiveVideoStyleSetValue",
+   "unarchiveClassname": "KNCommandLiveVideoStyleSetValue",
+   "binary": "Keynote"
+  },
+  {
+   "type": 191,
+   "kind": "register",
+   "message": "KN.CommandThemeAddLiveVideoSource",
+   "unarchiveClassname": "KNCommandThemeAddLiveVideoSource",
+   "binary": "Keynote"
+  },
+  {
+   "type": 192,
+   "kind": "register",
+   "message": "KN.CommandThemeRemoveLiveVideoSource",
+   "unarchiveClassname": "KNCommandThemeRemoveLiveVideoSource",
+   "binary": "Keynote"
+  },
+  {
+   "type": 194,
+   "kind": "register",
+   "message": "KN.CommandMotionBackgroundStyleSetValueArchive",
+   "unarchiveClassname": "KNCommandMotionBackgroundStyleSetValue",
+   "binary": "Keynote"
+  },
+  {
+   "type": 195,
+   "kind": "register",
+   "message": "KN.CommandMotionBackgroundStyleUpdatePosterFrameDataArchive",
+   "unarchiveClassname": "KNCommandMotionBackgroundStyleUpdatePosterFrame",
+   "binary": "Keynote"
+  },
+  {
+   "type": 200,
+   "kind": "register",
+   "message": "TSK.DocumentArchive",
+   "unarchiveClassname": "TSKDocumentRoot",
+   "binary": "TSKit"
+  },
+  {
+   "type": 201,
+   "kind": "register",
+   "message": "TSK.LocalCommandHistory",
+   "unarchiveClassname": "TSKCommandHistory",
+   "binary": "TSKit"
+  },
+  {
+   "type": 202,
+   "kind": "register",
+   "message": "TSK.CommandGroupArchive",
+   "unarchiveClassname": "TSKCommandGroup",
+   "binary": "TSKit"
+  },
+  {
+   "type": 203,
+   "kind": "register",
+   "message": "TSK.CommandContainerArchive",
+   "unarchiveClassname": "TSKCommandContainer",
+   "binary": "TSKit"
+  },
+  {
+   "type": 204,
+   "kind": "deprecated",
+   "binary": "TSKit"
+  },
+  {
+   "type": 205,
+   "kind": "register",
+   "message": "TSK.TreeNode",
+   "unarchiveClassname": "TSKTreeNodeDeprecated",
+   "binary": "TSKit"
+  },
+  {
+   "type": 210,
+   "kind": "register",
+   "message": "TSK.ViewStateArchive",
+   "unarchiveClassname": "TSKViewState",
+   "binary": "TSKit"
+  },
+  {
+   "type": 211,
+   "kind": "register",
+   "message": "TSK.DocumentSupportArchive",
+   "unarchiveClassname": "TSCKDocumentSupport",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 212,
+   "kind": "register",
+   "message": "TSK.AnnotationAuthorArchive",
+   "unarchiveClassname": "TSKAnnotationAuthor",
+   "binary": "TSKit"
+  },
+  {
+   "type": 213,
+   "kind": "register",
+   "message": "TSK.AnnotationAuthorStorageArchive",
+   "unarchiveClassname": "TSKAnnotationAuthorStorage",
+   "binary": "TSKit"
+  },
+  {
+   "type": 215,
+   "kind": "register",
+   "message": "TSCK.SetAnnotationAuthorColorCommandArchive",
+   "unarchiveClassname": "TSCKSetAnnotationAuthorColorCommand",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 218,
+   "kind": "register",
+   "message": "TSCK.CollaborationCommandHistory",
+   "unarchiveClassname": "TSCKCollaborationCommandHistory",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 219,
+   "kind": "register",
+   "message": "TSK.DocumentSelectionArchive",
+   "unarchiveClassname": "TSKArchivedDocumentSelection",
+   "binary": "TSKit"
+  },
+  {
+   "type": 220,
+   "kind": "register",
+   "message": "TSK.CommandSelectionBehaviorArchive",
+   "unarchiveClassname": "TSKCommandSelectionBehavior",
+   "binary": "TSKit"
+  },
+  {
+   "type": 221,
+   "kind": "register",
+   "message": "TSK.NullCommandArchive",
+   "unarchiveClassname": "TSKNullCommand",
+   "binary": "TSKit"
+  },
+  {
+   "type": 222,
+   "kind": "register",
+   "message": "TSK.CustomFormatListArchive",
+   "unarchiveClassname": "TSKCustomFormatList",
+   "binary": "TSKit"
+  },
+  {
+   "type": 223,
+   "kind": "register",
+   "message": "TSK.GroupCommitCommandArchive",
+   "unarchiveClassname": "TSKGroupCommitCommand",
+   "binary": "TSKit"
+  },
+  {
+   "type": 224,
+   "kind": "register",
+   "message": "TSK.InducedCommandCollectionArchive",
+   "unarchiveClassname": "TSKInducedCommandCollection",
+   "binary": "TSKit"
+  },
+  {
+   "type": 225,
+   "kind": "register",
+   "message": "TSK.InducedCommandCollectionCommitCommandArchive",
+   "unarchiveClassname": "TSKInducedCommandCollectionCommitCommand",
+   "binary": "TSKit"
+  },
+  {
+   "type": 226,
+   "kind": "register",
+   "message": "TSCK.CollaborationDocumentSessionState",
+   "unarchiveClassname": "TSCKCollaborationDocumentSessionState",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 227,
+   "kind": "register",
+   "message": "TSCK.CollaborationCommandHistoryCoalescingGroup",
+   "unarchiveClassname": "TSCKCollaborationCommandHistoryCoalescingGroup",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 228,
+   "kind": "register",
+   "message": "TSCK.CollaborationCommandHistoryCoalescingGroupNode",
+   "unarchiveClassname": "TSCKCollaborationCommandHistoryCoalescingGroupNode",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 229,
+   "kind": "register",
+   "message": "TSCK.CollaborationCommandHistoryOriginatingCommandAcknowledgementObserver",
+   "unarchiveClassname": "TSCKCollaborationCommandHistoryOriginatingCommandAcknowledgementObserver",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 230,
+   "kind": "register",
+   "message": "TSCK.DocumentSupportCollaborationState",
+   "unarchiveClassname": "TSCKDocumentSupportCollaborationState",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 231,
+   "kind": "register",
+   "message": "TSK.ChangeDocumentPackageTypeCommandArchive",
+   "unarchiveClassname": "TSKChangeDocumentPackageTypeCommand",
+   "binary": "TSKit"
+  },
+  {
+   "type": 232,
+   "kind": "register",
+   "message": "TSK.UpgradeDocPostProcessingCommandArchive",
+   "unarchiveClassname": "TSKUpgradeDocPostProcessingCommand",
+   "binary": "TSKit"
+  },
+  {
+   "type": 233,
+   "kind": "register",
+   "message": "TSK.FinalCommandPairArchive",
+   "unarchiveClassname": "TSKFinalCommandPair",
+   "binary": "TSKit"
+  },
+  {
+   "type": 234,
+   "kind": "register",
+   "message": "TSK.OutgoingCommandQueueItem",
+   "unarchiveClassname": "TSKOutgoingCommandQueueItem",
+   "binary": "TSKit"
+  },
+  {
+   "type": 235,
+   "kind": "register",
+   "message": "TSCK.TransformerEntry",
+   "unarchiveClassname": "TSCKTransformationControllerEntry",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 238,
+   "kind": "register",
+   "message": "TSCK.CreateLocalStorageSnapshotCommandArchive",
+   "unarchiveClassname": "TSCKCreateLocalStorageSnapshotCommand",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 240,
+   "kind": "register",
+   "message": "TSK.SelectionPathTransformerArchive",
+   "unarchiveClassname": "TSKSelectionPathTransformer",
+   "binary": "TSKit"
+  },
+  {
+   "type": 241,
+   "kind": "register",
+   "message": "TSK.NativeContentDescription",
+   "unarchiveClassname": "TSKNativeContentDescription",
+   "binary": "TSKit"
+  },
+  {
+   "type": 242,
+   "kind": "register",
+   "message": "TSD.PencilAnnotationStorageArchive",
+   "unarchiveClassname": "TSDPencilAnnotationStorage",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 245,
+   "kind": "register",
+   "message": "TSCK.OperationStorage",
+   "unarchiveClassname": "TSCKOperationStorage",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 246,
+   "kind": "register",
+   "message": "TSCK.OperationStorageEntryArray",
+   "unarchiveClassname": "TSCKOperationStorageEntryArray",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 247,
+   "kind": "register",
+   "message": "TSCK.OperationStorageEntryArraySegment",
+   "unarchiveClassname": "TSCKOperationStorageEntryArraySegment",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 248,
+   "kind": "register",
+   "message": "TSCK.BlockDiffsAtCurrentRevisionCommand",
+   "unarchiveClassname": "TSCKBlockDiffsAtCurrentRevisionCommand",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 249,
+   "kind": "register",
+   "message": "TSCK.OutgoingCommandQueue",
+   "unarchiveClassname": "TSCKOutgoingCommandQueue",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 250,
+   "kind": "register",
+   "message": "TSCK.OutgoingCommandQueueSegment",
+   "unarchiveClassname": "TSCKOutgoingCommandQueueSegment",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 251,
+   "kind": "register",
+   "message": "TSK.PropagatedCommandCollectionArchive",
+   "unarchiveClassname": "TSKPropagatedCommandCollection",
+   "binary": "TSKit"
+  },
+  {
+   "type": 252,
+   "kind": "register",
+   "message": "TSK.LocalCommandHistoryItem",
+   "unarchiveClassname": "TSKLocalCommandHistoryItem",
+   "binary": "TSKit"
+  },
+  {
+   "type": 253,
+   "kind": "register",
+   "message": "TSK.LocalCommandHistoryArray",
+   "unarchiveClassname": "TSKLocalCommandHistoryArray",
+   "binary": "TSKit"
+  },
+  {
+   "type": 254,
+   "kind": "register",
+   "message": "TSK.LocalCommandHistoryArraySegment",
+   "unarchiveClassname": "TSKLocalCommandHistoryArraySegment",
+   "binary": "TSKit"
+  },
+  {
+   "type": 255,
+   "kind": "register",
+   "message": "TSCK.CollaborationCommandHistoryItem",
+   "unarchiveClassname": "TSCKCollaborationCommandHistoryItem",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 256,
+   "kind": "register",
+   "message": "TSCK.CollaborationCommandHistoryArray",
+   "unarchiveClassname": "TSCKCollaborationCommandHistoryArray",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 257,
+   "kind": "register",
+   "message": "TSCK.CollaborationCommandHistoryArraySegment",
+   "unarchiveClassname": "TSCKCollaborationCommandHistoryArraySegment",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 258,
+   "kind": "register",
+   "message": "TSK.PencilAnnotationUIState",
+   "unarchiveClassname": "TSKPencilAnnotationUIState",
+   "binary": "TSKit"
+  },
+  {
+   "type": 259,
+   "kind": "register",
+   "message": "TSCKSOS.FixCorruptedDataCommandArchive",
+   "unarchiveClassname": "TSCKFixCorruptedDataCommand",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 260,
+   "kind": "register",
+   "message": "TSCK.CommandAssetChunkArchive",
+   "unarchiveClassname": "TSCKAssetChunkCommand",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 261,
+   "kind": "register",
+   "message": "TSCK.AssetUploadStatusCommandArchive",
+   "unarchiveClassname": "TSCKAssetUploadStatusCommand",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 262,
+   "kind": "register",
+   "message": "TSCK.AssetUnmaterializedOnServerCommandArchive",
+   "unarchiveClassname": "TSCKAssetUnmaterializedOnServerCommand",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 263,
+   "kind": "register",
+   "message": "TSK.CommandBehaviorArchive",
+   "unarchiveClassname": "TSKCommandBehavior",
+   "binary": "TSKit"
+  },
+  {
+   "type": 264,
+   "kind": "register",
+   "message": "TSK.CommandBehaviorSelectionPathStorageArchive",
+   "unarchiveClassname": "TSKCommandBehaviorSelectionPathStorage",
+   "binary": "TSKit"
+  },
+  {
+   "type": 265,
+   "kind": "register",
+   "message": "TSCK.CommandActivityBehaviorArchive",
+   "unarchiveClassname": "TSCKCommandActivityBehavior",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 273,
+   "kind": "register",
+   "message": "TSCK.ActivityOnlyCommandArchive",
+   "unarchiveClassname": "TSCKActivityOnlyCommand",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 275,
+   "kind": "register",
+   "message": "TSCK.SetActivityAuthorShareParticipantIDCommandArchive",
+   "unarchiveClassname": "TSCKSetActivityAuthorShareParticipantIDCommand",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 279,
+   "kind": "register",
+   "message": "TSCK.ActivityAuthorCacheArchive",
+   "unarchiveClassname": "TSCKActivityAuthorCache",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 280,
+   "kind": "register",
+   "message": "TSCK.ActivityStreamArchive",
+   "unarchiveClassname": "TSCKActivityStream",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 281,
+   "kind": "register",
+   "message": "TSCK.ActivityArchive",
+   "unarchiveClassname": "TSCKActivity",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 282,
+   "kind": "register",
+   "message": "TSCK.ActivityCommitCommandArchive",
+   "unarchiveClassname": "TSCKActivityCommitCommand",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 283,
+   "kind": "register",
+   "message": "TSCK.ActivityStreamActivityArray",
+   "unarchiveClassname": "TSCKActivityStreamActivityArray",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 284,
+   "kind": "register",
+   "message": "TSCK.ActivityStreamActivityArraySegment",
+   "unarchiveClassname": "TSCKActivityStreamActivityArraySegment",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 285,
+   "kind": "register",
+   "message": "TSCK.ActivityStreamRemovedAuthorAuditorPendingStateArchive",
+   "unarchiveClassname": "TSCKActivityStreamRemovedAuthorAuditorPendingState",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 286,
+   "kind": "register",
+   "message": "TSCK.ActivityAuthorArchive",
+   "unarchiveClassname": "TSCKActivityAuthor",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 287,
+   "kind": "register",
+   "message": "TSCKSOS.ResetActivityStreamCommandArchive",
+   "unarchiveClassname": "TSCKResetActivityStreamCommand",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 288,
+   "kind": "register",
+   "message": "TSCKSOS.RemoveAuthorIdentifiersCommandArchive",
+   "unarchiveClassname": "TSCKRemoveAuthorIdentifiersCommand",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 289,
+   "kind": "register",
+   "message": "TSCK.ActivityCursorCollectionPersistenceWrapperArchive",
+   "unarchiveClassname": "TSCKActivityCursorCollectionPersistenceWrapper",
+   "binary": "TSCollaborationKit"
+  },
+  {
+   "type": 290,
+   "kind": "register",
+   "message": "TSK.AIGeneratedContentCommandArchive",
+   "unarchiveClassname": "TSKAIGeneratedContentCommand",
+   "binary": "TSKit"
+  },
+  {
+   "type": 291,
+   "kind": "register",
+   "message": "TSK.SetLastPremiumUserActivityTimestampCommandArchive",
+   "unarchiveClassname": "TSKSetLastPremiumUserActivityTimestampCommand",
+   "binary": "TSKit"
+  },
+  {
+   "type": 400,
+   "kind": "register",
+   "message": "TSS.StyleArchive",
+   "unarchiveClassname": "TSSStyle",
+   "binary": "TSStyles"
+  },
+  {
+   "type": 401,
+   "kind": "register",
+   "message": "TSS.StylesheetArchive",
+   "unarchiveClassname": "TSSStylesheet",
+   "binary": "TSStyles"
+  },
+  {
+   "type": 402,
+   "kind": "register",
+   "message": "TSS.ThemeArchive",
+   "unarchiveClassname": "TSSTheme",
+   "binary": "TSStyles"
+  },
+  {
+   "type": 412,
+   "kind": "register",
+   "message": "TSS.StyleUpdatePropertyMapCommandArchive",
+   "unarchiveClassname": "TSSStyleUpdatePropertyMapCommand",
+   "binary": "TSStyles"
+  },
+  {
+   "type": 413,
+   "kind": "register",
+   "message": "TSS.ThemeReplacePresetCommandArchive",
+   "unarchiveClassname": "TSSThemeReplacePresetCommand",
+   "binary": "TSStyles"
+  },
+  {
+   "type": 414,
+   "kind": "register",
+   "message": "TSS.ThemeAddStylePresetCommandArchive",
+   "unarchiveClassname": "TSSThemeAddStylePresetCommand",
+   "binary": "TSStyles"
+  },
+  {
+   "type": 415,
+   "kind": "register",
+   "message": "TSS.ThemeRemoveStylePresetCommandArchive",
+   "unarchiveClassname": "TSSThemeRemoveStylePresetCommand",
+   "binary": "TSStyles"
+  },
+  {
+   "type": 416,
+   "kind": "register",
+   "message": "TSS.ThemeReplaceColorPresetCommandArchive",
+   "unarchiveClassname": "TSSThemeReplaceColorPresetCommand",
+   "binary": "TSStyles"
+  },
+  {
+   "type": 417,
+   "kind": "register",
+   "message": "TSS.ThemeMovePresetCommandArchive",
+   "unarchiveClassname": "TSSThemeMovePresetCommand",
+   "binary": "TSStyles"
+  },
+  {
+   "type": 419,
+   "kind": "register",
+   "message": "TSS.ThemeReplaceStylePresetAndDisconnectStylesCommandArchive",
+   "unarchiveClassname": "TSSThemeReplaceStylePresetAndDisconnectStylesCommand",
+   "binary": "TSStyles"
+  },
+  {
+   "type": 600,
+   "kind": "register",
+   "message": "TSA.DocumentArchive",
+   "unarchiveClassname": "TSADocumentRoot",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 601,
+   "kind": "register",
+   "message": "TSA.FunctionBrowserStateArchive",
+   "unarchiveClassname": "TSAFunctionBrowserState",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 602,
+   "kind": "register",
+   "message": "TSA.PropagatePresetCommandArchive",
+   "unarchiveClassname": "TSAPropagatePresetChangeCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 603,
+   "kind": "register",
+   "message": "TSA.ShortcutControllerArchive",
+   "unarchiveClassname": "TSAShortcutController",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 604,
+   "kind": "register",
+   "message": "TSA.ShortcutCommandArchive",
+   "unarchiveClassname": "TSAShortcutCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 605,
+   "kind": "register",
+   "message": "TSA.AddCustomFormatCommandArchive",
+   "unarchiveClassname": "TSACommandAddCustomFormat",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 606,
+   "kind": "register",
+   "message": "TSA.UpdateCustomFormatCommandArchive",
+   "unarchiveClassname": "TSACommandUpdateCustomFormat",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 607,
+   "kind": "register",
+   "message": "TSA.ReplaceCustomFormatCommandArchive",
+   "unarchiveClassname": "TSACommandReplaceCustomFormat",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 608,
+   "kind": "deprecated",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 609,
+   "kind": "deprecated",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 610,
+   "kind": "deprecated",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 611,
+   "kind": "register",
+   "message": "TSASOS.VerifyObjectsWithServerCommandArchive",
+   "unarchiveClassname": "TSAVerifyObjectsWithServerCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 612,
+   "kind": "register",
+   "message": "TSA.InducedVerifyObjectsWithServerCommandArchive",
+   "unarchiveClassname": "TSAInducedVerifyObjectsWithServerCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 613,
+   "kind": "register",
+   "message": "TSASOS.VerifyDocumentWithServerCommandArchive",
+   "unarchiveClassname": "TSAVerifyDocumentWithServerCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 614,
+   "kind": "register",
+   "message": "TSASOS.VerifyDrawableZOrdersWithServerCommandArchive",
+   "unarchiveClassname": "TSAVerifyDrawableZOrdersWithServerCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 615,
+   "kind": "register",
+   "message": "TSASOS.InducedVerifyDrawableZOrdersWithServerCommandArchive",
+   "unarchiveClassname": "TSAInducedVerifyDrawableZOrdersWithServerCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 616,
+   "kind": "register",
+   "message": "TSA.NeedsMediaCompatibilityUpgradeCommandArchive",
+   "unarchiveClassname": "TSANeedsMediaCompatibilityUpgradeCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 617,
+   "kind": "register",
+   "message": "TSA.ChangeDocumentLocaleCommandArchive",
+   "unarchiveClassname": "TSACommandSetDocumentLocale",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 618,
+   "kind": "register",
+   "message": "TSA.StyleUpdatePropertyMapCommandArchive",
+   "unarchiveClassname": "TSAStyleUpdatePropertyMapCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 619,
+   "kind": "register",
+   "message": "TSA.RemoteDataChangeCommandArchive",
+   "unarchiveClassname": "TSACommandRemoteDataChange",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 623,
+   "kind": "register",
+   "message": "TSA.GalleryItem",
+   "unarchiveClassname": "TSAGalleryItem",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 624,
+   "kind": "register",
+   "message": "TSA.GallerySelectionTransformer",
+   "unarchiveClassname": "TSAGallerySelectionTransformer",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 625,
+   "kind": "register",
+   "message": "TSA.GalleryItemSelection",
+   "unarchiveClassname": "TSAArchivedGalleryItemSelection",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 626,
+   "kind": "register",
+   "message": "TSA.GalleryItemSelectionTransformer",
+   "unarchiveClassname": "TSAGalleryItemSelectionTransformer",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 627,
+   "kind": "register",
+   "message": "TSA.GalleryInfoSetValueCommandArchive",
+   "unarchiveClassname": "TSAGalleryInfoSetValueCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 628,
+   "kind": "register",
+   "message": "TSA.GalleryItemSetGeometryCommand",
+   "unarchiveClassname": "TSAGalleryItemSetGeometryCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 629,
+   "kind": "register",
+   "message": "TSA.GalleryItemSetValueCommand",
+   "unarchiveClassname": "TSAGalleryItemSetValueCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 630,
+   "kind": "register",
+   "message": "TSA.InducedVerifyTransformHistoryWithServerCommandArchive",
+   "unarchiveClassname": "TSAInducedVerifyTransformHistoryWithServerCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 631,
+   "kind": "register",
+   "message": "TSASOS.CommandReapplyMasterArchive",
+   "unarchiveClassname": "TSAReapplyMasterCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 632,
+   "kind": "register",
+   "message": "TSASOS.PropagateMasterChangeCommandArchive",
+   "unarchiveClassname": "TSAPropagateMasterChangeCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 633,
+   "kind": "register",
+   "message": "TSA.CaptionInfoArchive",
+   "unarchiveClassname": "TSACaptionInfo",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 634,
+   "kind": "register",
+   "message": "TSA.CaptionPlacementArchive",
+   "unarchiveClassname": "TSACaptionPlacement",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 635,
+   "kind": "register",
+   "message": "TSA.TitlePlacementCommandArchive",
+   "unarchiveClassname": "TSATitlePlacementCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 636,
+   "kind": "register",
+   "message": "TSA.GalleryInfoInsertItemsCommandArchive",
+   "unarchiveClassname": "TSAGalleryInfoInsertItemsCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 637,
+   "kind": "register",
+   "message": "TSA.GalleryInfoRemoveItemsCommandArchive",
+   "unarchiveClassname": "TSAGalleryInfoRemoveItemsCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 638,
+   "kind": "register",
+   "message": "TSASOS.VerifyActivityStreamWithServerCommandArchive",
+   "unarchiveClassname": "TSAVerifyActivityStreamWithServerCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 639,
+   "kind": "register",
+   "message": "TSASOS.InducedVerifyActivityStreamWithServerCommandArchive",
+   "unarchiveClassname": "TSAInducedVerifyActivityStreamWithServerCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 640,
+   "kind": "register",
+   "message": "TSASOS.VerifyTransformHistoryWithServerCommandArchive",
+   "unarchiveClassname": "TSAVerifyTransformHistoryWithServerCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 641,
+   "kind": "register",
+   "message": "TSA.Object3DInfoSetValueCommandArchive",
+   "unarchiveClassname": "TSAObject3DInfoSetValueCommand",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 642,
+   "kind": "register",
+   "message": "TSA.Object3DInfoCommandArchive",
+   "unarchiveClassname": "TSAObject3DCommandSetPose",
+   "binary": "TSApplication"
+  },
+  {
+   "type": 2001,
+   "kind": "register",
+   "message": "TSWP.StorageArchive",
+   "unarchiveClassname": "TSWPStorage",
+   "binary": "TSText"
+  },
+  {
+   "type": 2002,
+   "kind": "register",
+   "message": "TSWP.SelectionArchive",
+   "unarchiveClassname": "TSWPArchivedSelection",
+   "binary": "TSText"
+  },
+  {
+   "type": 2003,
+   "kind": "register",
+   "message": "TSWP.DrawableAttachmentArchive",
+   "unarchiveClassname": "TSWPDrawableAttachment",
+   "binary": "TSText"
+  },
+  {
+   "type": 2004,
+   "kind": "register",
+   "message": "TSWP.TextualAttachmentArchive",
+   "unarchiveClassname": "TSWPTextualAttachment",
+   "binary": "TSText"
+  },
+  {
+   "type": 2005,
+   "kind": "upgrade",
+   "unarchiveClassname": "TSWPStorage",
+   "binary": "TSText"
+  },
+  {
+   "type": 2006,
+   "kind": "register",
+   "message": "TSWP.UIGraphicalAttachment",
+   "unarchiveClassname": "TSWPUIGraphicalAttachment",
+   "binary": "TSText"
+  },
+  {
+   "type": 2007,
+   "kind": "upgrade",
+   "unarchiveClassname": "TSWPTextualAttachment",
+   "binary": "TSText"
+  },
+  {
+   "type": 2008,
+   "kind": "register",
+   "message": "TSWP.FootnoteReferenceAttachmentArchive",
+   "unarchiveClassname": "TSWPFootnoteReferenceAttachment",
+   "binary": "TSText"
+  },
+  {
+   "type": 2009,
+   "kind": "upgrade",
+   "unarchiveClassname": "TSWPTextualAttachment",
+   "binary": "TSText"
+  },
+  {
+   "type": 2010,
+   "kind": "register",
+   "message": "TSWP.TSWPTOCPageNumberAttachmentArchive",
+   "unarchiveClassname": "TSWPTOCPageNumberAttachment",
+   "binary": "TSText"
+  },
+  {
+   "type": 2011,
+   "kind": "register",
+   "message": "TSWP.ShapeInfoArchive",
+   "unarchiveClassname": "TSWPShapeInfo",
+   "binary": "TSText"
+  },
+  {
+   "type": 2012,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2013,
+   "kind": "register",
+   "message": "TSWP.HighlightArchive",
+   "unarchiveClassname": "TSWPHighlight",
+   "binary": "TSText"
+  },
+  {
+   "type": 2014,
+   "kind": "register",
+   "message": "TSWP.CommentInfoArchive",
+   "unarchiveClassname": "TSWPFloatingCommentInfo",
+   "binary": "TSText"
+  },
+  {
+   "type": 2015,
+   "kind": "register",
+   "message": "TSWP.EquationInfoArchive",
+   "unarchiveClassname": "TSWPEquationInfo",
+   "binary": "TSText"
+  },
+  {
+   "type": 2016,
+   "kind": "register",
+   "message": "TSWP.PencilAnnotationArchive",
+   "unarchiveClassname": "TSWPPencilAnnotation",
+   "binary": "TSText"
+  },
+  {
+   "type": 2021,
+   "kind": "register",
+   "message": "TSWP.CharacterStyleArchive",
+   "unarchiveClassname": "TSWPCharacterStyle",
+   "binary": "TSText"
+  },
+  {
+   "type": 2022,
+   "kind": "register",
+   "message": "TSWP.ParagraphStyleArchive",
+   "unarchiveClassname": "TSWPParagraphStyle",
+   "binary": "TSText"
+  },
+  {
+   "type": 2023,
+   "kind": "register",
+   "message": "TSWP.ListStyleArchive",
+   "unarchiveClassname": "TSWPListStyle",
+   "binary": "TSText"
+  },
+  {
+   "type": 2024,
+   "kind": "register",
+   "message": "TSWP.ColumnStyleArchive",
+   "unarchiveClassname": "TSWPColumnStyle",
+   "binary": "TSText"
+  },
+  {
+   "type": 2025,
+   "kind": "register",
+   "message": "TSWP.ShapeStyleArchive",
+   "unarchiveClassname": "TSWPShapeStyle",
+   "binary": "TSText"
+  },
+  {
+   "type": 2026,
+   "kind": "register",
+   "message": "TSWP.TOCEntryStyleArchive",
+   "unarchiveClassname": "TSWPTOCEntryStyle",
+   "binary": "TSText"
+  },
+  {
+   "type": 2031,
+   "kind": "register",
+   "message": "TSWP.PlaceholderSmartFieldArchive",
+   "unarchiveClassname": "TSWPPlaceholderSmartField",
+   "binary": "TSText"
+  },
+  {
+   "type": 2032,
+   "kind": "register",
+   "message": "TSWP.HyperlinkFieldArchive",
+   "unarchiveClassname": "TSWPHyperlinkField",
+   "binary": "TSText"
+  },
+  {
+   "type": 2033,
+   "kind": "register",
+   "message": "TSWP.FilenameSmartFieldArchive",
+   "unarchiveClassname": "TSWPFilenameSmartField",
+   "binary": "TSText"
+  },
+  {
+   "type": 2034,
+   "kind": "register",
+   "message": "TSWP.DateTimeSmartFieldArchive",
+   "unarchiveClassname": "TSWPDateTimeSmartField",
+   "binary": "TSText"
+  },
+  {
+   "type": 2035,
+   "kind": "register",
+   "message": "TSWP.BookmarkFieldArchive",
+   "unarchiveClassname": "TSWPBookmarkField",
+   "binary": "TSText"
+  },
+  {
+   "type": 2036,
+   "kind": "register",
+   "message": "TSWP.MergeSmartFieldArchive",
+   "unarchiveClassname": "TSWPMergeSmartField",
+   "binary": "TSText"
+  },
+  {
+   "type": 2037,
+   "kind": "register",
+   "message": "TSWP.CitationRecordArchive",
+   "unarchiveClassname": "TSWPCitationRecord",
+   "binary": "TSText"
+  },
+  {
+   "type": 2038,
+   "kind": "register",
+   "message": "TSWP.CitationSmartFieldArchive",
+   "unarchiveClassname": "TSWPCitationSmartField",
+   "binary": "TSText"
+  },
+  {
+   "type": 2039,
+   "kind": "register",
+   "message": "TSWP.UnsupportedHyperlinkFieldArchive",
+   "unarchiveClassname": "TSWPUnsupportedHyperlinkField",
+   "binary": "TSText"
+  },
+  {
+   "type": 2040,
+   "kind": "register",
+   "message": "TSWP.BibliographySmartFieldArchive",
+   "unarchiveClassname": "TSWPBibliographySmartField",
+   "binary": "TSText"
+  },
+  {
+   "type": 2041,
+   "kind": "register",
+   "message": "TSWP.TOCSmartFieldArchive",
+   "unarchiveClassname": "TSWPTOCSmartField",
+   "binary": "TSText"
+  },
+  {
+   "type": 2042,
+   "kind": "register",
+   "message": "TSWP.RubyFieldArchive",
+   "unarchiveClassname": "TSWPRubyField",
+   "binary": "TSText"
+  },
+  {
+   "type": 2043,
+   "kind": "override",
+   "message": "TSWP.NumberAttachmentArchive",
+   "unarchiveClassname": "KNSlideNumberAttachment",
+   "binary": "Keynote"
+  },
+  {
+   "type": 2043,
+   "kind": "register",
+   "message": "TSWP.NumberAttachmentArchive",
+   "unarchiveClassname": "TSWPNumberAttachment",
+   "binary": "TSText"
+  },
+  {
+   "type": 2050,
+   "kind": "register",
+   "message": "TSWP.TextStylePresetArchive",
+   "unarchiveClassname": "TSWPTextStylePreset",
+   "binary": "TSText"
+  },
+  {
+   "type": 2051,
+   "kind": "register",
+   "message": "TSWP.TOCSettingsArchive",
+   "unarchiveClassname": "TSWPTOCSettings",
+   "binary": "TSText"
+  },
+  {
+   "type": 2052,
+   "kind": "register",
+   "message": "TSWP.TOCEntryInstanceArchive",
+   "unarchiveClassname": "TSWPTOCEntryData",
+   "binary": "TSText"
+  },
+  {
+   "type": 2053,
+   "kind": "register",
+   "message": "TSWPSOS.StyleDiffArchive",
+   "unarchiveClassname": "TSWPStyleDiff",
+   "binary": "TSText"
+  },
+  {
+   "type": 2060,
+   "kind": "register",
+   "message": "TSWP.ChangeArchive",
+   "unarchiveClassname": "TSWPChange",
+   "binary": "TSText"
+  },
+  {
+   "type": 2061,
+   "kind": "upgrade",
+   "unarchiveClassname": "TSKAnnotationAuthor",
+   "binary": "TSText"
+  },
+  {
+   "type": 2062,
+   "kind": "register",
+   "message": "TSWP.ChangeSessionArchive",
+   "unarchiveClassname": "TSWPChangeSession",
+   "binary": "TSText"
+  },
+  {
+   "type": 2101,
+   "kind": "register",
+   "message": "TSWP.TextCommandArchive",
+   "unarchiveClassname": "TSWPTextCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2102,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2104,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2105,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2106,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2107,
+   "kind": "register",
+   "message": "TSWP.ApplyPlaceholderTextCommandArchive",
+   "unarchiveClassname": "TSWPApplyPlaceholderTextCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2108,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2109,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2110,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2111,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2112,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2113,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2114,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2115,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2116,
+   "kind": "register",
+   "message": "TSWP.ApplyRubyTextCommandArchive",
+   "unarchiveClassname": "TSWPApplyRubyTextCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2117,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2118,
+   "kind": "register",
+   "message": "TSWP.ModifyRubyTextCommandArchive",
+   "unarchiveClassname": "TSWPModifyRubyTextCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2119,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2120,
+   "kind": "register",
+   "message": "TSWP.ModifyTOCSettingsBaseCommandArchive",
+   "unarchiveClassname": "TSWPModifyTOCSettingsBaseCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2121,
+   "kind": "register",
+   "message": "TSWP.ModifyTOCSettingsForTOCInfoCommandArchive",
+   "unarchiveClassname": "TSWPModifyTOCSettingsForTOCInfoCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2122,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2123,
+   "kind": "register",
+   "message": "TSWP.SetObjectPropertiesCommandArchive",
+   "unarchiveClassname": "TSWPSetObjectPropertiesCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2124,
+   "kind": "register",
+   "message": "TSWP.UpdateFlowInfoCommandArchive",
+   "unarchiveClassname": "TSWPUpdateFlowInfoCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2125,
+   "kind": "register",
+   "message": "TSWP.AddFlowInfoCommandArchive",
+   "unarchiveClassname": "TSWPAddFlowInfoCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2126,
+   "kind": "register",
+   "message": "TSWP.RemoveFlowInfoCommandArchive",
+   "unarchiveClassname": "TSWPRemoveFlowInfoCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2127,
+   "kind": "register",
+   "message": "TSWP.ContainedObjectsCommandArchive",
+   "unarchiveClassname": "TSWPContainedObjectsCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2128,
+   "kind": "register",
+   "message": "TSWP.EquationInfoGeometryCommandArchive",
+   "unarchiveClassname": "TSWPEquationInfoGeometryCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2201,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2202,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2203,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2204,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2205,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2206,
+   "kind": "register",
+   "message": "TSWP.AnchorAttachmentCommandArchive",
+   "unarchiveClassname": "TSWPAnchorAttachmentCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2207,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2208,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2209,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2210,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2217,
+   "kind": "register",
+   "message": "TSWP.TextCommentReplyCommandArchive",
+   "unarchiveClassname": "TSWPCommentReplyCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2231,
+   "kind": "register",
+   "message": "TSWP.ShapeApplyPresetCommandArchive",
+   "unarchiveClassname": "TSWPShapeApplyPresetCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2232,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2240,
+   "kind": "override",
+   "message": "TSWP.TOCInfoArchive",
+   "unarchiveClassname": "TSWPTOCInfoAdapter",
+   "binary": "Keynote"
+  },
+  {
+   "type": 2240,
+   "kind": "register",
+   "message": "TSWP.TOCInfoArchive",
+   "unarchiveClassname": "TSWPTOCInfo",
+   "binary": "TSText"
+  },
+  {
+   "type": 2241,
+   "kind": "register",
+   "message": "TSWP.TOCAttachmentArchive",
+   "unarchiveClassname": "TSWPTOCAttachment",
+   "binary": "TSText"
+  },
+  {
+   "type": 2242,
+   "kind": "register",
+   "message": "TSWP.TOCLayoutHintArchive",
+   "unarchiveClassname": "TSWPTOCArchivedLayoutHint",
+   "binary": "TSText"
+  },
+  {
+   "type": 2300,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2400,
+   "kind": "register",
+   "message": "TSWP.StyleBaseCommandArchive",
+   "unarchiveClassname": "TSWPStyleBaseCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2401,
+   "kind": "register",
+   "message": "TSWP.StyleCreateCommandArchive",
+   "unarchiveClassname": "TSWPStyleCreateCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2402,
+   "kind": "register",
+   "message": "TSWP.StyleRenameCommandArchive",
+   "unarchiveClassname": "TSWPStyleRenameCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2403,
+   "kind": "deprecated",
+   "binary": "TSText"
+  },
+  {
+   "type": 2404,
+   "kind": "register",
+   "message": "TSWP.StyleDeleteCommandArchive",
+   "unarchiveClassname": "TSWPStyleDeleteCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2405,
+   "kind": "register",
+   "message": "TSWP.StyleReorderCommandArchive",
+   "unarchiveClassname": "TSWPStyleReorderCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2406,
+   "kind": "register",
+   "message": "TSWP.StyleUpdatePropertyMapCommandArchive",
+   "unarchiveClassname": "TSWPStyleUpdatePropertyMapCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2407,
+   "kind": "register",
+   "message": "TSWP.StorageActionCommandArchive",
+   "unarchiveClassname": "TSWPStorageActionCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2408,
+   "kind": "register",
+   "message": "TSWP.ShapeStyleSetValueCommandArchive",
+   "unarchiveClassname": "TSWPShapeStyleSetValueCommand",
+   "binary": "TSText"
+  },
+  {
+   "type": 2409,
+   "kind": "register",
+   "message": "TSWP.HyperlinkSelectionArchive",
+   "unarchiveClassname": "TSWPArchivedHyperlinkSelection",
+   "binary": "TSText"
+  },
+  {
+   "type": 2410,
+   "kind": "register",
+   "message": "TSWP.FlowInfoArchive",
+   "unarchiveClassname": "TSWPFlowInfo",
+   "binary": "TSText"
+  },
+  {
+   "type": 2411,
+   "kind": "register",
+   "message": "TSWP.FlowInfoContainerArchive",
+   "unarchiveClassname": "TSWPFlowInfoContainer",
+   "binary": "TSText"
+  },
+  {
+   "type": 2412,
+   "kind": "register",
+   "message": "TSWP.PencilAnnotationSelectionTransformerArchive",
+   "unarchiveClassname": "TSWPPencilAnnotationSelectionTransformer",
+   "binary": "TSText"
+  },
+  {
+   "type": 2413,
+   "kind": "register",
+   "message": "TSWP.DateTimeSelectionArchive",
+   "unarchiveClassname": "TSWPArchivedDateTimeSelection",
+   "binary": "TSText"
+  },
+  {
+   "type": 3002,
+   "kind": "register",
+   "message": "TSD.DrawableArchive",
+   "unarchiveClassname": "TSDDrawableInfo",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3003,
+   "kind": "register",
+   "message": "TSD.ContainerArchive",
+   "unarchiveClassname": "TSDContainerInfo",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3004,
+   "kind": "register",
+   "message": "TSD.ShapeArchive",
+   "unarchiveClassname": "TSDShapeInfo",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3005,
+   "kind": "register",
+   "message": "TSD.ImageArchive",
+   "unarchiveClassname": "TSDImageInfo",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3006,
+   "kind": "register",
+   "message": "TSD.MaskArchive",
+   "unarchiveClassname": "TSDMaskInfo",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3007,
+   "kind": "register",
+   "message": "TSD.MovieArchive",
+   "unarchiveClassname": "TSDMovieInfo",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3008,
+   "kind": "register",
+   "message": "TSD.GroupArchive",
+   "unarchiveClassname": "TSDGroupInfo",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3009,
+   "kind": "register",
+   "message": "TSD.ConnectionLineArchive",
+   "unarchiveClassname": "TSDConnectionLineInfo",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3015,
+   "kind": "register",
+   "message": "TSD.ShapeStyleArchive",
+   "unarchiveClassname": "TSDShapeStyle",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3016,
+   "kind": "register",
+   "message": "TSD.MediaStyleArchive",
+   "unarchiveClassname": "TSDMediaStyle",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3021,
+   "kind": "register",
+   "message": "TSD.InfoGeometryCommandArchive",
+   "unarchiveClassname": "TSDInfoGeometryCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3022,
+   "kind": "register",
+   "message": "TSD.DrawablePathSourceCommandArchive",
+   "unarchiveClassname": "TSDDrawablePathSourceCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3023,
+   "kind": "deprecated",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3024,
+   "kind": "register",
+   "message": "TSD.ImageMaskCommandArchive",
+   "unarchiveClassname": "TSDImageMaskCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3025,
+   "kind": "register",
+   "message": "TSD.ImageMediaCommandArchive",
+   "unarchiveClassname": "TSDImageMediaCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3026,
+   "kind": "register",
+   "message": "TSD.ImageReplaceCommandArchive",
+   "unarchiveClassname": "TSDImageReplaceCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3027,
+   "kind": "register",
+   "message": "TSD.MediaOriginalSizeCommandArchive",
+   "unarchiveClassname": "TSDMediaOriginalSizeCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3028,
+   "kind": "register",
+   "message": "TSD.ShapeStyleSetValueCommandArchive",
+   "unarchiveClassname": "TSDShapeStyleSetValueCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3030,
+   "kind": "register",
+   "message": "TSD.MediaStyleSetValueCommandArchive",
+   "unarchiveClassname": "TSDMediaStyleSetValueCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3031,
+   "kind": "register",
+   "message": "TSD.ShapeApplyPresetCommandArchive",
+   "unarchiveClassname": "TSDShapeApplyPresetCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3032,
+   "kind": "register",
+   "message": "TSD.MediaApplyPresetCommandArchive",
+   "unarchiveClassname": "TSDMediaApplyPresetCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3034,
+   "kind": "register",
+   "message": "TSD.MovieSetValueCommandArchive",
+   "unarchiveClassname": "TSDMovieSetValueCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3036,
+   "kind": "register",
+   "message": "TSD.ExteriorTextWrapCommandArchive",
+   "unarchiveClassname": "TSDExteriorTextWrapCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3037,
+   "kind": "register",
+   "message": "TSD.MediaFlagsCommandArchive",
+   "unarchiveClassname": "TSDMediaFlagsCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3040,
+   "kind": "register",
+   "message": "TSD.DrawableHyperlinkCommandArchive",
+   "unarchiveClassname": "TSDDrawableHyperlinkCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3041,
+   "kind": "register",
+   "message": "TSD.ConnectionLineConnectCommandArchive",
+   "unarchiveClassname": "TSDConnectionLineConnectCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3042,
+   "kind": "register",
+   "message": "TSD.InstantAlphaCommandArchive",
+   "unarchiveClassname": "TSDInstantAlphaCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3043,
+   "kind": "register",
+   "message": "TSD.DrawableLockCommandArchive",
+   "unarchiveClassname": "TSDDrawableLockCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3044,
+   "kind": "register",
+   "message": "TSD.ImageNaturalSizeCommandArchive",
+   "unarchiveClassname": "TSDImageNaturalSizeCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3045,
+   "kind": "register",
+   "message": "TSD.CanvasSelectionArchive",
+   "unarchiveClassname": "TSDArchivedCanvasSelection",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3047,
+   "kind": "register",
+   "message": "TSD.GuideStorageArchive",
+   "unarchiveClassname": "TSDGuideStorage",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3048,
+   "kind": "register",
+   "message": "TSD.StyledInfoSetStyleCommandArchive",
+   "unarchiveClassname": "TSDStyledInfoSetStyleCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3049,
+   "kind": "register",
+   "message": "TSD.DrawableInfoCommentCommandArchive",
+   "unarchiveClassname": "TSDDrawableInfoCommentCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3050,
+   "kind": "register",
+   "message": "TSD.GuideCommandArchive",
+   "unarchiveClassname": "TSDGuideCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3051,
+   "kind": "register",
+   "message": "TSD.DrawableAspectRatioLockedCommandArchive",
+   "unarchiveClassname": "TSDDrawableAspectRatioLockedCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3052,
+   "kind": "register",
+   "message": "TSD.ContainerRemoveChildrenCommandArchive",
+   "unarchiveClassname": "TSDContainerRemoveChildrenCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3053,
+   "kind": "register",
+   "message": "TSD.ContainerInsertChildrenCommandArchive",
+   "unarchiveClassname": "TSDContainerInsertChildrenCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3054,
+   "kind": "register",
+   "message": "TSD.ContainerReorderChildrenCommandArchive",
+   "unarchiveClassname": "TSDContainerReorderChildrenCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3055,
+   "kind": "register",
+   "message": "TSD.ImageAdjustmentsCommandArchive",
+   "unarchiveClassname": "TSDImageAdjustmentsCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3056,
+   "kind": "register",
+   "message": "TSD.CommentStorageArchive",
+   "unarchiveClassname": "TSDCommentStorage",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3057,
+   "kind": "register",
+   "message": "TSD.ThemeReplaceFillPresetCommandArchive",
+   "unarchiveClassname": "TSDThemeReplaceFillPresetCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3058,
+   "kind": "register",
+   "message": "TSD.DrawableAccessibilityDescriptionCommandArchive",
+   "unarchiveClassname": "TSDDrawableAccessibilityDescriptionCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3059,
+   "kind": "register",
+   "message": "TSD.PasteStyleCommandArchive",
+   "unarchiveClassname": "TSDPasteStyleCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3061,
+   "kind": "register",
+   "message": "TSD.DrawableSelectionArchive",
+   "unarchiveClassname": "TSDArchivedDrawableSelection",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3062,
+   "kind": "register",
+   "message": "TSD.GroupSelectionArchive",
+   "unarchiveClassname": "TSDArchivedGroupSelection",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3063,
+   "kind": "register",
+   "message": "TSD.PathSelectionArchive",
+   "unarchiveClassname": "TSDArchivedPathSelection",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3064,
+   "kind": "register",
+   "message": "TSD.CommentInvalidatingCommandSelectionBehaviorArchive",
+   "unarchiveClassname": "TSDCommentInvalidatingCommandSelectionBehavior",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3065,
+   "kind": "register",
+   "message": "TSD.ImageInfoAbstractGeometryCommandArchive",
+   "unarchiveClassname": "TSDImageAbstractInfoGeometryCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3066,
+   "kind": "register",
+   "message": "TSD.ImageInfoGeometryCommandArchive",
+   "unarchiveClassname": "TSDImageInfoGeometryCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3067,
+   "kind": "register",
+   "message": "TSD.ImageInfoMaskGeometryCommandArchive",
+   "unarchiveClassname": "TSDImageInfoMaskGeometryCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3068,
+   "kind": "register",
+   "message": "TSD.UndoObjectArchive",
+   "unarchiveClassname": "TSDUndoObject",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3070,
+   "kind": "register",
+   "message": "TSD.ReplaceAnnotationAuthorCommandArchive",
+   "unarchiveClassname": "TSDReplaceAnnotationAuthorCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3071,
+   "kind": "register",
+   "message": "TSD.DrawableSelectionTransformerArchive",
+   "unarchiveClassname": "TSDDrawableSelectionTransformer",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3072,
+   "kind": "register",
+   "message": "TSD.GroupSelectionTransformerArchive",
+   "unarchiveClassname": "TSDGroupSelectionTransformer",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3073,
+   "kind": "register",
+   "message": "TSD.ShapeSelectionTransformerArchive",
+   "unarchiveClassname": "TSDShapeSelectionTransformer",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3074,
+   "kind": "register",
+   "message": "TSD.PathSelectionTransformerArchive",
+   "unarchiveClassname": "TSDPathSelectionTransformer",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3080,
+   "kind": "register",
+   "message": "TSD.MediaInfoGeometryCommandArchive",
+   "unarchiveClassname": "TSDMediaInfoGeometryCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3082,
+   "kind": "register",
+   "message": "TSD.GroupUngroupInformativeCommandArchive",
+   "unarchiveClassname": "TSDGroupUngroupInformativeCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3083,
+   "kind": "register",
+   "message": "TSD.DrawableContentDescription",
+   "unarchiveClassname": "TSDDrawableContentDescription",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3084,
+   "kind": "register",
+   "message": "TSD.ContainerRemoveDrawablesCommandArchive",
+   "unarchiveClassname": "TSDContainerRemoveDrawablesCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3085,
+   "kind": "register",
+   "message": "TSD.ContainerInsertDrawablesCommandArchive",
+   "unarchiveClassname": "TSDContainerInsertDrawablesCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3086,
+   "kind": "register",
+   "message": "TSD.PencilAnnotationArchive",
+   "unarchiveClassname": "TSDPencilAnnotation",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3087,
+   "kind": "register",
+   "message": "TSD.FreehandDrawingOpacityCommandArchive",
+   "unarchiveClassname": "TSDFreehandDrawingOpacityCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3088,
+   "kind": "register",
+   "message": "TSD.DrawablePencilAnnotationCommandArchive",
+   "unarchiveClassname": "TSDPencilAnnotationCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3089,
+   "kind": "register",
+   "message": "TSD.PencilAnnotationSelectionArchive",
+   "unarchiveClassname": "TSDArchivedPencilAnnotationSelection",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3090,
+   "kind": "register",
+   "message": "TSD.FreehandDrawingContentDescription",
+   "unarchiveClassname": "TSDFreehandDrawingContentDescription",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3091,
+   "kind": "register",
+   "message": "TSD.FreehandDrawingToolkitUIState",
+   "unarchiveClassname": "TSDFreehandDrawingToolkitUIState",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3092,
+   "kind": "register",
+   "message": "TSD.PencilAnnotationSelectionTransformerArchive",
+   "unarchiveClassname": "TSDPencilAnnotationSelectionTransformer",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3094,
+   "kind": "register",
+   "message": "TSD.FreehandDrawingAnimationCommandArchive",
+   "unarchiveClassname": "TSDFreehandDrawingAnimationCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3095,
+   "kind": "register",
+   "message": "TSD.InsertCaptionOrTitleCommandArchive",
+   "unarchiveClassname": "TSDInsertCaptionOrTitleCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3096,
+   "kind": "register",
+   "message": "TSD.RemoveCaptionOrTitleCommandArchive",
+   "unarchiveClassname": "TSDRemoveCaptionOrTitleCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3097,
+   "kind": "register",
+   "message": "TSD.StandinCaptionArchive",
+   "unarchiveClassname": "TSDStandinCaptionInfo",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 3098,
+   "kind": "register",
+   "message": "TSD.SetCaptionOrTitleVisibilityCommandArchive",
+   "unarchiveClassname": "TSDSetCaptionOrTitleVisibilityCommand",
+   "binary": "TSDrawables"
+  },
+  {
+   "type": 4000,
+   "kind": "register",
+   "message": "TSCE.CalculationEngineArchive",
+   "unarchiveClassname": "TSCECalculationEngine",
+   "binary": "TSTables"
+  },
+  {
+   "type": 4001,
+   "kind": "register",
+   "message": "TSCE.FormulaRewriteCommandArchive",
+   "unarchiveClassname": "TSCEFormulaRewriteCommand",
+   "binary": "TSTables"
+  },
+  {
+   "type": 4003,
+   "kind": "register",
+   "message": "TSCE.NamedReferenceManagerArchive",
+   "unarchiveClassname": "TSCENamedReferenceManager",
+   "binary": "TSTables"
+  },
+  {
+   "type": 4004,
+   "kind": "register",
+   "message": "TSCE.TrackedReferenceStoreArchive",
+   "unarchiveClassname": "TSCETrackedReferenceStore",
+   "binary": "TSTables"
+  },
+  {
+   "type": 4005,
+   "kind": "register",
+   "message": "TSCE.TrackedReferenceArchive",
+   "unarchiveClassname": "TSCETrackedReferenceTSPObjectDeprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 4007,
+   "kind": "register",
+   "message": "TSCE.RemoteDataStoreArchive",
+   "unarchiveClassname": "TSCERemoteDataStore",
+   "binary": "TSTables"
+  },
+  {
+   "type": 4008,
+   "kind": "register",
+   "message": "TSCE.FormulaOwnerDependenciesArchive",
+   "unarchiveClassname": "TSCEFormulaOwnerDependencies",
+   "binary": "TSTables"
+  },
+  {
+   "type": 4009,
+   "kind": "register",
+   "message": "TSCE.CellRecordTileArchive",
+   "unarchiveClassname": "TSCECellRecordTile",
+   "binary": "TSTables"
+  },
+  {
+   "type": 4010,
+   "kind": "register",
+   "message": "TSCE.RangePrecedentsTileArchive",
+   "unarchiveClassname": "TSCERangePrecedentsTile",
+   "binary": "TSTables"
+  },
+  {
+   "type": 4011,
+   "kind": "register",
+   "message": "TSCE.ReferencesToDirtyArchive",
+   "unarchiveClassname": "TSCEReferencesToDirty",
+   "binary": "TSTables"
+  },
+  {
+   "type": 5000,
+   "kind": "register",
+   "message": "TSCH.PreUFF.ChartInfoArchive",
+   "unarchiveClassname": "TSCHChartDrawableInfo",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5002,
+   "kind": "register",
+   "message": "TSCH.PreUFF.ChartGridArchive",
+   "unarchiveClassname": "TSCHDeprecatedChartGridForUpgrade",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5004,
+   "kind": "register",
+   "message": "TSCH.ChartMediatorArchive",
+   "unarchiveClassname": "TSCHPersistentChartMediator",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5010,
+   "kind": "register",
+   "message": "TSCH.PreUFF.ChartStyleArchive",
+   "unarchiveClassname": "TSCHChartStyle",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5011,
+   "kind": "register",
+   "message": "TSCH.PreUFF.ChartSeriesStyleArchive",
+   "unarchiveClassname": "TSCHChartSeriesStyle",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5012,
+   "kind": "register",
+   "message": "TSCH.PreUFF.ChartAxisStyleArchive",
+   "unarchiveClassname": "TSCHChartAxisStyle",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5013,
+   "kind": "register",
+   "message": "TSCH.PreUFF.LegendStyleArchive",
+   "unarchiveClassname": "TSCHLegendStyle",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5014,
+   "kind": "register",
+   "message": "TSCH.PreUFF.ChartNonStyleArchive",
+   "unarchiveClassname": "TSCHChartNonStyle",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5015,
+   "kind": "register",
+   "message": "TSCH.PreUFF.ChartSeriesNonStyleArchive",
+   "unarchiveClassname": "TSCHChartSeriesNonStyle",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5016,
+   "kind": "register",
+   "message": "TSCH.PreUFF.ChartAxisNonStyleArchive",
+   "unarchiveClassname": "TSCHChartAxisNonStyle",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5017,
+   "kind": "register",
+   "message": "TSCH.PreUFF.LegendNonStyleArchive",
+   "unarchiveClassname": "TSCHLegendNonStyle",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5020,
+   "kind": "register",
+   "message": "TSCH.ChartStylePreset",
+   "unarchiveClassname": "TSCHChartStylePreset",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5021,
+   "kind": "register",
+   "message": "TSCH.ChartDrawableArchive",
+   "unarchiveClassname": "TSCHChartDrawableInfo",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5022,
+   "kind": "register",
+   "message": "TSCH.ChartStyleArchive",
+   "unarchiveClassname": "TSCHChartStyle",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5023,
+   "kind": "register",
+   "message": "TSCH.ChartNonStyleArchive",
+   "unarchiveClassname": "TSCHChartNonStyle",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5024,
+   "kind": "register",
+   "message": "TSCH.LegendStyleArchive",
+   "unarchiveClassname": "TSCHLegendStyle",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5025,
+   "kind": "register",
+   "message": "TSCH.LegendNonStyleArchive",
+   "unarchiveClassname": "TSCHLegendNonStyle",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5026,
+   "kind": "register",
+   "message": "TSCH.ChartAxisStyleArchive",
+   "unarchiveClassname": "TSCHChartAxisStyle",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5027,
+   "kind": "register",
+   "message": "TSCH.ChartAxisNonStyleArchive",
+   "unarchiveClassname": "TSCHChartAxisNonStyle",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5028,
+   "kind": "register",
+   "message": "TSCH.ChartSeriesStyleArchive",
+   "unarchiveClassname": "TSCHChartSeriesStyle",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5029,
+   "kind": "register",
+   "message": "TSCH.ChartSeriesNonStyleArchive",
+   "unarchiveClassname": "TSCHChartSeriesNonStyle",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5030,
+   "kind": "register",
+   "message": "TSCH.ReferenceLineStyleArchive",
+   "unarchiveClassname": "TSCHReferenceLineStyle",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5031,
+   "kind": "register",
+   "message": "TSCH.ReferenceLineNonStyleArchive",
+   "unarchiveClassname": "TSCHReferenceLineNonStyle",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5103,
+   "kind": "register",
+   "message": "TSCH.CommandSetChartTypeArchive",
+   "unarchiveClassname": "TSCHCommandSetChartType",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5104,
+   "kind": "register",
+   "message": "TSCH.CommandSetSeriesNameArchive",
+   "unarchiveClassname": "TSCHCommandSetSeriesName",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5105,
+   "kind": "register",
+   "message": "TSCH.CommandSetCategoryNameArchive",
+   "unarchiveClassname": "TSCHCommandSetCategoryName",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5107,
+   "kind": "register",
+   "message": "TSCH.CommandSetScatterFormatArchive",
+   "unarchiveClassname": "TSCHCommandSetScatterFormat",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5108,
+   "kind": "register",
+   "message": "TSCH.CommandSetLegendFrameArchive",
+   "unarchiveClassname": "TSCHCommandSetLegendFrame",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5109,
+   "kind": "register",
+   "message": "TSCH.CommandSetGridValueArchive",
+   "unarchiveClassname": "TSCHCommandSetGridValue",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5110,
+   "kind": "register",
+   "message": "TSCH.CommandSetGridDirectionArchive",
+   "unarchiveClassname": "TSCHCommandSetGridDirection",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5114,
+   "kind": "deprecated",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5115,
+   "kind": "register",
+   "message": "TSCH.CommandAddGridRowsArchive",
+   "unarchiveClassname": "TSCHCommandAddRows",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5116,
+   "kind": "register",
+   "message": "TSCH.CommandAddGridColumnsArchive",
+   "unarchiveClassname": "TSCHCommandAddColumns",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5118,
+   "kind": "register",
+   "message": "TSCH.CommandMoveGridRowsArchive",
+   "unarchiveClassname": "TSCHCommandMoveGridRows",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5119,
+   "kind": "register",
+   "message": "TSCH.CommandMoveGridColumnsArchive",
+   "unarchiveClassname": "TSCHCommandMoveGridColumns",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5122,
+   "kind": "register",
+   "message": "TSCH.CommandSetPieWedgeExplosion",
+   "unarchiveClassname": "TSCHCommandSetPieWedgeExplosion",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5123,
+   "kind": "register",
+   "message": "TSCH.CommandStyleSwapArchive",
+   "unarchiveClassname": "TSCHCommandStyleSwap",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5125,
+   "kind": "register",
+   "message": "TSCH.CommandChartApplyPreset",
+   "unarchiveClassname": "TSCHCommandChartApplyPreset",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5126,
+   "kind": "register",
+   "message": "TSCH.ChartCommandArchive",
+   "unarchiveClassname": "TSCHChartCommand",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5127,
+   "kind": "register",
+   "message": "TSCH.CommandReplaceGridValuesArchive",
+   "unarchiveClassname": "TSCHCommandReplaceGridValues",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5129,
+   "kind": "register",
+   "message": "TSCH.StylePasteboardDataArchive",
+   "unarchiveClassname": "TSCHStylePasteboardData",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5130,
+   "kind": "register",
+   "message": "TSCH.CommandSetMultiDataSetIndexArchive",
+   "unarchiveClassname": "TSCHCommandSetMultiDataSetIndex",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5131,
+   "kind": "register",
+   "message": "TSCH.CommandReplaceThemePresetArchive",
+   "unarchiveClassname": "TSCHCommandReplaceThemePreset",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5132,
+   "kind": "register",
+   "message": "TSCH.CommandInvalidateWPCaches",
+   "unarchiveClassname": "TSCHCommandInvalidateWPCaches",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5135,
+   "kind": "register",
+   "message": "TSCH.CommandMutatePropertiesArchive",
+   "unarchiveClassname": "TSCHCommandMutateProperties",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5136,
+   "kind": "register",
+   "message": "TSCH.CommandScaleAllTextArchive",
+   "unarchiveClassname": "TSCHCommandScaleAllText",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5137,
+   "kind": "register",
+   "message": "TSCH.CommandSetFontFamilyArchive",
+   "unarchiveClassname": "TSCHCommandSetFontFamily",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5138,
+   "kind": "register",
+   "message": "TSCH.CommandApplyFillSetArchive",
+   "unarchiveClassname": "TSCHCommandApplyFillSet",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5139,
+   "kind": "register",
+   "message": "TSCH.CommandReplaceCustomFormatArchive",
+   "unarchiveClassname": "TSCHCommandReplaceCustomFormat",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5140,
+   "kind": "register",
+   "message": "TSCH.CommandAddReferenceLineArchive",
+   "unarchiveClassname": "TSCHCommandAddReferenceLine",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5141,
+   "kind": "register",
+   "message": "TSCH.CommandDeleteReferenceLineArchive",
+   "unarchiveClassname": "TSCHCommandDeleteReferenceLine",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5142,
+   "kind": "register",
+   "message": "TSCH.CommandDeleteGridColumnsArchive",
+   "unarchiveClassname": "TSCHCommandDeleteColumns",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5143,
+   "kind": "register",
+   "message": "TSCH.CommandDeleteGridRowsArchive",
+   "unarchiveClassname": "TSCHCommandDeleteRows",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5145,
+   "kind": "register",
+   "message": "TSCH.ChartSelectionArchive",
+   "unarchiveClassname": "TSCHArchivedSelection",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5146,
+   "kind": "register",
+   "message": "TSCH.ChartTextSelectionTransformerArchive",
+   "unarchiveClassname": "TSCHChartTextSelectionTransformer",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5147,
+   "kind": "register",
+   "message": "TSCH.ChartSubselectionTransformerArchive",
+   "unarchiveClassname": "TSCHChartSubselectionTransformer",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5148,
+   "kind": "register",
+   "message": "TSCH.ChartDrawableSelectionTransformerArchive",
+   "unarchiveClassname": "TSCHChartDrawableSelectionTransformer",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5149,
+   "kind": "register",
+   "message": "TSCH.ChartSubselectionTransformerHelperArchive",
+   "unarchiveClassname": "TSCHChartSubselectionTransformerHelper",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5150,
+   "kind": "register",
+   "message": "TSCH.ChartRefLineSubselectionTransformerHelperArchive",
+   "unarchiveClassname": "TSCHChartRefLineSubselectionTransformerHelper",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5151,
+   "kind": "register",
+   "message": "TSCH.CDESelectionTransformerArchive",
+   "unarchiveClassname": "TSCHCDESelectionTransformer",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5152,
+   "kind": "register",
+   "message": "TSCH.ChartSubselectionIdentityTransformerHelperArchive",
+   "unarchiveClassname": "TSCHChartSubselectionIdentityTransformerHelper",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5154,
+   "kind": "register",
+   "message": "TSCH.CommandPasteStyleArchive",
+   "unarchiveClassname": "TSCHCommandPasteStyle",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5155,
+   "kind": "register",
+   "message": "TSCH.CommandInducedReplaceChartGrid",
+   "unarchiveClassname": "TSCHCommandInducedReplaceChartGrid",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5156,
+   "kind": "register",
+   "message": "TSCH.CommandReplaceImageDataArchive",
+   "unarchiveClassname": "TSCHCommandReplaceImageData",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 5157,
+   "kind": "register",
+   "message": "TSCH.CommandInduced3DChartGeometry",
+   "unarchiveClassname": "TSCHCommandInduced3DChartGeometry",
+   "binary": "TSCharts"
+  },
+  {
+   "type": 6000,
+   "kind": "register",
+   "message": "TST.TableInfoArchive",
+   "unarchiveClassname": "TSTTableInfo",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6001,
+   "kind": "register",
+   "message": "TST.TableModelArchive",
+   "unarchiveClassname": "TSTTableModel",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6002,
+   "kind": "register",
+   "message": "TST.Tile",
+   "unarchiveClassname": "TSTTableTile",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6003,
+   "kind": "register",
+   "message": "TST.TableStyleArchive",
+   "unarchiveClassname": "TSTTableStyle",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6004,
+   "kind": "register",
+   "message": "TST.CellStyleArchive",
+   "unarchiveClassname": "TSTCellStyle",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6005,
+   "kind": "register",
+   "message": "TST.TableDataList",
+   "unarchiveClassname": "TSTTableDataList",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6006,
+   "kind": "register",
+   "message": "TST.HeaderStorageBucket",
+   "unarchiveClassname": "TSTTableHeaderStorageBucket",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6007,
+   "kind": "register",
+   "message": "TST.WPTableInfoArchive",
+   "unarchiveClassname": "TSTWPTableInfo",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6008,
+   "kind": "register",
+   "message": "TST.TableStylePresetArchive",
+   "unarchiveClassname": "TSTTableStylePreset",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6009,
+   "kind": "register",
+   "message": "TST.TableStrokePresetArchive",
+   "unarchiveClassname": "TSTTableStrokePreset",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6010,
+   "kind": "register",
+   "message": "TST.ConditionalStyleSetArchive",
+   "unarchiveClassname": "TSTConditionalStyleSet",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6011,
+   "kind": "register",
+   "message": "TST.TableDataListSegment",
+   "unarchiveClassname": "TSTTableDataListSegment",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6030,
+   "kind": "register",
+   "message": "TST.SelectionArchive",
+   "unarchiveClassname": "TSTArchivedCellSelection",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6031,
+   "kind": "register",
+   "message": "TST.CellMapArchive",
+   "unarchiveClassname": "TSTCellMap",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6032,
+   "kind": "register",
+   "message": "TST.DeathhawkRdar39989167CellSelectionArchive",
+   "unarchiveClassname": "TSTArchivedRdar39989167CellSelection",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6033,
+   "kind": "register",
+   "message": "TST.ConcurrentCellMapArchive",
+   "unarchiveClassname": "TSTConcurrentCellMap",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6034,
+   "kind": "register",
+   "message": "TST.ConcurrentCellListArchive",
+   "unarchiveClassname": "TSTConcurrentCellList",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6100,
+   "kind": "register",
+   "message": "TST.TableCommandArchive",
+   "unarchiveClassname": "TSTTableCommand",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6101,
+   "kind": "register",
+   "message": "TST.CommandDeleteCellsArchive",
+   "unarchiveClassname": "TSTCommandDeleteCells",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6102,
+   "kind": "register",
+   "message": "TST.CommandInsertColumnsOrRowsArchive",
+   "unarchiveClassname": "TSTCommandInsertColumnsOrRows",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6103,
+   "kind": "register",
+   "message": "TST.CommandRemoveColumnsOrRowsArchive",
+   "unarchiveClassname": "TSTCommandRemoveColumnsOrRows",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6104,
+   "kind": "register",
+   "message": "TST.CommandResizeColumnOrRowArchive",
+   "unarchiveClassname": "TSTCommandResizeColumnOrRow",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6105,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6106,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6107,
+   "kind": "register",
+   "message": "TST.CommandSetTableNameArchive",
+   "unarchiveClassname": "TSTCommandSetTableName",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6108,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6109,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6110,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6111,
+   "kind": "register",
+   "message": "TST.CommandChangeFreezeHeaderStateArchive",
+   "unarchiveClassname": "TSTCommandChangeFreezeHeaderState",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6112,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6113,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6114,
+   "kind": "register",
+   "message": "TST.CommandSetTableNameEnabledArchive",
+   "unarchiveClassname": "TSTCommandSetTableNameEnabled",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6117,
+   "kind": "register",
+   "message": "TST.CommandApplyTableStylePresetArchive",
+   "unarchiveClassname": "TSTCommandApplyTableStylePreset",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6119,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6120,
+   "kind": "register",
+   "message": "TST.CommandSetRepeatingHeaderEnabledArchive",
+   "unarchiveClassname": "TSTCommandSetRepeatingHeaderEnabled",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6121,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6122,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6123,
+   "kind": "register",
+   "message": "TST.CommandSortArchive",
+   "unarchiveClassname": "TSTCommandSort",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6124,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6125,
+   "kind": "register",
+   "message": "TST.CommandStyleTableArchive",
+   "unarchiveClassname": "TSTCommandStyleTable",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6126,
+   "kind": "register",
+   "message": "TST.CommandSetNumberOfDecimalPlacesArchive",
+   "unarchiveClassname": "TSTCommandSetNumberOfDecimalPlaces",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6127,
+   "kind": "register",
+   "message": "TST.CommandSetShowThousandsSeparatorArchive",
+   "unarchiveClassname": "TSTCommandSetShowThousandsSeparator",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6128,
+   "kind": "register",
+   "message": "TST.CommandSetNegativeNumberStyleArchive",
+   "unarchiveClassname": "TSTCommandSetNegativeNumberStyle",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6129,
+   "kind": "register",
+   "message": "TST.CommandSetFractionAccuracyArchive",
+   "unarchiveClassname": "TSTCommandSetFractionAccuracy",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6130,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6131,
+   "kind": "register",
+   "message": "TST.CommandSetCurrencyCodeArchive",
+   "unarchiveClassname": "TSTCommandSetCurrencyCode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6132,
+   "kind": "register",
+   "message": "TST.CommandSetUseAccountingStyleArchive",
+   "unarchiveClassname": "TSTCommandSetUseAccountingStyle",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6133,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6134,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6135,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6136,
+   "kind": "register",
+   "message": "TST.CommandSetTableFontNameArchive",
+   "unarchiveClassname": "TSTCommandSetTableFontName",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6137,
+   "kind": "register",
+   "message": "TST.CommandSetTableFontSizeArchive",
+   "unarchiveClassname": "TSTCommandSetTableFontSize",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6138,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6139,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6140,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6141,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6142,
+   "kind": "register",
+   "message": "TST.CommandSetTableNameHeightArchive",
+   "unarchiveClassname": "TSTCommandSetTableNameHeight",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6143,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6144,
+   "kind": "register",
+   "message": "TST.MergeRegionMapArchive",
+   "unarchiveClassname": "TSTMergeRegionMap",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6145,
+   "kind": "register",
+   "message": "TST.CommandHideShowArchive",
+   "unarchiveClassname": "TSTCommandHideShowColumnsOrRows",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6146,
+   "kind": "register",
+   "message": "TST.CommandSetBaseArchive",
+   "unarchiveClassname": "TSTCommandSetBase",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6147,
+   "kind": "register",
+   "message": "TST.CommandSetBasePlacesArchive",
+   "unarchiveClassname": "TSTCommandSetBasePlaces",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6148,
+   "kind": "register",
+   "message": "TST.CommandSetBaseUseMinusSignArchive",
+   "unarchiveClassname": "TSTCommandSetBaseUseMinusSign",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6149,
+   "kind": "register",
+   "message": "TST.CommandSetTextStylePropertiesArchive",
+   "unarchiveClassname": "TSTCommandSetTextStyleProperties",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6150,
+   "kind": "register",
+   "message": "TST.CommandCategoryChangeSummaryAggregateType",
+   "unarchiveClassname": "TSTCommandCategoryChangeSummaryAggregateType",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6152,
+   "kind": "register",
+   "message": "TST.CommandCategoryResizeColumnOrRowArchive",
+   "unarchiveClassname": "TSTCommandCategoryResizeColumnOrRow",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6153,
+   "kind": "register",
+   "message": "TST.CommandCategoryMoveRowsArchive",
+   "unarchiveClassname": "TSTCommandCategoryMoveRows",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6156,
+   "kind": "register",
+   "message": "TST.CommandSetPencilAnnotationsArchive",
+   "unarchiveClassname": "TSTCommandSetPencilAnnotations",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6157,
+   "kind": "register",
+   "message": "TST.CommandCategoryWillChangeGroupValue",
+   "unarchiveClassname": "TSTCommandCategoryWillChangeGroupValue",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6158,
+   "kind": "register",
+   "message": "TST.CommandApplyConcurrentCellMapArchive",
+   "unarchiveClassname": "TSTCommandApplyConcurrentCellMap",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6159,
+   "kind": "register",
+   "message": "TST.CommandSetGroupSortOrderArchive",
+   "unarchiveClassname": "TSTCommandSetGroupSortOrder",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6179,
+   "kind": "register",
+   "message": "TST.FormulaEqualsTokenAttachmentArchive",
+   "unarchiveClassname": "TSTFormulaEqualsTokenAttachment",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6181,
+   "kind": "register",
+   "message": "TST.TokenAttachmentArchive",
+   "unarchiveClassname": "TSTWPTokenAttachment",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6182,
+   "kind": "register",
+   "message": "TST.ExpressionNodeArchive",
+   "unarchiveClassname": "TSTExpressionNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6183,
+   "kind": "register",
+   "message": "TST.BooleanNodeArchive",
+   "unarchiveClassname": "TSTBooleanNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6184,
+   "kind": "register",
+   "message": "TST.NumberNodeArchive",
+   "unarchiveClassname": "TSTNumberNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6185,
+   "kind": "register",
+   "message": "TST.StringNodeArchive",
+   "unarchiveClassname": "TSTStringNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6186,
+   "kind": "register",
+   "message": "TST.ArrayNodeArchive",
+   "unarchiveClassname": "TSTArrayNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6187,
+   "kind": "register",
+   "message": "TST.ListNodeArchive",
+   "unarchiveClassname": "TSTListNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6188,
+   "kind": "register",
+   "message": "TST.OperatorNodeArchive",
+   "unarchiveClassname": "TSTOperatorNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6189,
+   "kind": "register",
+   "message": "TST.FunctionNodeArchive",
+   "unarchiveClassname": "TSTFunctionNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6190,
+   "kind": "register",
+   "message": "TST.DateNodeArchive",
+   "unarchiveClassname": "TSTDateNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6191,
+   "kind": "register",
+   "message": "TST.ReferenceNodeArchive",
+   "unarchiveClassname": "TSTReferenceNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6192,
+   "kind": "register",
+   "message": "TST.DurationNodeArchive",
+   "unarchiveClassname": "TSTDurationNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6193,
+   "kind": "register",
+   "message": "TST.ArgumentPlaceholderNodeArchive",
+   "unarchiveClassname": "TSTArgumentPlaceholderNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6194,
+   "kind": "register",
+   "message": "TST.PostfixOperatorNodeArchive",
+   "unarchiveClassname": "TSTPostfixOperatorNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6195,
+   "kind": "register",
+   "message": "TST.PrefixOperatorNodeArchive",
+   "unarchiveClassname": "TSTPrefixOperatorNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6196,
+   "kind": "register",
+   "message": "TST.FunctionEndNodeArchive",
+   "unarchiveClassname": "TSTFunctionEndNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6197,
+   "kind": "register",
+   "message": "TST.EmptyExpressionNodeArchive",
+   "unarchiveClassname": "TSTEmptyExpressionNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6198,
+   "kind": "register",
+   "message": "TST.LayoutHintArchive",
+   "unarchiveClassname": "TSTArchivedLayoutHint",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6199,
+   "kind": "register",
+   "message": "TST.CompletionTokenAttachmentArchive",
+   "unarchiveClassname": "TSTCompletionToken",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6200,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6201,
+   "kind": "upgrade",
+   "unarchiveClassname": "TSTTableDataList",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6202,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6203,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6204,
+   "kind": "register",
+   "message": "TST.HiddenStateFormulaOwnerArchive",
+   "unarchiveClassname": "TSTHiddenStateFormulaOwner",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6205,
+   "kind": "register",
+   "message": "TST.CommandSetAutomaticDurationUnitsArchive",
+   "unarchiveClassname": "TSTCommandSetAutomaticDurationUnits",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6206,
+   "kind": "register",
+   "message": "TST.PopUpMenuModel",
+   "unarchiveClassname": "TSTPopUpMenuModel",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6207,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6208,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6209,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6210,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6211,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6212,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6213,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6214,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6215,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6216,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6217,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6218,
+   "kind": "register",
+   "message": "TST.RichTextPayloadArchive",
+   "unarchiveClassname": "TSTRichTextPayload",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6219,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6220,
+   "kind": "register",
+   "message": "TST.FilterSetArchive",
+   "unarchiveClassname": "TSTTableFilterSet",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6221,
+   "kind": "register",
+   "message": "TST.CommandSetFiltersEnabledArchive",
+   "unarchiveClassname": "TSTCommandSetFiltersEnabled",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6222,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6223,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6224,
+   "kind": "register",
+   "message": "TST.CommandRewriteFilterFormulasForTableResizeArchive",
+   "unarchiveClassname": "TSTCommandRewriteFilterFormulasForTableResize",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6225,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6226,
+   "kind": "register",
+   "message": "TST.CommandTextPreflightInsertCellArchive",
+   "unarchiveClassname": "TSTCommandTextPreflightInsertCell",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6227,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6228,
+   "kind": "register",
+   "message": "TST.CommandDeleteCellContentsArchive",
+   "unarchiveClassname": "TSTCommandDeleteCellContents",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6229,
+   "kind": "register",
+   "message": "TST.CommandPostflightSetCellArchive",
+   "unarchiveClassname": "TSTCommandPostflightSetCell",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6230,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6231,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6232,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6235,
+   "kind": "register",
+   "message": "TST.IdentifierNodeArchive",
+   "unarchiveClassname": "TSTIdentifierNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6236,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6237,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6238,
+   "kind": "register",
+   "message": "TST.CommandSetDateTimeFormatArchive",
+   "unarchiveClassname": "TSTCommandSetDateTimeFormat",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6239,
+   "kind": "register",
+   "message": "TST.TableCommandSelectionBehaviorArchive",
+   "unarchiveClassname": "TSTTableSelectionBehavior",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6240,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6241,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6242,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6244,
+   "kind": "register",
+   "message": "TST.CommandApplyCellCommentArchive",
+   "unarchiveClassname": "TSTCommandApplyCellComment",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6245,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6246,
+   "kind": "register",
+   "message": "TST.CommandSetFormulaTokenizationArchive",
+   "unarchiveClassname": "TSTCommandSetFormulaTokenization",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6247,
+   "kind": "register",
+   "message": "TST.TableStyleNetworkArchive",
+   "unarchiveClassname": "TSTTableStyleNetwork",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6248,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6249,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6250,
+   "kind": "register",
+   "message": "TST.CommandSetFilterSetTypeArchive",
+   "unarchiveClassname": "TSTCommandSetFilterSetType",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6251,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6252,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6253,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6254,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6255,
+   "kind": "register",
+   "message": "TST.CommandSetTextStyleArchive",
+   "unarchiveClassname": "TSTCommandSetTextStyle",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6256,
+   "kind": "register",
+   "message": "TST.CommandJustForNotifyingArchive",
+   "unarchiveClassname": "TSTCommandJustForNotifying",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6257,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6258,
+   "kind": "register",
+   "message": "TST.CommandSetSortOrderArchive",
+   "unarchiveClassname": "TSTCommandSetSortOrder",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6259,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6260,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6261,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6262,
+   "kind": "register",
+   "message": "TST.CommandAddTableStylePresetArchive",
+   "unarchiveClassname": "TSTCommandAddTableStylePreset",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6263,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6264,
+   "kind": "register",
+   "message": "TST.CellDiffMapArchive",
+   "unarchiveClassname": "TSTCellDiffMap",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6265,
+   "kind": "register",
+   "message": "TST.CommandApplyCellContentsArchive",
+   "unarchiveClassname": "TSTCommandApplyCellContents",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6266,
+   "kind": "register",
+   "message": "TST.CommandRemoveTableStylePresetArchive",
+   "unarchiveClassname": "TSTCommandRemoveTableStylePreset",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6267,
+   "kind": "register",
+   "message": "TST.ColumnRowUIDMapArchive",
+   "unarchiveClassname": "TSTColumnRowUIDMap",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6268,
+   "kind": "register",
+   "message": "TST.CommandMoveColumnsOrRowsArchive",
+   "unarchiveClassname": "TSTCommandMoveColumnsOrRows",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6269,
+   "kind": "register",
+   "message": "TST.CommandReplaceCustomFormatArchive",
+   "unarchiveClassname": "TSTCommandReplaceCustomFormat",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6270,
+   "kind": "register",
+   "message": "TST.CommandReplaceTableStylePresetArchive",
+   "unarchiveClassname": "TSTCommandReplaceTableStylePreset",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6271,
+   "kind": "register",
+   "message": "TST.FormulaSelectionArchive",
+   "unarchiveClassname": "TSTWPFormulaArchivedSelection",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6272,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6273,
+   "kind": "register",
+   "message": "TST.CellListArchive",
+   "unarchiveClassname": "TSTCellList",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6274,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6275,
+   "kind": "register",
+   "message": "TST.CommandApplyCellDiffMapArchive",
+   "unarchiveClassname": "TSTCommandApplyCellDiffMap",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6276,
+   "kind": "register",
+   "message": "TST.CommandSetFilterSetArchive",
+   "unarchiveClassname": "TSTCommandSetFilterSet",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6277,
+   "kind": "register",
+   "message": "TST.CommandMutateCellFormatArchive",
+   "unarchiveClassname": "TSTCommandMutateCellFormat",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6278,
+   "kind": "register",
+   "message": "TST.CommandSetStorageLanguageArchive",
+   "unarchiveClassname": "TSTCommandSetStorageLanguage",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6279,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6280,
+   "kind": "register",
+   "message": "TST.CommandMergeArchive",
+   "unarchiveClassname": "TSTCommandMergeCells",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6281,
+   "kind": "register",
+   "message": "TST.CommandUnmergeArchive",
+   "unarchiveClassname": "TSTCommandUnmergeCells",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6282,
+   "kind": "register",
+   "message": "TST.CommandApplyCellMapArchive",
+   "unarchiveClassname": "TSTCommandApplyCellMap",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6283,
+   "kind": "register",
+   "message": "TST.ControlCellSelectionArchive",
+   "unarchiveClassname": "TSTTableArchivedControlCellSelection",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6284,
+   "kind": "register",
+   "message": "TST.TableNameSelectionArchive",
+   "unarchiveClassname": "TSTArchivedTableNameSelection",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6285,
+   "kind": "register",
+   "message": "TST.CommandRewriteFormulasForTransposeArchive",
+   "unarchiveClassname": "TSTCommandRewriteFormulasForTranspose",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6286,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6287,
+   "kind": "register",
+   "message": "TST.CommandTransposeTableArchive",
+   "unarchiveClassname": "TSTCommandTransposeTable",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6288,
+   "kind": "deprecated",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6289,
+   "kind": "register",
+   "message": "TST.CommandSetDurationStyleArchive",
+   "unarchiveClassname": "TSTCommandSetDurationStyle",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6290,
+   "kind": "register",
+   "message": "TST.CommandSetDurationUnitSmallestLargestArchive",
+   "unarchiveClassname": "TSTCommandSetDurationUnitSmallestLargest",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6291,
+   "kind": "register",
+   "message": "TST.CommandRewriteTableFormulasForRewriteSpecArchive",
+   "unarchiveClassname": "TSTCommandRewriteTableFormulasForRewriteSpec",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6292,
+   "kind": "register",
+   "message": "TST.CommandRewriteConditionalStylesForRewriteSpecArchive",
+   "unarchiveClassname": "TSTCommandRewriteConditionalStylesForRewriteSpec",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6293,
+   "kind": "register",
+   "message": "TST.CommandRewriteFilterFormulasForRewriteSpecArchive",
+   "unarchiveClassname": "TSTCommandRewriteFilterFormulasForRewriteSpec",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6294,
+   "kind": "register",
+   "message": "TST.CommandRewriteSortOrderForRewriteSpecArchive",
+   "unarchiveClassname": "TSTCommandRewriteSortOrderForRewriteSpec",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6295,
+   "kind": "register",
+   "message": "TST.StrokeSelectionArchive",
+   "unarchiveClassname": "TSTArchivedStrokeSelection",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6298,
+   "kind": "register",
+   "message": "TST.VariableNodeArchive",
+   "unarchiveClassname": "TSTVariableNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6300,
+   "kind": "register",
+   "message": "TST.CommandInverseMergeArchive",
+   "unarchiveClassname": "TSTCommandInverseMergeCells",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6301,
+   "kind": "register",
+   "message": "TST.CommandMoveCellsArchive",
+   "unarchiveClassname": "TSTCommandMoveCells",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6302,
+   "kind": "register",
+   "message": "TST.DefaultCellStylesContainerArchive",
+   "unarchiveClassname": "TSTDefaultCellStylesContainer",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6303,
+   "kind": "register",
+   "message": "TST.CommandRewriteMergeFormulasArchive",
+   "unarchiveClassname": "TSTCommandRewriteMergeFormulas",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6304,
+   "kind": "register",
+   "message": "TST.CommandChangeTableAreaForColumnOrRowArchive",
+   "unarchiveClassname": "TSTCommandChangeTableAreaForColumnOrRow",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6305,
+   "kind": "register",
+   "message": "TST.StrokeSidecarArchive",
+   "unarchiveClassname": "TSTStrokeSidecar",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6306,
+   "kind": "register",
+   "message": "TST.StrokeLayerArchive",
+   "unarchiveClassname": "TSTStrokeLayer",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6307,
+   "kind": "register",
+   "message": "TST.CommandChooseTableIdRemapperArchive",
+   "unarchiveClassname": "TSTCommandChooseTableIdRemapper",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6310,
+   "kind": "register",
+   "message": "TST.CommandSetWasCutArchive",
+   "unarchiveClassname": "TSTCommandSetWasCut",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6311,
+   "kind": "register",
+   "message": "TST.AutofillSelectionArchive",
+   "unarchiveClassname": "TSTArchivedAutofillSelection",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6312,
+   "kind": "register",
+   "message": "TST.StockCellSelectionArchive",
+   "unarchiveClassname": "TSTTableArchivedStockCellSelection",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6313,
+   "kind": "register",
+   "message": "TST.CommandSetNowArchive",
+   "unarchiveClassname": "TSTCommandSetNow",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6314,
+   "kind": "register",
+   "message": "TST.CommandSetStructuredTextImportRecordArchive",
+   "unarchiveClassname": "TSTCommandSetStructuredTextImportRecord",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6315,
+   "kind": "register",
+   "message": "TST.CommandRewriteCategoryFormulasArchive",
+   "unarchiveClassname": "TSTCommandRewriteCategoryFormulas",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6316,
+   "kind": "register",
+   "message": "TST.SummaryModelArchive",
+   "unarchiveClassname": "TSTSummaryModel",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6317,
+   "kind": "register",
+   "message": "TST.SummaryCellVendorArchive",
+   "unarchiveClassname": "TSTSummaryCellVendor",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6318,
+   "kind": "register",
+   "message": "TST.CategoryOrderArchive",
+   "unarchiveClassname": "TSTCategoryOrder",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6320,
+   "kind": "register",
+   "message": "TST.CommandCategoryCollapseExpandGroupArchive",
+   "unarchiveClassname": "TSTCommandCategoryCollapseExpandGroup",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6321,
+   "kind": "register",
+   "message": "TST.CommandCategorySetGroupingColumnsArchive",
+   "unarchiveClassname": "TSTCommandCategorySetGroupingColumns",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6323,
+   "kind": "register",
+   "message": "TST.CommandRewriteHiddenStatesForGroupByChangeArchive",
+   "unarchiveClassname": "TSTCommandRewriteHiddenStatesForGroupByChange",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6350,
+   "kind": "register",
+   "message": "TST.IdempotentSelectionTransformerArchive",
+   "unarchiveClassname": "TSTIdempotentSelectionTransformer",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6351,
+   "kind": "register",
+   "message": "TST.TableSubSelectionTransformerBaseArchive",
+   "unarchiveClassname": "TSTTableSubSelectionTransformerBase",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6352,
+   "kind": "register",
+   "message": "TST.TableNameSelectionTransformerArchive",
+   "unarchiveClassname": "TSTTableNameSelectionTransformer",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6353,
+   "kind": "register",
+   "message": "TST.RegionSelectionTransformerArchive",
+   "unarchiveClassname": "TSTRegionSelectionTransformer",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6354,
+   "kind": "register",
+   "message": "TST.RowColumnSelectionTransformerArchive",
+   "unarchiveClassname": "TSTRowColumnSelectionTransformer",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6355,
+   "kind": "register",
+   "message": "TST.ControlCellSelectionTransformerArchive",
+   "unarchiveClassname": "TSTTableControlCellSelectionTransformer",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6357,
+   "kind": "register",
+   "message": "TST.ChangePropagationMapWrapper",
+   "unarchiveClassname": "TSTChangePropagationMapWrapper",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6358,
+   "kind": "register",
+   "message": "TST.WPSelectionTransformerArchive",
+   "unarchiveClassname": "TSTWPSelectionTransformer",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6359,
+   "kind": "register",
+   "message": "TST.StockCellSelectionTransformerArchive",
+   "unarchiveClassname": "TSTTableStockCellSelectionTransformer",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6360,
+   "kind": "register",
+   "message": "TST.CommandSetRangeControlMinMaxIncArchive",
+   "unarchiveClassname": "TSTCommandSetRangeControlMinMaxInc",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6361,
+   "kind": "register",
+   "message": "TST.CommandCategorySetLabelRowVisibility",
+   "unarchiveClassname": "TSTCommandCategorySetLabelRowVisibility",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6362,
+   "kind": "register",
+   "message": "TST.CommandRewritePencilAnnotationFormulasArchive",
+   "unarchiveClassname": "TSTCommandRewritePencilAnnotationFormulas",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6363,
+   "kind": "register",
+   "message": "TST.PencilAnnotationArchive",
+   "unarchiveClassname": "TSTPencilAnnotation",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6364,
+   "kind": "register",
+   "message": "TST.StrokeSelectionTransformerArchive",
+   "unarchiveClassname": "TSTStrokeSelectionTransformer",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6365,
+   "kind": "register",
+   "message": "TST.HeaderNameMgrTileArchive",
+   "unarchiveClassname": "TSTHeaderNameMgrTile",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6366,
+   "kind": "register",
+   "message": "TST.HeaderNameMgrArchive",
+   "unarchiveClassname": "TSTHeaderNameMgr",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6367,
+   "kind": "register",
+   "message": "TST.CellDiffArray",
+   "unarchiveClassname": "TSTCellDiffArray",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6368,
+   "kind": "register",
+   "message": "TST.CellDiffArraySegment",
+   "unarchiveClassname": "TSTCellDiffArraySegment",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6369,
+   "kind": "register",
+   "message": "TST.PivotOrderArchive",
+   "unarchiveClassname": "TSTPivotRowColumnOrder",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6370,
+   "kind": "register",
+   "message": "TST.PivotOwnerArchive",
+   "unarchiveClassname": "TSTPivotOwner",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6371,
+   "kind": "register",
+   "message": "TST.CommandPivotSetPivotRulesArchive",
+   "unarchiveClassname": "TSTCommandPivotSetPivotRules",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6372,
+   "kind": "register",
+   "message": "TST.CategoryOwnerRefArchive",
+   "unarchiveClassname": "TSTCategoryOwner",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6373,
+   "kind": "register",
+   "message": "TST.GroupByArchive",
+   "unarchiveClassname": "TSTGroupBy",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6374,
+   "kind": "register",
+   "message": "TST.PivotGroupingColumnOptionsMapArchive",
+   "unarchiveClassname": "TSTPivotGroupingColumnOptionsMap",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6375,
+   "kind": "register",
+   "message": "TST.CommandPivotSetGroupingColumnOptionsArchive",
+   "unarchiveClassname": "TSTCommandPivotSetGroupingColumnOptions",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6376,
+   "kind": "register",
+   "message": "TST.CommandPivotHideShowGrandTotalsArchive",
+   "unarchiveClassname": "TSTCommandPivotHideShowGrandTotals",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6377,
+   "kind": "register",
+   "message": "TST.CommandPivotSortArchive",
+   "unarchiveClassname": "TSTCommandPivotSort",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6379,
+   "kind": "register",
+   "message": "TST.CommandRewritePivotOwnerFormulasArchive",
+   "unarchiveClassname": "TSTCommandRewritePivotOwnerFormulas",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6380,
+   "kind": "register",
+   "message": "TST.CommandRewriteTrackedReferencesArchive",
+   "unarchiveClassname": "TSTCommandRewriteTrackedReferences",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6381,
+   "kind": "register",
+   "message": "TST.CommandExtendTableIDHistoryArchive",
+   "unarchiveClassname": "TSTCommandExtendTableIDHistory",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6382,
+   "kind": "register",
+   "message": "TST.GroupByArchive.AggregatorArchive",
+   "unarchiveClassname": "TSTAggregator",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6383,
+   "kind": "register",
+   "message": "TST.GroupByArchive.GroupNodeArchive",
+   "unarchiveClassname": "TSTGroupNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 6384,
+   "kind": "register",
+   "message": "TST.SpillOriginRefNodeArchive",
+   "unarchiveClassname": "TSTSpillOriginRefNode",
+   "binary": "TSTables"
+  },
+  {
+   "type": 10011,
+   "kind": "register",
+   "message": "TSWP.SectionPlaceholderArchive",
+   "unarchiveClassname": "TSWPSectionPlaceholder",
+   "binary": "TSText"
+  },
+  {
+   "type": 10020,
+   "kind": "register",
+   "message": "TSWP.ShapeSelectionTransformerArchive",
+   "unarchiveClassname": "TSWPShapeSelectionTransformer",
+   "binary": "TSText"
+  },
+  {
+   "type": 10021,
+   "kind": "register",
+   "message": "TSWP.SelectionTransformerArchive",
+   "unarchiveClassname": "TSWPSelectionTransformer",
+   "binary": "TSText"
+  },
+  {
+   "type": 10022,
+   "kind": "register",
+   "message": "TSWP.ShapeContentDescription",
+   "unarchiveClassname": "TSWPShapeContentDescription",
+   "binary": "TSText"
+  },
+  {
+   "type": 10023,
+   "kind": "register",
+   "message": "TSWP.TateChuYokoFieldArchive",
+   "unarchiveClassname": "TSWPTateChuYokoField",
+   "binary": "TSText"
+  },
+  {
+   "type": 10024,
+   "kind": "register",
+   "message": "TSWP.DropCapStyleArchive",
+   "unarchiveClassname": "TSWPDropCapStyle",
+   "binary": "TSText"
+  },
+  {
+   "type": 11000,
+   "kind": "register",
+   "message": "TSP.PasteboardObject",
+   "unarchiveClassname": "TSPPasteboardObject",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11001,
+   "kind": "upgrade",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11002,
+   "kind": "upgrade",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11005,
+   "kind": "upgrade",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11006,
+   "kind": "register",
+   "message": "TSP.PackageMetadata",
+   "unarchiveClassname": "TSPPackageMetadata",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11007,
+   "kind": "register",
+   "message": "TSP.PasteboardMetadata",
+   "unarchiveClassname": "TSPPasteboardMetadata",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11008,
+   "kind": "register",
+   "message": "TSP.ObjectContainer",
+   "unarchiveClassname": "TSPObjectContainer",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11009,
+   "kind": "register",
+   "message": "TSP.ViewStateMetadata",
+   "unarchiveClassname": "TSPViewStateMetadata",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11010,
+   "kind": "register",
+   "message": "TSP.ObjectCollection",
+   "unarchiveClassname": "TSPObjectCollection",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11011,
+   "kind": "register",
+   "message": "TSP.DocumentMetadata",
+   "unarchiveClassname": "TSPDocumentMetadata",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11012,
+   "kind": "register",
+   "message": "TSP.SupportMetadata",
+   "unarchiveClassname": "TSPSupportMetadata",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11013,
+   "kind": "register",
+   "message": "TSP.ObjectSerializationMetadata",
+   "unarchiveClassname": "TSPObjectSerializationMetadata",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11014,
+   "kind": "register",
+   "message": "TSP.DataMetadata",
+   "unarchiveClassname": "TSPDataMetadata",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11015,
+   "kind": "register",
+   "message": "TSP.DataMetadataMap",
+   "unarchiveClassname": "TSPDataMetadataMap",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11016,
+   "kind": "register",
+   "message": "TSP.LargeNumberArraySegment",
+   "unarchiveClassname": "TSPMutableLargeNumberArraySegment",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11017,
+   "kind": "register",
+   "message": "TSP.LargeStringArraySegment",
+   "unarchiveClassname": "TSPMutableLargeStringArraySegment",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11018,
+   "kind": "register",
+   "message": "TSP.LargeLazyObjectArraySegment",
+   "unarchiveClassname": "TSPMutableLargeLazyReferenceArraySegment",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11019,
+   "kind": "register",
+   "message": "TSP.LargeNumberArray",
+   "unarchiveClassname": "TSPMutableLargeNumberArray",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11020,
+   "kind": "register",
+   "message": "TSP.LargeStringArray",
+   "unarchiveClassname": "TSPMutableLargeStringArray",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11021,
+   "kind": "register",
+   "message": "TSP.LargeLazyObjectArray",
+   "unarchiveClassname": "TSPMutableLargeLazyObjectArray",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11022,
+   "kind": "deprecated",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11023,
+   "kind": "deprecated",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11024,
+   "kind": "register",
+   "message": "TSP.LargeUUIDArraySegment",
+   "unarchiveClassname": "TSPMutableLargeUUIDArraySegment",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11025,
+   "kind": "register",
+   "message": "TSP.LargeUUIDArray",
+   "unarchiveClassname": "TSPMutableLargeUUIDArray",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11026,
+   "kind": "register",
+   "message": "TSP.LargeObjectArraySegment",
+   "unarchiveClassname": "TSPMutableLargeObjectArraySegment",
+   "binary": "TSPersistence"
+  },
+  {
+   "type": 11027,
+   "kind": "register",
+   "message": "TSP.LargeObjectArray",
+   "unarchiveClassname": "TSPMutableLargeObjectArray",
+   "binary": "TSPersistence"
+  }
+ ]
 }

@@ -46,6 +46,9 @@ let package = Package(
         .testTarget(name: "IWASnappyTests", dependencies: ["IWASnappy"]),
         .testTarget(name: "IWAArchiveTests", dependencies: ["IWAArchive", "IWASnappy"]),
         .testTarget(
+            name: "IWASchemaTests",
+            dependencies: ["IWASchema", .product(name: "SwiftProtobuf", package: "swift-protobuf")]),
+        .testTarget(
             name: "IWAContainerTests",
             dependencies: ["IWAContainer", .product(name: "Rostrum", package: "rostrum")]),
         .testTarget(name: "KeynoteGraphTests", dependencies: ["KeynoteGraph", "IWAArchive", "IWASnappy", "IWAContainer"]),

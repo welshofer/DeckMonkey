@@ -19,8 +19,8 @@ enum SynthDocument {
             record(id: 2, type: 2, payload: [1, 2, 3]),
         ])
         let slide = ArchiveStream.join([
-            record(id: 10_000, type: 10_000, payload: [UInt8]("slide one".utf8), refs: [10_001]),
-            record(id: 10_001, type: 10_001, payload: [UInt8]("drawable".utf8)),
+            record(id: 10_000, type: 5, payload: [UInt8]("slide one".utf8), refs: [10_001]),      // KN.SlideArchive
+            record(id: 10_001, type: 2001, payload: [UInt8]("drawable".utf8)),                     // TSWP.StorageArchive
         ])
         let plist = """
             <?xml version="1.0" encoding="UTF-8"?>
@@ -46,7 +46,7 @@ struct DocumentTests {
         #expect(s.recordCount == 4)
         #expect(s.mergeRecordCount == 0)
         #expect(s.highestIdentifier == 10_001)
-        #expect(s.typeHistogram == [1: 1, 2: 1, 10_000: 1, 10_001: 1])
+        #expect(s.typeHistogram == [1: 1, 2: 1, 5: 1, 2001: 1])
         #expect(s.buildVersionHistory == ["M15.4-7051-1"])
         #expect(s.dataEntries == 1)
         #expect(document.lastSavedBy == "M15.4-7051-1")
@@ -96,6 +96,36 @@ struct DocumentTests {
         let document = try KeynoteDocument.open(package)
         #expect(document.validate().contains { $0.severity == .error })
         let out = FileManager.default.temporaryDirectory.appendingPathComponent("deckmonkey-dup-\(UUID().uuidString).key")
+        #expect(throws: KeynoteError.self) { try document.save(to: out) }
+        #expect(!FileManager.default.fileExists(atPath: out.path))
+    }
+
+    @Test("invariant 8: an unknown type blocks save; a merge diff descriptor and a deprecated type do not")
+    func unknownTypeIsAnError() throws {
+        var package = try SynthDocument.package()
+        // A merge archive as Keynote writes one: [0] a payload, [1] the diff descriptor (type 0,
+        // base_message_index 0, sentinel version). And type 6219, which 15.4 declares deprecated.
+        var payload = MessageInfo(type: 2001, version: [1, 0, 5], length: 1)
+        payload.setObjectReferences([])
+        let diff = try MessageInfo(fields: [
+            WireField(number: MessageInfo.typeField, value: .varint(0)),
+            WireField(number: MessageInfo.versionField, value: Wire.packed([65535, 65535, 4_294_967_295])),
+            WireField(number: MessageInfo.lengthField, value: .varint(1)),
+            WireField(number: MessageInfo.baseMessageIndexField, value: .varint(0)),
+        ], messageIndex: 1)
+        // Fresh headers are never merge records (writes consolidate), so this one is read the way
+        // Keynote's arrive: encoded, should_merge = 1 appended (field 3, varint), decoded.
+        let header = ArchiveInfo(identifier: 20_000, messageInfos: [payload, diff]).encoded() + [0x18, 0x01]
+        let merge = ArchiveRecord(info: try ArchiveInfo(bytes: header), payloads: [Data([0x08]), Data([0x08])])
+        #expect(merge.shouldMerge)
+        let deprecated = SynthDocument.record(id: 20_001, type: 6219, payload: [0])
+        package.set("Index/Extra.iwa", try IWAChunking.compress(ArchiveStream.join([merge, deprecated])))
+        #expect(try KeynoteDocument.open(package).validate().isEmpty)
+
+        package.set("Index/Unknown.iwa", try IWAChunking.compress(ArchiveStream.join([SynthDocument.record(id: 20_002, type: 999_999, payload: [0])])))
+        let document = try KeynoteDocument.open(package)
+        #expect(document.validate() == [ValidationIssue(severity: .error, kind: .unknownType(999_999, identifier: 20_002))])
+        let out = FileManager.default.temporaryDirectory.appendingPathComponent("deckmonkey-unknown-\(UUID().uuidString).key")
         #expect(throws: KeynoteError.self) { try document.save(to: out) }
         #expect(!FileManager.default.fileExists(atPath: out.path))
     }
@@ -166,6 +196,28 @@ struct CorpusTests {
             }
         }
         return files.sorted { $0.path < $1.path }
+    }
+
+    @Test("AT-05: every type number in every corpus file resolves in the pinned registry (a message, or declared deprecated)", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus: set DECKMONKEY_CORPUS, write .deckmonkey-corpus, or add decks under Corpus/"))
+    func corpusTypesResolve() throws {
+        var seen = [UInt32: Int]()
+        var unresolved = Set<UInt32>()
+        var deprecated = Set<UInt32>()
+        var decks = 0
+        for url in CorpusTests.corpusFiles() {
+            guard let document = try? KeynoteDocument.open(url) else { continue }   // legacy decks: AT-09 reports them
+            let registry = try #require(document.registry, "the pinned registry did not load")
+            decks += 1
+            for (type, count) in document.store.typeHistogram {
+                seen[type, default: 0] += count
+                if !registry.resolves(type) { unresolved.insert(type) }
+                if registry.deprecatedTypes.contains(type) { deprecated.insert(type) }
+            }
+        }
+        print("AT-05: \(seen.count) distinct types in \(decks) deck(s): \(seen.count - deprecated.count - unresolved.count) with a message, "
+            + "\(deprecated.count) declared deprecated (\(deprecated.sorted().map(String.init).joined(separator: ", "))), \(unresolved.count) unresolved"
+            + unresolved.sorted().map { "\n      type \($0) ×\(seen[$0]!)" }.joined())
+        #expect(unresolved.isEmpty)
     }
 
     @Test("AT-09: every corpus file opens, validates, and round-trips clean", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus: set DECKMONKEY_CORPUS, write .deckmonkey-corpus, or add decks under Corpus/"))
