@@ -3,6 +3,7 @@ import IWAArchive
 import IWAContainer
 import IWASchema
 import IWASnappy
+import SwiftProtobuf
 
 /// Errors raised by `KeynoteDocument`.
 public enum KeynoteError: Error, Equatable, Sendable {
@@ -10,6 +11,13 @@ public enum KeynoteError: Error, Equatable, Sendable {
     case validationFailed([ValidationIssue])
     /// The file was written by a newer Keynote than the pinned schema (AT-25); reads only.
     case schemaNewerThanLibrary(fileBuild: String, pinned: String)
+    /// No object with this identifier.
+    case noSuchObject(UInt64)
+    /// The payload cannot be replaced: no such message, a merge diff descriptor, or an object with
+    /// merge records attached (consolidation is not implemented).
+    case notMutable(UInt64, reason: String)
+    /// The new payload's references could not be derived (invariant 4).
+    case referencesNotDerivable(UInt64, detail: String)
     /// One `.iwa` could not be read. `detail` is the lower layer's error, whose offsets are
     /// relative to that stage's input (the compressed file, or its decompressed stream).
     case componentUnreadable(component: String, stage: ComponentStage, detail: String)
@@ -32,6 +40,12 @@ extension KeynoteError: CustomStringConvertible {
             return "saved by \(fileBuild), newer than the pinned schema \(pinned); read-only"
         case .componentUnreadable(let component, let stage, let detail):
             return "\(component): \(stage.rawValue) failed: \(detail)"
+        case .noSuchObject(let id):
+            return "no object \(id)"
+        case .notMutable(let id, let reason):
+            return "object \(id) cannot be replaced: \(reason)"
+        case .referencesNotDerivable(let id, let detail):
+            return "object \(id): references not derivable: \(detail)"
         }
     }
 }
@@ -82,6 +96,75 @@ public struct KeynoteDocument: Sendable {
         self.registry = registry
     }
 
+    // MARK: Package metadata
+
+    /// `TSP.PackageMetadata`, identifier 2 (type 11006 in `Index/Metadata.iwa` in every corpus
+    /// deck): the component list, every `DataInfo`, and the read, write and file-format versions
+    /// Keynote checks before opening a file. Nil if the object is missing or does not decode.
+    public var packageMetadata: TSP_PackageMetadata? {
+        guard let record = store.record(for: 2), let info = record.info.messageInfos.first,
+              info.type == Self.packageMetadataType, let payload = record.payloads.first else { return nil }
+        return try? TSP_PackageMetadata(serializedBytes: payload, extensions: Schema.extensions, partial: true)
+    }
+
+    static let packageMetadataType: UInt32 = 11006
+
+    /// AT-25: non-nil (a description of the file's versions) when a newer Keynote than the pinned
+    /// schema wrote this file. Such a document reads through the raw store and refuses `save`.
+    public var writtenByNewerKeynote: String? {
+        guard let m = packageMetadata else { return nil }
+        guard TypeRegistry.isNewer(m.writeVersion, than: TypeRegistry.pinnedWriteVersion)
+            || TypeRegistry.isNewer(m.fileFormatVersion, than: TypeRegistry.pinnedFileFormatVersion) else { return nil }
+        func v(_ x: [UInt32]) -> String { x.map(String.init).joined(separator: ".") }
+        return "\(lastSavedBy ?? "unknown build") (write \(v(m.writeVersion)), file format \(v(m.fileFormatVersion)))"
+    }
+
+    // MARK: Mutation
+
+    /// Replaces one payload of an object, the single primitive every later surgery builds on.
+    ///
+    /// The header follows from the bytes, never the other way round: `length` is the new size,
+    /// `data_references` are the derived DataReference ids minus 0, and `object_references` are the
+    /// strong references by the invariant-4 rule (mixed fields keep the membership the old payload
+    /// had). Lists keep their stored order for references that remain, so an edit that moves no
+    /// reference leaves the header byte-identical; new ones follow in traversal order.
+    public mutating func replacePayload(of identifier: UInt64, message index: Int = 0, with payload: Data) throws {
+        guard let entry = store.entry(for: identifier), var record = store.record(for: identifier) else {
+            throw KeynoteError.noSuchObject(identifier)
+        }
+        guard entry.merges.isEmpty else { throw KeynoteError.notMutable(identifier, reason: "merge records attached") }
+        guard index < record.info.messageInfos.count, index < record.payloads.count else {
+            throw KeynoteError.notMutable(identifier, reason: "no message \(index)")
+        }
+        var info = record.info.messageInfos[index]
+        guard info.baseMessageIndex == nil else { throw KeynoteError.notMutable(identifier, reason: "message \(index) is a merge diff descriptor") }
+        let strength: ReferenceStrength
+        do { strength = try ReferenceStrength.load(version: TypeRegistry.pinnedVersion) } catch {
+            throw KeynoteError.referencesNotDerivable(identifier, detail: "\(error)")
+        }
+        let old: DerivedReferences, new: DerivedReferences, listed: Set<UInt64>
+        do {
+            old = try ReferenceDerivation.derive(type: info.type, payload: record.payloads[index])
+            new = try ReferenceDerivation.derive(type: info.type, payload: payload)
+            listed = try ReferenceDerivation.listedObjects(new, strength: strength, original: (old, info.objectReferences))
+        } catch {
+            throw KeynoteError.referencesNotDerivable(identifier, detail: "\(error)")
+        }
+        info.setLength(UInt32(payload.count))
+        info.setObjectReferences(Self.stableOrder(listed, stored: info.objectReferences, traversal: new.objects))
+        info.setDataReferences(Self.stableOrder(Set(new.data).subtracting([0]), stored: info.dataReferences, traversal: new.data))
+        record.info.messageInfos[index] = info
+        record.payloads[index] = payload
+        store.replaceRecord(for: identifier, with: record)
+    }
+
+    /// `members` ordered as `stored` where they were already listed, the rest in traversal order.
+    static func stableOrder(_ members: Set<UInt64>, stored: [UInt64], traversal: [UInt64]) -> [UInt64] {
+        var out = [UInt64](), seen = Set<UInt64>()
+        for ref in stored + traversal where members.contains(ref) && seen.insert(ref).inserted { out.append(ref) }
+        return out
+    }
+
     // MARK: Identifiers
 
     /// A fresh allocator seeded above every identifier in the store (invariant 3). Phase 0 has no
@@ -102,6 +185,9 @@ public struct KeynoteDocument: Sendable {
     /// Writes the document. Every component is re-joined from the store; untouched records are
     /// emitted from their original bytes. Refuses on any validation issue.
     public func save(to url: URL, as form: IWAPackage.Form? = nil) throws {
+        if let newer = writtenByNewerKeynote {
+            throw KeynoteError.schemaNewerThanLibrary(fileBuild: newer, pinned: "\(TypeRegistry.pinnedVersion) (\(TypeRegistry.pinnedBuild))")
+        }
         let issues = validate().filter { $0.severity == .error }
         guard issues.isEmpty else { throw KeynoteError.validationFailed(issues) }
         var out = package

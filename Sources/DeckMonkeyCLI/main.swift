@@ -55,6 +55,10 @@ func runInspect(_ args: [String]) throws {
     print("fileFormatVersion: \(s.fileFormatVersion ?? "-")")
     print("documentIdentifier: \(s.documentIdentifier ?? "-")")
     print("buildVersionHistory: \(s.buildVersionHistory.joined(separator: " → "))")
+    if let m = document.packageMetadata {
+        func v(_ x: [UInt32]) -> String { x.map(String.init).joined(separator: ".") }
+        print("packageMetadata: read \(v(m.readVersion)) write \(v(m.writeVersion)) fileFormat \(v(m.fileFormatVersion)) lastObjectIdentifier \(m.lastObjectIdentifier)")
+    }
     print("components: \(s.components.count)")
     for name in s.components {
         let count = document.store.records(in: name)?.count ?? 0

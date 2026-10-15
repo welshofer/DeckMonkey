@@ -54,6 +54,23 @@ public struct TypeRegistry: Sendable, Equatable {
 
     /// The registry pinned for Phase 0 (docs/spec.md OQ-2).
     public static let pinnedVersion = "15.4"
+    public static let pinnedBuild = "7051.0.79"
+
+    /// What Keynote 15.4 (7051.0.79) writes into `TSP.PackageMetadata` (read 2.4.0, write 4.1.0,
+    /// file format 26.4.0; observed in every deck it saved). A file whose `write_version` or
+    /// `file_format_version` exceeds these was written by a newer Keynote than the schema: it opens
+    /// through the raw store and refuses writes (AT-25).
+    public static let pinnedWriteVersion: [UInt32] = [4, 1, 0]
+    public static let pinnedFileFormatVersion: [UInt32] = [26, 4, 0]
+
+    /// Version arrays compare component-wise, missing components counting as 0.
+    public static func isNewer(_ version: [UInt32], than pinned: [UInt32]) -> Bool {
+        for i in 0..<max(version.count, pinned.count) {
+            let a = i < version.count ? version[i] : 0, b = i < pinned.count ? pinned[i] : 0
+            if a != b { return a > b }
+        }
+        return false
+    }
 }
 
 public enum SchemaError: Error, Equatable, Sendable {

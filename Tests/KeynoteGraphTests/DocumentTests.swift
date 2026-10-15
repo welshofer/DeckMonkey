@@ -7,7 +7,8 @@ import SwiftProtobuf
 import Testing
 @testable import KeynoteGraph
 
-/// A synthetic Keynote-shaped package: two components, a few records, one merge.
+/// A synthetic Keynote-shaped package: three components, identifier 1 the document, identifier 2
+/// a real `TSP.PackageMetadata` in `Index/Metadata.iwa` (as in every corpus deck), a slide.
 enum SynthDocument {
     static func record(id: UInt64, type: UInt32, payload: [UInt8], refs: [UInt64] = []) -> ArchiveRecord {
         var info = MessageInfo(type: type, version: [2, 0, 0], length: UInt32(payload.count))
@@ -15,11 +16,26 @@ enum SynthDocument {
         return ArchiveRecord(info: ArchiveInfo(identifier: id, messageInfos: [info]), payloads: [Data(payload)])
     }
 
-    static func package() throws -> IWAPackage {
+    /// What Keynote 15.4 writes, unless a test asks for a newer file.
+    static func metadata(fileFormat: [UInt32] = TypeRegistry.pinnedFileFormatVersion) throws -> [UInt8] {
+        var m = TSP_PackageMetadata()
+        m.lastObjectIdentifier = 10_001
+        m.readVersion = [2, 4, 0]
+        m.writeVersion = TypeRegistry.pinnedWriteVersion
+        m.fileFormatVersion = fileFormat
+        return [UInt8](try m.serializedData())
+    }
+
+    static let properties = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <plist version="1.0"><dict><key>fileFormatVersion</key><string>26.4.0</string></dict></plist>
+        """
+
+    static func package(fileFormat: [UInt32] = TypeRegistry.pinnedFileFormatVersion) throws -> IWAPackage {
         let document = ArchiveStream.join([
             record(id: 1, type: 1, payload: [UInt8](repeating: 7, count: 500), refs: [2, 10_000]),
-            record(id: 2, type: 2, payload: [1, 2, 3]),
         ])
+        let metadata = ArchiveStream.join([record(id: 2, type: 11006, payload: try metadata(fileFormat: fileFormat))])
         let slide = ArchiveStream.join([
             record(id: 10_000, type: 5, payload: [UInt8]("slide one".utf8), refs: [10_001]),      // KN.SlideArchive
             record(id: 10_001, type: 2001, payload: [UInt8]("drawable".utf8)),                     // TSWP.StorageArchive
@@ -30,8 +46,10 @@ enum SynthDocument {
             """
         return IWAPackage(form: .zip, entries: [
             "Index/Document.iwa": try IWAChunking.compress(document),
+            "Index/Metadata.iwa": try IWAChunking.compress(metadata),
             "Index/Slide-10000.iwa": try IWAChunking.compress(slide),
             "Metadata/BuildVersionHistory.plist": Data(plist.utf8),
+            "Metadata/Properties.plist": Data(properties.utf8),
             "Data/image-1.jpg": Data([0xFF, 0xD8]),
         ])
     }
@@ -43,12 +61,14 @@ struct DocumentTests {
     func openAndSummarize() throws {
         let document = try KeynoteDocument.open(try SynthDocument.package())
         let s = document.summary
-        #expect(s.components == ["Index/Document.iwa", "Index/Slide-10000.iwa"])
+        #expect(s.components == ["Index/Document.iwa", "Index/Metadata.iwa", "Index/Slide-10000.iwa"])
         #expect(s.objectCount == 4)
         #expect(s.recordCount == 4)
         #expect(s.mergeRecordCount == 0)
         #expect(s.highestIdentifier == 10_001)
-        #expect(s.typeHistogram == [1: 1, 2: 1, 5: 1, 2001: 1])
+        #expect(s.typeHistogram == [1: 1, 11006: 1, 5: 1, 2001: 1])
+        #expect(document.packageMetadata?.writeVersion == TypeRegistry.pinnedWriteVersion)
+        #expect(document.writtenByNewerKeynote == nil)
         #expect(s.buildVersionHistory == ["M15.4-7051-1"])
         #expect(s.dataEntries == 1)
         #expect(document.lastSavedBy == "M15.4-7051-1")
@@ -187,6 +207,54 @@ struct DocumentTests {
         #expect(try ReferenceStrength.load(from: file.encoded()).fields == file.fields.mapValues(\.strength))
     }
 
+    @Test("AT-25: a file from a newer Keynote opens and reads, and any write raises schemaNewerThanLibrary", arguments: [
+        ([27, 0, 0] as [UInt32], TypeRegistry.pinnedWriteVersion),
+        (TypeRegistry.pinnedFileFormatVersion, [4, 2, 0] as [UInt32]),
+    ])
+    func newerKeynoteIsReadOnly(fileFormat: [UInt32], writeVersion: [UInt32]) throws {
+        var package = try SynthDocument.package(fileFormat: fileFormat)
+        var m = TSP_PackageMetadata()
+        m.lastObjectIdentifier = 10_001
+        m.readVersion = [2, 4, 0]
+        m.writeVersion = writeVersion
+        m.fileFormatVersion = fileFormat
+        let payload = [UInt8](try m.serializedData())
+        package.set("Index/Metadata.iwa", try IWAChunking.compress(ArchiveStream.join([SynthDocument.record(id: 2, type: 11006, payload: payload)])))
+        let document = try KeynoteDocument.open(package)
+        #expect(document.summary.objectCount == 4)          // reads through the raw store
+        #expect(document.validate().isEmpty)
+        #expect(document.writtenByNewerKeynote != nil)
+        let out = FileManager.default.temporaryDirectory.appendingPathComponent("deckmonkey-newer-\(UUID().uuidString).key")
+        #expect {
+            try document.save(to: out)
+        } throws: { error in
+            guard case .schemaNewerThanLibrary(_, let pinned)? = error as? KeynoteError else { return false }
+            return pinned == "15.4 (7051.0.79)"
+        }
+        #expect(!FileManager.default.fileExists(atPath: out.path))
+        #expect(!TypeRegistry.isNewer([26, 4, 0], than: [26, 4, 0]) && TypeRegistry.isNewer([26, 4, 1], than: [26, 4]) && !TypeRegistry.isNewer([1, 5, 0], than: [26, 4, 0]))
+    }
+
+    @Test("AT-11 shape: plists, PackageMetadata versions and every MessageInfo.version are byte-identical after save")
+    func versionsInherited() throws {
+        let package = try SynthDocument.package()
+        let document = try KeynoteDocument.open(package)
+        let out = FileManager.default.temporaryDirectory.appendingPathComponent("deckmonkey-at11-\(UUID().uuidString).key")
+        defer { try? FileManager.default.removeItem(at: out) }
+        try document.save(to: out)
+        let reread = try KeynoteDocument.open(out)
+        #expect(CorpusTests.versionDifferences(document, reread).isEmpty)
+    }
+
+    @Test("AT-12 shape: an injected unknown field survives decode, mutation of a sibling field, and encode")
+    func unknownFieldSurvivesMutation() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("deckmonkey-at12-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        var document = try KeynoteDocument.open(try SynthDocument.package())
+        try CorpusTests.injectUnknownFieldAndMutate(&document, scratch: dir)
+    }
+
     // First CLI contact: a truncated deck printed only `error: truncated(at: 4)`.
     @Test("a truncated .iwa names its component and the decompress stage")
     func truncatedComponentIsNamed() throws {
@@ -241,6 +309,57 @@ struct CorpusTests {
         }
         roots.append(repoRoot.appendingPathComponent("Corpus"))
         return roots
+    }
+
+    /// AT-11: what save must leave byte-identical. Empty when nothing differs.
+    static func versionDifferences(_ a: KeynoteDocument, _ b: KeynoteDocument) -> [String] {
+        var out = [String]()
+        for name in ["Metadata/Properties.plist", "Metadata/BuildVersionHistory.plist"] where a.package.data(name) != b.package.data(name) {
+            out.append("\(name) differs")
+        }
+        if let x = a.packageMetadata, let y = b.packageMetadata {
+            if x.readVersion != y.readVersion || x.writeVersion != y.writeVersion || x.fileFormatVersion != y.fileFormatVersion {
+                out.append("PackageMetadata versions differ")
+            }
+        } else if (a.packageMetadata == nil) != (b.packageMetadata == nil) {
+            out.append("PackageMetadata decodes on one side only")
+        }
+        for id in a.store.identifiers {
+            let va = a.store.record(for: id)?.info.messageInfos.map(\.version)
+            let vb = b.store.record(for: id)?.info.messageInfos.map(\.version)
+            if va != vb { out.append("object \(id): MessageInfo.version \(String(describing: va)) → \(String(describing: vb))"); if out.count > 10 { break } }
+        }
+        return out
+    }
+
+    /// AT-12 on `document`'s PackageMetadata (identifier 2): inject an unknown field, save, reopen,
+    /// mutate a sibling field, save, reopen; the unknown field must survive byte for byte and the
+    /// header's reference lists must not move.
+    static func injectUnknownFieldAndMutate(_ document: inout KeynoteDocument, scratch: URL) throws {
+        let original = try #require(document.store.record(for: 2), "no PackageMetadata")
+        let unknown: [UInt8] = [0xF8, 0xF0, 0x04, 0x07]          // field 9999, varint 7: not in TSP.PackageMetadata
+        try document.replacePayload(of: 2, with: original.payloads[0] + unknown)
+        let first = scratch.appendingPathComponent("injected.key")
+        try document.save(to: first)
+
+        var reopened = try KeynoteDocument.open(first)
+        var metadata = try #require(reopened.packageMetadata)
+        #expect(Array(metadata.unknownFields.data) == unknown)
+        metadata.saveToken = 4242
+        try reopened.replacePayload(of: 2, with: try metadata.serializedData())
+        let second = scratch.appendingPathComponent("mutated.key")
+        try reopened.save(to: second)
+
+        let final = try KeynoteDocument.open(second)
+        let decoded = try #require(final.packageMetadata)
+        #expect(decoded.saveToken == 4242)
+        #expect(Array(decoded.unknownFields.data) == unknown)
+        let info = try #require(final.store.record(for: 2)?.info.messageInfos.first)
+        let before = try #require(original.info.messageInfos.first)
+        #expect(info.objectReferences == before.objectReferences)
+        #expect(info.dataReferences == before.dataReferences)
+        #expect(info.version == before.version)
+        #expect(final.validate().filter { $0.severity == .error }.isEmpty)
     }
 
     static func corpusFiles() -> [URL] {
@@ -414,6 +533,21 @@ struct CorpusTests {
                 Issue.record("\(name): \(x.name) differs after round-trip")
             }
             if identical { clean += 1 }
+            // AT-11: versions are inherited, never bumped.
+            for difference in Self.versionDifferences(document, reread) {
+                log("      AT-11: \(difference)")
+                Issue.record("\(name): AT-11: \(difference)")
+            }
+            // AT-12 on a copy: an injected unknown field survives a sibling mutation.
+            let scratch = dir.appendingPathComponent("at12-\(clean)-\(name)")
+            try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
+            var copy = document
+            do {
+                try Self.injectUnknownFieldAndMutate(&copy, scratch: scratch)
+            } catch {
+                log("      AT-12 FAILED: \(error)")
+                Issue.record("\(name): AT-12: \(error)")
+            }
         }
         let supported = files.count - legacy
         log("corpus roundtrip CLEAN \(clean)/\(supported) (\(legacy) legacy '09 deck(s) skipped)")
