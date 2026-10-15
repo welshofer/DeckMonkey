@@ -29,6 +29,10 @@ enum CLI {
                                      validator rule, plus expected.json naming each one's error
       text <file> [--tables]         every TSWP text storage: identifier and its text (¶ = paragraph
                                      break); --tables adds each offset table (index→object id)
+      replace <file> --find <s> --replace <s> [--storage <id>] -o <out.key>
+                                     replace every occurrence (Phase 1: within a paragraph; the new
+                                     text takes the style in force at the first replaced character;
+                                     overlapping hyperlinks and smart fields are removed and listed)
       version
 
     Exit codes: 0 pass, 1 fail, 2 usage, 3 refused (Keynote '09 APXL, out of scope).
@@ -326,6 +330,26 @@ func runText(_ args: [String]) throws {
     }
 }
 
+func runReplace(_ args: [String]) throws {
+    guard let path = args.first, !path.hasPrefix("-"),
+          let needle = option("--find", in: args), let replacement = option("--replace", in: args),
+          let out = option("-o", in: args) else { fail(CLI.usage, code: 2) }
+    let storage = option("--storage", in: args).map { value -> UInt64 in
+        guard let id = UInt64(value) else { fail("error: --storage needs an object identifier", code: 2) }
+        return id
+    }
+    var document = try DeckMonkey.open(url(path))
+    let summary = try document.replaceAll(needle, with: replacement, in: storage)
+    guard summary.replacements > 0 else { fail("error: \"\(needle)\" not found") }
+    try FileManager.default.createDirectory(at: url(out).deletingLastPathComponent(), withIntermediateDirectories: true)
+    try document.save(to: url(out))
+    print("replaced \(summary.replacements) occurrence(s) in \(summary.storages.count) storage(s): \(summary.storages.map(String.init).joined(separator: ", "))")
+    if !summary.removedFields.isEmpty {
+        print("removed \(summary.removedFields.count) overlapping field(s): \(summary.removedFields.map(String.init).joined(separator: ", "))")
+    }
+    print("output: \(url(out).path)")
+}
+
 let arguments = Array(CommandLine.arguments.dropFirst())
 guard let command = arguments.first else { fail(usage, code: 2) }
 let rest = Array(arguments.dropFirst())
@@ -339,6 +363,7 @@ do {
     case "snappy-check": try runSnappyCheck(rest)
     case "reference-strength": try runReferenceStrength(rest)
     case "text": try runText(rest)
+    case "replace": try runReplace(rest)
     case "corpus":
         switch rest.first {
         case "add": try runCorpusAdd(Array(rest.dropFirst()))

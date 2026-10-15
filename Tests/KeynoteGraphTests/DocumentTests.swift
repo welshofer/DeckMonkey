@@ -533,6 +533,34 @@ struct CorpusTests {
         }
     }
 
+    /// Phase 1 groundwork: decoding a storage and encoding it again, with an empty edit, must give
+    /// Keynote's bytes back exactly. Any field the encoder adds (an empty table it never wrote) makes
+    /// Keynote "upgrade" the storage on read, which the oracle reports as persistence errors.
+    @Test("every corpus text storage re-encodes byte for byte through an empty edit", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus"))
+    func corpusStorageIdentity() throws {
+        var storages = 0
+        var differ = [String]()
+        for url in CorpusTests.corpusFiles() {
+            guard let document = try? KeynoteDocument.open(url) else { continue }
+            for component in document.store.components {
+                for record in component.records {
+                    guard let info = record.info.messageInfos.first, info.type == 2001, info.baseMessageIndex == nil else { continue }
+                    let storage = try TSWP_StorageArchive(serializedBytes: record.payloads[0], extensions: Schema.extensions, partial: true)
+                    guard storage.text.count == 1 else { continue }
+                    storages += 1
+                    let (same, _) = try TextReplace.apply(storage, range: 0..<0, with: "")
+                    let bytes: Data = try same.serializedData(partial: true)
+                    if bytes != record.payloads[0], differ.count < 10 {
+                        differ.append("\(url.lastPathComponent) storage \(record.identifier): \(record.payloads[0].count) → \(bytes.count) bytes")
+                    }
+                }
+            }
+        }
+        print("storage identity: \(storages) storages, \(differ.count) re-encode differently")
+        differ.forEach { print("  \($0)") }
+        #expect(differ.isEmpty)
+    }
+
     /// Invariant 8 for text, against Keynote's own files: every TSWP.StorageArchive's offset tables
     /// are strictly increasing and within the UTF-16 text length.
     @Test("text offset tables in every Keynote-authored storage are sorted and in range", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus: set DECKMONKEY_CORPUS, write .deckmonkey-corpus, or add decks under Corpus/"))
