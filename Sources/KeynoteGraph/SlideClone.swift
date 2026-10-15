@@ -1,5 +1,6 @@
 import Foundation
 import IWAArchive
+import IWAContainer
 import IWASchema
 import SwiftProtobuf
 
@@ -38,11 +39,17 @@ extension KeynoteDocument {
     public enum SlideCloneFailure: Error, Equatable, Sendable, CustomStringConvertible {
         case unsupportedContent(slide: UInt64, type: String)
         case noComponentInfo(String)
+        /// A locator from the source deck that is not a safe component name (a hostile file).
+        case unsafeLocator(String)
+        /// The calculation engine's internal owner identifiers are exhausted (uint32).
+        case ownerIdentifiersExhausted
 
         public var description: String {
             switch self {
             case .unsupportedContent(let slide, let type): return "slide \(slide) holds \(type); Phase 3a clones slides without charts or builds"
             case .noComponentInfo(let name): return "no ComponentInfo for \(name)"
+            case .unsafeLocator(let locator): return "the source deck names a component \"\(locator)\", which is not a safe name"
+            case .ownerIdentifiersExhausted: return "the calculation engine has no internal owner identifiers left"
             }
         }
     }
@@ -131,6 +138,7 @@ extension KeynoteDocument {
             let map = e.dependencyTracker.ownerIDMap
             var next = UInt64((map.mapEntry.map(\.internalOwnerID) + map.unregisteredInternalOwnerID).max() ?? 0) + 1
             for entry in map.mapEntry where inFamily(uuidOf(entry.ownerID)) {
+                guard next <= UInt64(UInt32.max) else { throw SlideCloneFailure.ownerIdentifiersExhausted }
                 ownerIDs[UInt64(entry.internalOwnerID)] = next
                 next += 1
             }
@@ -194,6 +202,7 @@ extension KeynoteDocument {
                 var info = homeInfo
                 info.identifier = identifiers[id]!
                 info.locator = "\(homeInfo.preferredLocator.isEmpty ? homeLocator : homeInfo.preferredLocator)-\(identifiers[id]!)"
+                guard IWAPackage.isSafeEntryName("Index/\(info.locator).iwa") else { throw SlideCloneFailure.unsafeLocator(info.locator) }
                 info.objectUuidMapEntries = newUUIDEntries[homeLocator] ?? []
                 info.externalReferences = []
                 remappedDataReferences(&info)
@@ -216,7 +225,7 @@ extension KeynoteDocument {
             for entry in engine.dependencyTracker.ownerIDMap.mapEntry {
                 guard let newInternal = ownerIDs[UInt64(entry.internalOwnerID)], let new = rewriter.mapped(uuidOf(entry.ownerID)) else { continue }
                 added.append(.with {
-                    $0.internalOwnerID = UInt32(newInternal)
+                    $0.internalOwnerID = UInt32(truncatingIfNeeded: newInternal)      // ≤ UInt32.max, checked above
                     $0.ownerID = TSP_CFUUIDArchive.with {
                         $0.uuidW0 = UInt32(truncatingIfNeeded: new.lower); $0.uuidW1 = UInt32(truncatingIfNeeded: new.lower >> 32)
                         $0.uuidW2 = UInt32(truncatingIfNeeded: new.upper); $0.uuidW3 = UInt32(truncatingIfNeeded: new.upper >> 32)

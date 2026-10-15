@@ -117,4 +117,26 @@ struct PackageTests {
             try IWAPackage.open(URL(fileURLWithPath: "/nonexistent/x.key"))
         }
     }
+
+    @Test("an entry name that could escape the package is refused on open and on write")
+    func unsafeEntryNames() throws {
+        for bad in ["Data/../../escape.png", "/etc/x", "Index/./Document.iwa", "Data//x", "Data\\x", "Data/x\u{0}y", ""] {
+            #expect(!IWAPackage.isSafeEntryName(bad), "\(bad)")
+        }
+        for good in ["Index/Document.iwa", "Data/photo-2652582.jpg", "Index/Tables/Tile-2654602.iwa", "Data/a b..c.png"] {
+            #expect(IWAPackage.isSafeEntryName(good), "\(good)")
+        }
+        var hostile = SynthPackage.entries(iwa: Data([0]))
+        hostile["Data/../../escape.png"] = Data([1])
+        #expect(throws: IWAPackageError.unsafeEntryName("Data/../../escape.png")) {
+            try IWAPackage.openZip(try SynthPackage.zip(hostile))
+        }
+        var package = try IWAPackage.openZip(try SynthPackage.zip(SynthPackage.entries(iwa: Data([0]))))
+        package.set("Index/../../escape.iwa", Data([1]))
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("deckmonkey-unsafe-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        #expect(throws: IWAPackageError.unsafeEntryName("Index/../../escape.iwa")) { try package.write(to: dir.appendingPathComponent("x.key"), as: .directory) }
+        #expect(throws: IWAPackageError.unsafeEntryName("Index/../../escape.iwa")) { try package.zipData() }
+        #expect(!FileManager.default.fileExists(atPath: dir.appendingPathComponent("escape.iwa").path))
+    }
 }

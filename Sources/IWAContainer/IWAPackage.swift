@@ -9,6 +9,10 @@ public enum IWAPackageError: Error, Equatable, Sendable {
     /// `index.apxl` / `index.apxl.gz`: the pre-2013 XML format, out of scope (docs/spec.md §2).
     case unsupportedLegacyFormat(String)
     case zipEntryUnreadable(String)
+    /// An entry name that could escape the package: absolute, empty components, `.` or `..`, a
+    /// backslash or a NUL. Refused on open and on write, so no name read from a hostile file (or
+    /// derived from one) ever becomes a path outside the package.
+    case unsafeEntryName(String)
 }
 
 /// The physical container of a `.key` (or `.pages` / `.numbers`): a zip, or a package directory
@@ -100,7 +104,17 @@ public struct IWAPackage: Sendable {
         return IWAPackage(form: .directory, entries: entries, nestedIndex: nestedIndex)
     }
 
+    /// True when `name` is a relative path of ordinary components: never absolute, no empty,
+    /// `.` or `..` component, no backslash, no NUL.
+    public static func isSafeEntryName(_ name: String) -> Bool {
+        guard !name.isEmpty, !name.hasPrefix("/"), !name.contains("\\"), !name.contains("\u{0}") else { return false }
+        return name.split(separator: "/", omittingEmptySubsequences: false).allSatisfy { !$0.isEmpty && $0 != "." && $0 != ".." }
+    }
+
     private static func validate(_ entries: [String: Data], name: String) throws {
+        if let unsafe = entries.keys.sorted().first(where: { !isSafeEntryName($0) }) {
+            throw IWAPackageError.unsafeEntryName(unsafe)
+        }
         if entries.keys.contains(where: { $0.lowercased().hasPrefix("index.apxl") }) {
             throw IWAPackageError.unsupportedLegacyFormat(name)
         }
@@ -165,6 +179,9 @@ public struct IWAPackage: Sendable {
 
     /// Writes the package. `form` defaults to the form it was read in.
     public func write(to url: URL, as form: Form? = nil) throws {
+        if let unsafe = entryNames.first(where: { !Self.isSafeEntryName($0) }) {
+            throw IWAPackageError.unsafeEntryName(unsafe)
+        }
         switch form ?? self.form {
         case .zip:
             try zipData().write(to: url, options: .atomic)
@@ -196,6 +213,9 @@ public struct IWAPackage: Sendable {
 
     /// The zip form as bytes, deterministic: entries sorted by name, fixed timestamps (Rostrum's writer).
     public func zipData() throws -> Data {
+        if let unsafe = entryNames.first(where: { !Self.isSafeEntryName($0) }) {
+            throw IWAPackageError.unsafeEntryName(unsafe)
+        }
         var writer = ZipWriter()
         if nestedIndex {
             writer.addFile(name: "Index.zip", data: try indexZipData(), compress: false)
@@ -228,6 +248,7 @@ extension IWAPackageError: CustomStringConvertible {
         case .unsupportedLegacyFormat(let path):
             return "\(path) is a Keynote '09 (APXL) document, which DeckMonkey does not read; open and save it in a current Keynote first"
         case .zipEntryUnreadable(let name): return "zip entry \(name) could not be read"
+        case .unsafeEntryName(let name): return "entry name \"\(name)\" could escape the package; refused"
         }
     }
 }
