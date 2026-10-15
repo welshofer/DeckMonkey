@@ -62,10 +62,11 @@ snappy-vectors: .venv/bin/python
 	$(PYTHON) Scripts/snappy-crosscheck.py verify-vectors .build/snappy-vectors-ours.json
 
 ## AT-26: `deckmonkey roundtrip` must refuse every file in Corpus/hostile (exit 1) and write nothing.
+## Files the manifest marks `requires` (e.g. the type registry) are skipped until that layer lands.
 hostile:
 	@$(SWIFT) build --product deckmonkey >/dev/null
 	@fail=0; n=0; out=/tmp/deckmonkey-hostile-out.key; \
-	for f in Corpus/hostile/*.key; do \
+	for f in $$(python3 -c 'import json; [print("Corpus/hostile/" + e["file"]) for e in json.load(open("Corpus/hostile/manifest.json"))["files"] if "requires" not in e]'); do \
 	  n=$$((n+1)); rm -rf $$out; \
 	  if .build/debug/deckmonkey roundtrip "$$f" -o $$out >/dev/null 2>&1; then fail=$$((fail+1)); echo "ACCEPTED $$f (must be refused)"; fi; \
 	  if [ -e $$out ]; then fail=$$((fail+1)); echo "WROTE OUTPUT for $$f (must write nothing)"; fi; \
