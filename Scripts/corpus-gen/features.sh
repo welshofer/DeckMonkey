@@ -316,6 +316,32 @@ feature drawables '
         tell d to set s4 to make new slide with properties {base layout:blank}
         tell s4 to make new line'
 
+# Table parts for Phase 4: one Title Only slide per table size (rows 2-10 x columns 2-6, header row
+# and column included), every cell holding its own text "r<row>c<column>" (letters, so Keynote keeps it text), so each cell has its own
+# string-table entry. DeckMonkey imports the slide of the size an IR table needs and replaces the
+# strings; it never writes a cell buffer.
+feature tables-parts '
+        set titleOnly to (first slide layout of d whose name is "Title Only")
+        set first_ to true
+        repeat with r from 2 to 10
+          repeat with c from 2 to 6
+            if first_ then
+              set target to s
+              set base layout of target to titleOnly
+              set first_ to false
+            else
+              tell d to set target to make new slide with properties {base layout:titleOnly}
+            end if
+            set object text of default title item of target to (r as text) & "x" & (c as text)
+            tell target to set t to make new table with properties {row count:r, column count:c}
+            repeat with i from 1 to r
+              repeat with j from 1 to c
+                set value of cell j of row i of t to "r" & (i as text) & "c" & (j as text)
+              end repeat
+            end repeat
+          end repeat
+        end repeat'
+
 # --- Movie asset (a Keynote export of a template) and the run --------------------------------------
 
 if wants media; then

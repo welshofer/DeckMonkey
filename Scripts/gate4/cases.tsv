@@ -40,3 +40,6 @@ Corpus/ir/37-chart-line.json	Corpus/templates/basic-white_wide.key
 Corpus/ir/38-chart-pie.json	Corpus/templates/academy_wide.key
 Corpus/ir/39-chart-area.json	Corpus/templates/minimalist-dark_wide.key
 Corpus/ir/40-chart-stacked.json	Corpus/templates/showcase_wide.key
+Corpus/ir/41-table-small.json	Corpus/templates/basic-black_wide.key
+Corpus/ir/42-table-wide.json	Corpus/templates/academy_wide.key
+Corpus/ir/43-table-ragged.json	Corpus/templates/showcase_wide.key

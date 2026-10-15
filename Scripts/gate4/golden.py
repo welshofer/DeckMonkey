@@ -42,6 +42,13 @@ def slide_lines(slide):
                 'if box is missing value then error "no free text box on this master"',
                 f"set object text of box to {q(slide['box'])}"]
     if slide.get("notes") is not None: out.append(f"set presenter notes of s to {q(slide['notes'])}")
+    if slide.get("table") is not None:
+        cells = slide["table"]
+        out.append(f"tell s to set t to make new table with properties {{row count:{len(cells)}, column count:{len(cells[0])}}}")
+        for r, row in enumerate(cells, 1):
+            for c, value in enumerate(row, 1):
+                v = value.replace("\\", "\\\\").replace('"', '\\"')
+                out.append(f'set value of cell {c} of row {r} of t to "{v}"')
     def strings(xs): return "{" + ", ".join('"' + x.replace("\\", "\\\\").replace('"', '\\"') + '"' for x in xs) + "}"
     for d in slide.get("drawables", []):
         if d["kind"] == "chart":

@@ -1,0 +1,31 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Tables"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "table",
+   "title": "Plan",
+   "body": {
+    "table": {
+     "headers": [
+      "Phase",
+      "Owner"
+     ],
+     "rows": [
+      [
+       "Discovery",
+       "Ana"
+      ],
+      [
+       "Build",
+       "Ben"
+      ]
+     ]
+    }
+   }
+  }
+ ]
+}

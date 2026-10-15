@@ -24,7 +24,9 @@ import RostrumLayout
 /// comparison → Title Only with two text boxes; callout → Title Only with a band shape and a text
 /// box; chart → Title Only with a copy of a Keynote-made chart of that type (charts.key) over the
 /// body area, its data replaced. Styles stay the theme's (invariant 6: no overrides are created).
-/// Table is refused for now; content with no place is reported.
+/// table → a Title Only slide holding a Keynote-made table of that size from tables-parts.key,
+/// imported (restyled to the theme's table preset in the same slot) and its strings replaced.
+/// Content with no place is reported.
 public enum DeckIRWriter {
     // MARK: Plan
 
@@ -76,6 +78,9 @@ public enum DeckIRWriter {
         public var box: [Paragraph]?
         public var notes: [Paragraph]?
         public var drawables: [DrawablePlan] = []
+        /// A table's cells, header row first, every row padded to the widest: the slide is a
+        /// parts-deck table slide of that size (tables-parts.key), its strings replaced.
+        public var table: [[String]]?
     }
 
     public struct DeckPlan: Codable, Equatable, Sendable {
@@ -123,7 +128,7 @@ public enum DeckIRWriter {
         "bigNumber": ["Big Fact"], "quote": ["Quote"], "closing": ["Title"],
         "metrics": ["Title Only"], "bands": ["Title Only"], "diagram": ["Title Only"], "timeline": ["Title Only"],
         "quadrant": ["Title Only"], "twoColumn": ["Title Only"], "comparison": ["Title Only"], "callout": ["Title Only"],
-        "chart": ["Title Only"],
+        "chart": ["Title Only"], "table": ["Title Only"],
     ]
     public static var supportedLayouts: [String] { masters.keys.sorted() }
 
@@ -240,6 +245,11 @@ public enum DeckIRWriter {
             }
             ignore("lead", body?.lead != nil)
             ignore("kicker", body?.kicker != nil)
+        case "table":
+            s.title = lines(slide.title)
+            guard let t = body?.table, !t.headers.isEmpty else { throw Failure.layout(slide: slide.id, "the table needs a header row") }
+            let width = max(t.headers.count, t.rows.map(\.count).max() ?? 0)
+            s.table = t.grid.map { $0 + Array(repeating: "", count: width - $0.count) }
         case "chart":
             s.title = lines(slide.title)
             guard let c = body?.chart, !c.categories.isEmpty, !c.series.isEmpty,
@@ -312,10 +322,29 @@ public enum DeckIRWriter {
                 }
             }
         }
+        // Table parts: the parts deck slide holding a table of each size.
+        var tableSlides = [String: (KeynoteDocument, Int)]()
+        for deck in parts {
+            guard let list = try? deck.slideList() else { continue }
+            for (i, entry) in list.enumerated() {
+                for model in deck.slideTables(entry.slide) {
+                    if let size = deck.tableSize(model), tableSlides["\(size.rows)x\(size.columns)"] == nil { tableSlides["\(size.rows)x\(size.columns)"] = (deck, i) }
+                }
+            }
+        }
         for s in plan.slides {
-            guard let index = sampleMasters.firstIndex(of: s.master) else { throw Failure.noSampleSlide(slide: s.id, masters: [s.master]) }
-            let clone = try document.cloneSlide(at: index, to: try document.slideList().count)
-            guard let targets = document.slideText(clone.slide) else { throw Failure.noPlaceholder(slide: s.id, role: "text") }
+            let newSlide: UInt64
+            if let cells = s.table {
+                let key = "\(cells.count)x\(cells.first?.count ?? 0)"
+                guard let (deck, index) = tableSlides[key] else { throw Failure.layout(slide: s.id, "no parts table of size \(key) (tables-parts.key holds 2-10 rows by 2-6 columns)") }
+                newSlide = try document.importSlide(at: index, from: deck).slide
+                guard let model = document.slideTables(newSlide).first else { throw Failure.layout(slide: s.id, "the parts slide lost its table") }
+                try document.setTableCells(model, cells)
+            } else {
+                guard let index = sampleMasters.firstIndex(of: s.master) else { throw Failure.noSampleSlide(slide: s.id, masters: [s.master]) }
+                newSlide = try document.cloneSlide(at: index, to: try document.slideList().count).slide
+            }
+            guard let targets = document.slideText(newSlide) else { throw Failure.noPlaceholder(slide: s.id, role: "text") }
             func set(_ storage: UInt64?, _ role: String, _ paragraphs: [Paragraph]?) throws {
                 guard let paragraphs else { return }
                 guard let storage else { throw Failure.noPlaceholder(slide: s.id, role: role) }
@@ -336,7 +365,7 @@ public enum DeckIRWriter {
                 case .chart: source = d.chart.flatMap { charts[$0.chartType] }
                 }
                 guard let (deck, part) = source else { throw Failure.noParts(slide: s.id) }
-                let new = try document.insertDrawable(part, from: deck, onto: clone.slide,
+                let new = try document.insertDrawable(part, from: deck, onto: newSlide,
                                                       frame: .init(x: d.x, y: d.y, width: d.width, height: d.height),
                                                       paragraphs: d.kind == .chart ? nil : d.paragraphs.map { TextParagraphs.Paragraph($0.text, level: $0.level) })
                 if let c = d.chart { try document.setChartData(new, rows: c.rows, columns: c.columns, values: c.values) }

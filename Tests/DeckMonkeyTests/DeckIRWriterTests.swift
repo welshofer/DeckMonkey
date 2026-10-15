@@ -19,12 +19,15 @@ struct DeckIRWriterTests {
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }
         var built = 0
-        let parts = try ["drawables", "charts"].map { Self.root.appendingPathComponent("Corpus/features/\($0).key") }
+        let parts = try ["drawables", "charts", "tables-parts"].map { Self.root.appendingPathComponent("Corpus/features/\($0).key") }
             .filter { FileManager.default.fileExists(atPath: $0.path) }.map { try KeynoteDocument.open($0) }
         for template in Self.templates {
             let base = try KeynoteDocument.open(template)
             for fixture in Self.fixtures {
                 let ir = try JSONDecoder().decode(DeckIR.self, from: Data(contentsOf: fixture))
+                if ir.slides.contains(where: { $0.layout == "table" }), !FileManager.default.fileExists(atPath: Self.root.appendingPathComponent("Corpus/features/tables-parts.key").path) {
+                    continue                                       // needs tables-parts.key (make corpus)
+                }
                 let (doc, report) = try DeckIRWriter.build(ir, template: base, parts: parts)
                 let out = dir.appendingPathComponent("\(built).key")
                 try doc.save(to: out)
@@ -41,6 +44,10 @@ struct DeckIRWriterTests {
                 }
                 let joined = all.joined(separator: "\n").replacingOccurrences(of: "\u{2028}", with: "\n")
                 for (s, entry) in zip(ir.slides, try reread.slideList()) {
+                    if let t = s.body?.table {
+                        let models = reread.slideTables(entry.slide)
+                        #expect(models.count == 1 && reread.tableSize(models[0])?.rows == t.rows.count + 1, "\(fixture.lastPathComponent) \(s.id): table")
+                    }
                     if let c = s.body?.chart {
                         let grids = reread.slideDrawables(entry.slide).compactMap { reread.chartGrid($0) }
                         #expect(grids.count == 1 && grids[0].rows == c.series.map(\.name) && grids[0].columns == c.categories
@@ -67,8 +74,8 @@ struct DeckIRWriterTests {
     @Test("an unsupported layout and an empty deck are refused with typed errors", .enabled(if: !templates.isEmpty, "no Corpus/templates"))
     func refusals() throws {
         let base = try KeynoteDocument.open(Self.templates[0])
-        let chart = DeckIR(meta: Meta(title: "x"), slides: [IRSlide(id: "a", layout: "table")])
-        #expect(throws: DeckIRWriter.Failure.unsupportedLayout(slide: "a", layout: "table")) { try DeckIRWriter.build(chart, template: base) }
+        let chart = DeckIR(meta: Meta(title: "x"), slides: [IRSlide(id: "a", layout: "novel")])
+        #expect(throws: DeckIRWriter.Failure.unsupportedLayout(slide: "a", layout: "novel")) { try DeckIRWriter.build(chart, template: base) }
         #expect(throws: DeckIRWriter.Failure.emptyDeck) { try DeckIRWriter.build(DeckIR(meta: Meta(title: "x"), slides: []), template: base) }
     }
 }
