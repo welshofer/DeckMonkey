@@ -76,14 +76,16 @@ struct DocumentTests {
         #expect(reread.package.buildVersionHistory == ["M15.4-7051-1"])
     }
 
-    @Test("a dangling header reference is reported (warning until AT-06 promotes it)")
+    @Test("a dangling header reference is an error and blocks save (invariant 8)")
     func danglingReference() throws {
         var package = try SynthDocument.package()
         let broken = ArchiveStream.join([SynthDocument.record(id: 1, type: 1, payload: [0], refs: [424_242])])
         package.set("Index/Document.iwa", try IWAChunking.compress(broken))
         let document = try KeynoteDocument.open(package)
         let issues = document.validate()
-        #expect(issues.contains { $0.kind == .danglingObjectReference(from: 1, to: 424_242) })
+        #expect(issues.contains { $0.kind == .danglingObjectReference(from: 1, to: 424_242) && $0.severity == .error })
+        let out = FileManager.default.temporaryDirectory.appendingPathComponent("deckmonkey-dangling-\(UUID().uuidString).key")
+        #expect(throws: KeynoteError.self) { try document.save(to: out) }
     }
 
     @Test("AT-26 shape: a duplicate identifier blocks save")
@@ -140,25 +142,57 @@ struct CorpusTests {
         defer { try? FileManager.default.removeItem(at: dir) }
         let files = Self.corpusFiles()
         var clean = 0
-        print("corpus: \(files.count) deck(s) under \(Self.corpusRoots().map(\.path).joined(separator: ", "))")
+        var legacy = 0
+        // The report also goes to .build/corpus-report.txt, rewritten after every deck, so a crash
+        // mid-corpus still leaves a record of how far it got and what each deck looked like.
+        let reportURL = Self.repoRoot.appendingPathComponent(".build/corpus-report.txt")
+        var report = ["corpus: \(files.count) deck(s) under \(Self.corpusRoots().map(\.path).joined(separator: ", "))"]
+        func log(_ line: String) {
+            print(line)
+            report.append(line)
+            try? report.joined(separator: "\n").write(to: reportURL, atomically: true, encoding: .utf8)
+        }
+        log(report[0])
         for file in files {
             let name = file.lastPathComponent
             let document: KeynoteDocument
             do {
                 document = try KeynoteDocument.open(file)
+            } catch IWAPackageError.unsupportedLegacyFormat {
+                // Keynote '09 APXL: out of scope (docs/spec.md §2), counted, never a failure.
+                log("  \(name): legacy Keynote '09 format, skipped")
+                legacy += 1
+                continue
             } catch {
+                log("  \(name): OPEN FAILED: \(error)")
                 Issue.record("\(name): open failed: \(error)")
                 continue
             }
             let s = document.summary
             let issues = document.validate()
             let errors = issues.filter { $0.severity == .error }
-            print("  \(name): form=\(document.package.form) nested=\(document.package.nestedIndex) components=\(s.components.count) objects=\(s.objectCount) merges=\(s.mergeRecordCount) maxID=\(s.highestIdentifier) types=\(s.typeHistogram.count) data=\(s.dataEntries) saved-by=\(s.buildVersionHistory.last ?? "-") issues=\(issues.count)")
+            log("  \(name): form=\(document.package.form) nested=\(document.package.nestedIndex) components=\(s.components.count) objects=\(s.objectCount) merges=\(s.mergeRecordCount) mergeOnly=\(s.mergeOnlyObjectCount) maxID=\(s.highestIdentifier) types=\(s.typeHistogram.count) data=\(s.dataEntries) saved-by=\(s.buildVersionHistory.last ?? "-") issues=\(issues.count)")
+            if !issues.isEmpty {
+                var kinds = [String: Int]()
+                for issue in issues {
+                    let kind: String
+                    switch issue.kind {
+                    case .duplicateIdentifier: kind = "duplicateIdentifier"
+                    case .danglingObjectReference: kind = "danglingObjectReference"
+                    case .unknownType: kind = "unknownType"
+                    case .missingDataFile: kind = "missingDataFile"
+                    }
+                    kinds[kind, default: 0] += 1
+                }
+                log("      issue kinds: \(kinds.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))")
+                for issue in issues.prefix(3) { log("      e.g. \(issue)") }
+            }
             #expect(errors.isEmpty, "\(name): \(errors)")
             let out = dir.appendingPathComponent(name)
             do {
                 try document.save(to: out)
             } catch {
+                log("      SAVE FAILED: \(error)")
                 Issue.record("\(name): save failed: \(error)")
                 continue
             }
@@ -166,6 +200,7 @@ struct CorpusTests {
             do {
                 reread = try KeynoteDocument.open(out)
             } catch {
+                log("      RE-OPEN FAILED: \(error)")
                 Issue.record("\(name): re-open of saved output failed: \(error)")
                 continue
             }
@@ -174,11 +209,13 @@ struct CorpusTests {
             var identical = a.count == b.count
             for (x, y) in zip(a, b) where x.decompressed != y.decompressed {
                 identical = false
+                log("      DIFFERS after round-trip: \(x.name)")
                 Issue.record("\(name): \(x.name) differs after round-trip")
             }
             if identical { clean += 1 }
         }
-        print("corpus roundtrip CLEAN \(clean)/\(files.count)")
-        #expect(clean == files.count)
+        let supported = files.count - legacy
+        log("corpus roundtrip CLEAN \(clean)/\(supported) (\(legacy) legacy '09 deck(s) skipped)")
+        #expect(clean == supported)
     }
 }

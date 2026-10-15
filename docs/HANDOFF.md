@@ -15,31 +15,24 @@ claude
 ## Kickoff prompt
 
 You are picking up DeckMonkey, a Swift library that reads and writes native Keynote `.key` files.
-Read `CLAUDE.md` first (conventions, invariants, the Phase 0 task list), then `docs/spec.md`
-sections 5, 9, 12 and 14 (the contract). The scaffold was written without a compiler or a real
-`.key` in reach; your first job is first contact with both.
+Read `CLAUDE.md` first (conventions, invariants, the Phase 0 task list and what first contact
+already proved), then `docs/spec.md` sections 5, 9, 12 and 14 (the contract).
 
-Work in this order, committing after each step with a message that says what and why:
+State on handoff: the package builds and all suites are green on this Mac; `CorpusTests` reports
+`roundtrip CLEAN 28/28` over the private decks with zero validation issues. Confirm that first —
+`swift build && swift test` — then work in this order, committing after each step with a message
+that says what and why:
 
-1. **Build and test.** `swift build` then `swift test`. Fix anything the Swift 6.2 compiler
-   rejects (the code was written blind; expect a handful of strict-concurrency or API nits).
-   Target: zero warnings, every suite green. `CorpusTests` is skipped until step 3.
+1. **Hands on the CLI.** `swift run deckmonkey inspect <any .key>` and `swift run deckmonkey dump
+   <same file> Index/Document.iwa` on a few private decks (the test harness could not pass CLI
+   arguments, so the CLI itself has not been exercised on a real deck). Fix anything that
+   surprises; add a synthetic-stream regression test for each fix (no deck bytes enter the repo).
 
-2. **First contact with a real deck.** With `.deckmonkey-corpus` pointing at the private decks, run
-   `swift run deckmonkey inspect <any .key>` and then `swift run deckmonkey dump <same file>
-   Index/Document.iwa`. Compare what you see against `docs/spec.md` §4: component names, whether
-   `Index/` is flat or a nested `Index.zip`, `MessageInfo` field numbers (type=1, version=2,
-   length=3, object_references=5, data_references=6 are the assumptions), whether the reference
-   lists are packed, and the `BuildVersionHistory.plist` entry format. Correct the code and the
-   §4 table from the bytes, never the other way around, and add a regression test for each
-   correction using a synthetic stream (no real deck bytes enter the repo).
+2. **`make gate`.** It must pass before anything else lands.
 
-3. **Round-trip.** `swift run deckmonkey roundtrip <file>` on every private deck, then
-   `swift test` so `CorpusTests` runs. The bar is `CLEAN n/n` and no validator errors. A
-   difference means a header re-encoded differently from how Keynote wrote it (non-minimal
-   varints, field order) or a chunk-framing surprise; find the first differing identifier the
-   report names and fix the raw layer, keeping invariant 2 (untouched records re-emit from
-   original bytes). Then `make gate`.
+3. **Verify the §4 table against bytes.** `docs/spec.md` §4 was written from prior art; first
+   contact confirmed `MessageInfo` fields 1/2/3/5/6 and the container layouts. Correct the table
+   from what `dump` shows, never the other way around.
 
 4. **Oracle, first run.** Open one round-trip output in Keynote by hand and confirm no sheet
    appears. Then run `Scripts/oracle.sh <round-trip output> --golden <PDF you exported from the

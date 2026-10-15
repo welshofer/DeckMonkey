@@ -82,6 +82,8 @@ public struct KeynoteDocument: Sendable {
         public var objectCount: Int
         public var recordCount: Int
         public var mergeRecordCount: Int
+        /// Objects that exist only as merge records (no non-merge base).
+        public var mergeOnlyObjectCount: Int
         public var highestIdentifier: UInt64
         public var typeHistogram: [UInt32: Int]
         public var buildVersionHistory: [String]
@@ -102,6 +104,7 @@ public struct KeynoteDocument: Sendable {
             objectCount: store.objectCount,
             recordCount: records,
             mergeRecordCount: merges,
+            mergeOnlyObjectCount: store.mergeOnlyIdentifiers.count,
             highestIdentifier: store.highestIdentifier,
             typeHistogram: store.typeHistogram,
             buildVersionHistory: package.buildVersionHistory,

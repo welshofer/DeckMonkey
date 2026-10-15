@@ -16,7 +16,9 @@ public enum IWAPackageError: Error, Equatable, Sendable {
 /// `Metadata/` plists, which are exposed read-only and carried through unchanged (invariant 5).
 ///
 /// Layout:
-///   Index/*.iwa           archive components (older files nest these in `Index.zip`)
+///   Index/*.iwa           archive components; package directories (and some older zips) carry
+///                         them inside an `Index.zip` instead, which is flattened on read and
+///                         rebuilt on write
 ///   Data/*                media referenced by `TSP.DataReference`
 ///   Metadata/Properties.plist, BuildVersionHistory.plist, DocumentIdentifier
 ///   preview*.jpg          QuickLook previews
@@ -60,18 +62,25 @@ public struct IWAPackage: Sendable {
                 throw IWAPackageError.zipEntryUnreadable(entryName)
             }
         }
-        var nestedIndex = false
-        if let indexZip = entries["Index.zip"] {
-            let inner = try ZipReader(data: indexZip)
-            for innerName in inner.entryNames where !innerName.hasSuffix("/") {
-                let flat = innerName.hasPrefix("Index/") ? innerName : "Index/" + innerName
-                entries[flat] = try inner.data(forEntry: innerName)
-            }
-            entries["Index.zip"] = nil
-            nestedIndex = true
-        }
+        let nestedIndex = try flattenNestedIndex(&entries)
         try validate(entries, name: name)
         return IWAPackage(form: .zip, entries: entries, nestedIndex: nestedIndex)
+    }
+
+    /// Expands an `Index.zip` entry into `Index/*` entries. Returns whether one was present.
+    private static func flattenNestedIndex(_ entries: inout [String: Data]) throws -> Bool {
+        guard let indexZip = entries["Index.zip"] else { return false }
+        let inner = try ZipReader(data: indexZip)
+        for innerName in inner.entryNames where !innerName.hasSuffix("/") {
+            let flat = innerName.hasPrefix("Index/") ? innerName : "Index/" + innerName
+            do {
+                entries[flat] = try inner.data(forEntry: innerName)
+            } catch {
+                throw IWAPackageError.zipEntryUnreadable("Index.zip/" + innerName)
+            }
+        }
+        entries["Index.zip"] = nil
+        return true
     }
 
     private static func openDirectory(_ url: URL) throws -> IWAPackage {
@@ -86,8 +95,9 @@ public struct IWAPackage: Sendable {
             guard fm.fileExists(atPath: fileURL.path, isDirectory: &isDir), !isDir.boolValue else { continue }
             entries[sub] = try Data(contentsOf: fileURL)
         }
+        let nestedIndex = try flattenNestedIndex(&entries)
         try validate(entries, name: url.lastPathComponent)
-        return IWAPackage(form: .directory, entries: entries, nestedIndex: false)
+        return IWAPackage(form: .directory, entries: entries, nestedIndex: nestedIndex)
     }
 
     private static func validate(_ entries: [String: Data], name: String) throws {
@@ -164,23 +174,31 @@ public struct IWAPackage: Sendable {
                 try fm.removeItem(at: url)
             }
             try fm.createDirectory(at: url, withIntermediateDirectories: true)
-            for name in entryNames {
+            for name in entryNames where !(nestedIndex && name.hasPrefix("Index/")) {
                 let fileURL = url.appendingPathComponent(name)
                 try fm.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
                 try entries[name]!.write(to: fileURL)
             }
+            if nestedIndex {
+                try indexZipData().write(to: url.appendingPathComponent("Index.zip"))
+            }
         }
+    }
+
+    /// The `Index.zip` a nested-index package carries: every `Index/*` entry, stored uncompressed.
+    private func indexZipData() throws -> Data {
+        var inner = ZipWriter()
+        for name in iwaNames {
+            inner.addFile(name: name, data: entries[name]!, compress: false)
+        }
+        return try inner.finalize()
     }
 
     /// The zip form as bytes, deterministic: entries sorted by name, fixed timestamps (Rostrum's writer).
     public func zipData() throws -> Data {
         var writer = ZipWriter()
         if nestedIndex {
-            var inner = ZipWriter()
-            for name in iwaNames {
-                inner.addFile(name: name, data: entries[name]!, compress: false)
-            }
-            writer.addFile(name: "Index.zip", data: try inner.finalize(), compress: false)
+            writer.addFile(name: "Index.zip", data: try indexZipData(), compress: false)
             for name in entryNames where !name.hasPrefix("Index/") {
                 writer.addFile(name: name, data: entries[name]!, compress: shouldDeflate(name))
             }

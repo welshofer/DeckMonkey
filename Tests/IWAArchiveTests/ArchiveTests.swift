@@ -159,14 +159,16 @@ struct ObjectStoreTests {
         #expect(joined[0].name == "Index/Document.iwa")
     }
 
-    @Test("a merge with no base is reported")
+    @Test("a merge with no base becomes the object (first encounter)")
     func mergeWithoutBase() throws {
         var store = ObjectStore()
         var merge = Synth.record(id: 5, type: 1, payload: [])
         merge.info = try ArchiveInfo(bytes: Wire.encode(merge.info.fields + [WireField(number: ArchiveInfo.shouldMergeField, value: .varint(1))]))
         try store.load(component: "Index/X.iwa", decompressed: Synth.stream([merge]))
         store.finalize()
-        #expect(store.objectCount == 0)
-        #expect(store.issues == [.mergeWithoutBase(5, component: "Index/X.iwa")])
+        #expect(store.objectCount == 1)
+        #expect(store.issues.isEmpty)
+        #expect(store.record(for: 5)?.shouldMerge == true)
+        #expect(store.mergeOnlyIdentifiers == [5])
     }
 }

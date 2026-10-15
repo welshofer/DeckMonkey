@@ -11,7 +11,6 @@ public struct ValidationIssue: Equatable, Sendable, CustomStringConvertible {
     public enum Kind: Equatable, Sendable {
         case duplicateIdentifier(UInt64, components: [String])
         case danglingObjectReference(from: UInt64, to: UInt64)
-        case mergeWithoutBase(UInt64, component: String)
         case unknownType(UInt32, identifier: UInt64)
         case missingDataFile(String)
     }
@@ -25,8 +24,6 @@ public struct ValidationIssue: Equatable, Sendable, CustomStringConvertible {
             return "\(severity.rawValue): duplicate identifier \(id) in \(components.joined(separator: ", "))"
         case .danglingObjectReference(let from, let to):
             return "\(severity.rawValue): object \(from) references missing object \(to)"
-        case .mergeWithoutBase(let id, let component):
-            return "\(severity.rawValue): merge record for \(id) in \(component) has no base object"
         case .unknownType(let type, let id):
             return "\(severity.rawValue): object \(id) has type \(type) not in the pinned registry"
         case .missingDataFile(let name):
@@ -45,14 +42,13 @@ public enum Validator {
             switch issue {
             case .duplicateIdentifier(let id, let components):
                 issues.append(ValidationIssue(severity: .error, kind: .duplicateIdentifier(id, components: components)))
-            case .mergeWithoutBase(let id, let component):
-                issues.append(ValidationIssue(severity: .error, kind: .mergeWithoutBase(id, component: component)))
             }
         }
-        // Warning until AT-06 proves Keynote-authored files never carry one; then promote to .error
-        // so a dangling reference blocks save (invariant 8).
+        // An error, not a warning: 28 Keynote-authored decks (6.5 through 15.4, macOS, iOS and iCloud
+        // saves) carry zero header-level dangling references, so one in our output means we broke
+        // the graph (invariant 8). AT-06 extends the same check to payload-level TSP.Reference.
         for dangling in document.store.danglingObjectReferences {
-            issues.append(ValidationIssue(severity: .warning, kind: .danglingObjectReference(from: dangling.from, to: dangling.to)))
+            issues.append(ValidationIssue(severity: .error, kind: .danglingObjectReference(from: dangling.from, to: dangling.to)))
         }
         if let registry = document.registry, !registry.isEmpty {
             for identifier in document.store.identifiers {

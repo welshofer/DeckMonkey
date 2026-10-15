@@ -68,7 +68,7 @@ public enum Wire {
             case 2:
                 let len = try Varint.read(bytes, at: pos)
                 pos += len.length
-                guard len.value <= UInt64(Int.max), pos + Int(len.value) <= bytes.count else {
+                guard len.value <= UInt64(bytes.count - pos) else {
                     throw WireError.truncated(at: pos)
                 }
                 let n = Int(len.value)

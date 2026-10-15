@@ -53,16 +53,15 @@ public enum ArchiveStream {
                 throw ArchiveStreamError.truncated(at: lengthStart)
             }
             pos += headerLength.length
-            guard headerLength.value <= UInt64(Int.max) else { throw ArchiveStreamError.headerTooLong(at: lengthStart) }
+            guard headerLength.value <= UInt64(bytes.count - pos) else { throw ArchiveStreamError.headerTooLong(at: lengthStart) }
             let n = Int(headerLength.value)
-            guard pos + n <= bytes.count else { throw ArchiveStreamError.truncated(at: pos) }
             let info = try ArchiveInfo(bytes: Array(bytes[pos..<(pos + n)]))
             pos += n
             var payloads = [Data]()
             payloads.reserveCapacity(info.messageInfos.count)
             for messageInfo in info.messageInfos {
                 let len = Int(messageInfo.length)
-                guard pos + len <= bytes.count else { throw ArchiveStreamError.truncated(at: pos) }
+                guard len <= bytes.count - pos else { throw ArchiveStreamError.truncated(at: pos) }
                 payloads.append(Data(bytes[pos..<(pos + len)]))
                 pos += len
             }

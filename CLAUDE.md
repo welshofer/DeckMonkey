@@ -70,22 +70,29 @@ schema at all. Generated protos arrive in `IWASchema` and are used only for payl
 
 ## Phase 0 task list (Gate 0 = AT-01…AT-13, AT-25, AT-26; docs/spec.md §12, §14)
 
-Done in the scaffold: Snappy codec + framing with AT-02 fuzz; wire reader; `ArchiveInfo` /
-`MessageInfo` with unknown-field preservation; archive split/join; `ObjectStore` two-pass
-load; container (zip, directory, nested `Index.zip`); `KeynoteDocument` open / validate / save;
-`deckmonkey inspect | dump | roundtrip | verify`; oracle scripts (unverified); CI.
+Done and verified on the M4 (2026-10-14): Snappy codec + framing with AT-02 fuzz; wire reader;
+`ArchiveInfo` / `MessageInfo` with unknown-field preservation; archive split/join; `ObjectStore`
+two-pass load; container (zip, package directory, nested `Index.zip`); `KeynoteDocument` open /
+validate / save; `deckmonkey inspect | dump | roundtrip | verify`; oracle scripts (unverified); CI.
+First contact: **28/28 modern private decks round-trip CLEAN with zero validation issues** —
+saved by Keynote 6.5 through 15.4, by Keynote for iOS and Keynote for iCloud, in both container
+forms. The 7 Keynote '09 APXL decks are refused as designed. Facts learned from the bytes:
+`MessageInfo` fields 1/2/3/5/6 are as assumed and the reference lists are packed; package
+directories carry `Index.zip`, not `Index/`; `should_merge` records with no base are simply
+objects (stylesheet components are full of them) and in these decks every merge record is one;
+`BuildVersionHistory` entries look like `M15.4-7051.0.79-2`, `T2.5.1 (1715)` (iOS), `G-r11-2A396`
+(iCloud).
 
 Remaining, in order:
 
-1. `swift build && swift test` on the M4, then `deckmonkey inspect` and `roundtrip` on the first
-   real deck (`DECKMONKEY_CORPUS`). Expect surprises in field numbers (§4 table) and chunk
-   framing; fix with the real bytes in hand and add a regression test for each.
+1. The oracle, first run (step 4 of docs/HANDOFF.md): `Scripts/oracle.sh` on a round-trip output,
+   repair the AppleScript until the verdict is trustworthy, then `make oracle-corpus`.
 2. AT-01: a reference Snappy decoder comparison (python-snappy in a venv is fine as the oracle).
 3. Schema pipeline per `Scripts/schema/README.md`: protodump, render, `protoc`, registry dump,
    dispatch generator. Commit `Generated/15.4` and `registry-15.4.json`. AT-05.
 4. AT-06, AT-07, AT-08 on the corpus (derive references with a SwiftProtobuf `Visitor` over the
-   decoded payloads and compare with the stored lists). Promote dangling references to `.error`
-   in `Validator` once AT-06 is green.
+   decoded payloads and compare with the stored lists). Header-level dangling references are
+   already errors; AT-06 extends that to payload-level `TSP.Reference`.
 5. `Scripts/corpus-gen` (AppleScript): one deck per built-in theme × two sizes → `Corpus/templates`;
    hand-author `Corpus/features`; `deckmonkey corpus add` records version + golden PDF.
 6. `Corpus/hostile` files and AT-26; AT-11, AT-12, AT-25.

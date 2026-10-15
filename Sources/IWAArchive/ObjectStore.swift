@@ -5,15 +5,15 @@ import IWASnappy
 public enum StoreIssue: Equatable, Sendable {
     /// Two non-merge records carry the same identifier.
     case duplicateIdentifier(UInt64, components: [String])
-    /// A merge record has no base record to merge into.
-    case mergeWithoutBase(UInt64, component: String)
 }
 
 /// The raw object store: every record from every component, indexed by identifier.
 ///
 /// Two-pass semantics as Keynote applies them: non-merge records define objects; `should_merge`
-/// records are kept separately against the same identifier and applied on typed decode (never
-/// folded into the raw bytes, so the original stays available for re-emission).
+/// records attach to the object with the same identifier and are applied on typed decode (never
+/// folded into the raw bytes, so the original stays available for re-emission). A merge record
+/// whose identifier has no base is the object: Keynote writes plenty of these (stylesheet
+/// components are full of them), and prior art treats the first encounter as the base.
 public struct ObjectStore: Sendable {
     /// A component is one `.iwa` file; name is the entry name under `Index/`.
     public struct Component: Sendable {
@@ -49,17 +49,24 @@ public struct ObjectStore: Sendable {
         }
     }
 
-    /// Attaches merge records to their base objects; reports merges with no base.
+    /// Attaches merge records to their base objects; a merge with no base becomes the base.
     public mutating func finalize() {
         for merge in pendingMerges {
             if var entry = byIdentifier[merge.identifier] {
                 entry.merges.append((merge.component, merge.index))
                 byIdentifier[merge.identifier] = entry
             } else {
-                issues.append(.mergeWithoutBase(merge.identifier, component: merge.component))
+                byIdentifier[merge.identifier] = Entry(component: merge.component, index: merge.index, merges: [])
             }
         }
         pendingMerges.removeAll()
+    }
+
+    /// Base objects whose base record is itself a merge record (no non-merge record exists).
+    public var mergeOnlyIdentifiers: [UInt64] {
+        byIdentifier.compactMap { id, entry in
+            (records(in: entry.component)?[entry.index].shouldMerge ?? false) ? id : nil
+        }.sorted()
     }
 
     public var componentNames: [String] { components.map(\.name) }

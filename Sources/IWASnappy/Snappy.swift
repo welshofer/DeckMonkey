@@ -42,7 +42,7 @@ public enum Snappy {
         guard preamble.value <= UInt64(Int.max) else { throw SnappyError.invalidPreamble }
         let expected = Int(preamble.value)
         var out = [UInt8]()
-        out.reserveCapacity(expected)
+        out.reserveCapacity(min(expected, 1 << 26))
 
         while pos < src.count {
             let tag = src[pos]
@@ -62,7 +62,7 @@ public enum Snappy {
                     length = v
                 }
                 length += 1
-                guard pos + length <= src.count else { throw SnappyError.truncated(at: pos) }
+                guard length <= src.count - pos else { throw SnappyError.truncated(at: pos) }
                 out.append(contentsOf: src[pos..<(pos + length)])
                 pos += length
             case 1:
