@@ -108,30 +108,13 @@ extension KeynoteDocument {
         // object outside the component whose every strong referrer is going (a table's model and
         // tiles, a chart's non-style archives, their captions). Strong references are the header
         // lists (invariant 4); the document and package metadata are roots.
-        var referrers = [UInt64: Set<UInt64>]()
-        for component in store.components {
-            for record in component.records {
-                for info in record.info.messageInfos {
-                    for target in info.objectReferences { referrers[target, default: []].insert(record.identifier) }
-                }
-            }
-        }
-        var gone = doomed
-        var frontier = Array(doomed)
-        while let next = frontier.popLast() {
-            guard let record = store.record(for: next) else { continue }
-            for target in record.info.messageInfos.flatMap(\.objectReferences)
-            where !gone.contains(target) && target > 2 && target != showID && store.entry(for: target) != nil {
-                if let from = referrers[target], from.isSubset(of: gone) {
-                    gone.insert(target)
-                    frontier.append(target)
-                }
-            }
-        }
+        var referrers = referrerIndex()
+        var gone = heldOnly(by: doomed, referrers: referrers, keeping: [showID])
+        var frontier = [UInt64]()
         // The calculation engine tracks each formula owner (a table, a chart) through a dependency
         // record that names its owner; Keynote drops the records of owners that are gone. Drop them
         // from the tracker's list, then collect them and what only they kept alive (their tiles).
-        let calcEngineType: UInt32 = 4000, ownerDependenciesType: UInt32 = 4008, tableModelType: UInt32 = 6001
+        let calcEngineType: UInt32 = 4000, ownerDependenciesType: UInt32 = 4008, tableModelType = Self.tableModelType
         if let engineID = store.identifiers.first(where: { store.record(for: $0)?.info.messageInfos.first?.type == calcEngineType }),
            !gone.contains(engineID), var engine = decoded(TSCE_CalculationEngineArchive.self, engineID) {
             // Owners are named by reference or by UUID (a table registers several owners, each with
@@ -151,7 +134,7 @@ extension KeynoteDocument {
                 if let model = decoded(TST_TableModelArchive.self, id), let uuid = Self.uuidValue(model.tableID) { goneTables.insert(uuid) }
             }
             func ofGoneTable(_ u: ReferenceRewriter.UUIDValue) -> Bool {
-                goneTables.contains { $0.upper == u.upper && u.lower >= $0.lower && u.lower - $0.lower < 0x100 }
+                goneTables.contains { $0.upper == u.upper && u.lower >= $0.lower && u.lower - $0.lower < Self.ownerFamilySpan }
             }
             // Owners go with their objects, their table, or their base owner, to a fixpoint.
             var dependencies = [UInt64: TSCE_FormulaOwnerDependenciesArchive]()
@@ -253,6 +236,47 @@ extension KeynoteDocument {
         let removed = try commitData([], replacing: candidates, metadata: &metadata)
         return SlideDeleteReport(slide: entry.slide, component: entry.component, removedObjects: gone.count,
                                  removedData: removed.data, removedFiles: removed.files)
+    }
+
+    static let tableModelType: UInt32 = 6001
+    static let calculationEngineType: UInt32 = 4000
+    /// How far above a table's `table_id` (in the low word) its formula owners sit: 0x23 is the
+    /// furthest seen; 0x100 leaves room, and random UUIDs never collide within it.
+    static let ownerFamilySpan: UInt64 = 0x100
+
+    /// Every object → the records whose header lists it as a strong reference (invariant 4).
+    func referrerIndex() -> [UInt64: Set<UInt64>] {
+        var referrers = [UInt64: Set<UInt64>]()
+        for component in store.components {
+            for record in component.records {
+                for info in record.info.messageInfos {
+                    for target in info.objectReferences { referrers[target, default: []].insert(record.identifier) }
+                }
+            }
+        }
+        return referrers
+    }
+
+    /// `roots` plus every object that only they keep alive: reachable from them through strong
+    /// references and strongly referenced by nothing outside the set, to a fixpoint. The document
+    /// (1), package metadata (2) and `keeping` are never included.
+    func heldOnly(by roots: Set<UInt64>, referrers: [UInt64: Set<UInt64>], keeping: Set<UInt64>) -> Set<UInt64> {
+        var held = roots
+        var grew = true
+        while grew {
+            grew = false
+            for id in held {
+                guard let record = store.record(for: id) else { continue }
+                for target in record.info.messageInfos.flatMap(\.objectReferences)
+                where !held.contains(target) && target > 2 && !keeping.contains(target) && store.entry(for: target) != nil {
+                    if let from = referrers[target], from.isSubset(of: held) {
+                        held.insert(target)
+                        grew = true
+                    }
+                }
+            }
+        }
+        return held
     }
 
     /// A UUID string as Keynote's (lower, upper) pair: the first eight bytes little-endian, then

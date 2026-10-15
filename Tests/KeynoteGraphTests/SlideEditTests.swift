@@ -172,6 +172,71 @@ struct CalcEngineDeleteTests {
     }
 }
 
+@Suite("Table clone")
+struct TableCloneTests {
+    /// Every slide with a table, in every corpus deck: the clone saves and validates, its tables
+    /// have new table_ids, and each new family has as many owner-map entries and dependency
+    /// records as its source family.
+    @Test("every table slide clones with its own registered formula-owner family", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus"))
+    func corpusTableClone() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("deckmonkey-tclone-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        var cloned = 0, refused = 0
+        var failures = [String]()
+        func fail(_ s: String) { if failures.count < 12 { failures.append(s) } }
+        func tables(_ d: KeynoteDocument) -> [String: ReferenceRewriter.UUIDValue] {
+            var out = [String: ReferenceRewriter.UUIDValue]()
+            for id in d.store.identifiers where d.store.record(for: id)?.info.messageInfos.first?.type == 6001 {
+                if let m = d.decoded(TST_TableModelArchive.self, id), let u = KeynoteDocument.uuidValue(m.tableID) { out[m.tableID] = u }
+            }
+            return out
+        }
+        func family(_ d: KeynoteDocument, _ base: ReferenceRewriter.UUIDValue) -> (map: Int, dependencies: Int) {
+            guard let engineID = d.store.identifiers.first(where: { d.store.record(for: $0)?.info.messageInfos.first?.type == 4000 }),
+                  let e = d.decoded(TSCE_CalculationEngineArchive.self, engineID) else { return (0, 0) }
+            func near(_ lower: UInt64, _ upper: UInt64) -> Bool { upper == base.upper && lower >= base.lower && lower - base.lower < 0x100 }
+            let map = e.dependencyTracker.ownerIDMap.mapEntry.filter { near(UInt64($0.ownerID.uuidW1) << 32 | UInt64($0.ownerID.uuidW0), UInt64($0.ownerID.uuidW3) << 32 | UInt64($0.ownerID.uuidW2)) }.count
+            let deps = e.dependencyTracker.formulaOwnerDependencies.filter { ref in
+                guard let dep = d.decoded(TSCE_FormulaOwnerDependenciesArchive.self, ref.identifier) else { return false }
+                return near(dep.formulaOwnerUid.lower, dep.formulaOwnerUid.upper) || (dep.hasBaseOwnerUid && near(dep.baseOwnerUid.lower, dep.baseOwnerUid.upper))
+            }.count
+            return (map, deps)
+        }
+        for (n, url) in CorpusTests.corpusFiles().enumerated() {
+            guard let original = try? KeynoteDocument.open(url), original.writtenByNewerKeynote == nil,
+                  let list = try? original.slideList() else { continue }
+            let before = tables(original)
+            guard !before.isEmpty else { continue }
+            for i in list.indices {
+                var document = original
+                guard (try? document.cloneSlide(at: i)) != nil else { refused += 1; continue }
+                let added = tables(document).filter { before[$0.key] == nil }
+                guard !added.isEmpty else { continue }                // this slide holds no table
+                do {
+                    let out = dir.appendingPathComponent("\(n)-\(i).key")
+                    try document.save(to: out)
+                    let reread = try KeynoteDocument.open(out)
+                    if let e = reread.validate().first(where: { $0.severity == .error }) { fail("\(url.lastPathComponent) #\(i): \(e)") }
+                    if let e = reread.externalReferenceIssue() { fail("\(url.lastPathComponent) #\(i): \(e)") }
+                    let sources = before.values.map { family(original, $0) }.filter { $0.map > 0 }
+                    for (id, base) in added {
+                        let f = family(reread, base)
+                        if f.map == 0 || !sources.contains(where: { $0 == f }) { fail("\(url.lastPathComponent) #\(i): table \(id) registers \(f), sources \(sources)") }
+                    }
+                    cloned += 1
+                } catch {
+                    fail("\(url.lastPathComponent) #\(i): \(error)")
+                }
+            }
+        }
+        print("table clone: \(cloned) table slides cloned, saved and validated; \(refused) slides refused; \(failures.count) failure(s)")
+        failures.forEach { print("  \($0)") }
+        #expect(cloned > 0)
+        #expect(failures.isEmpty)
+    }
+}
+
 extension KeynoteDocument {
     /// Nil when every component's `external_references` holds each reference the rule derives and
     /// nothing whose target is gone.

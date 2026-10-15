@@ -9,6 +9,9 @@ import SwiftProtobuf
 public struct FieldIndex: Sendable {
     /// Message full name ("KN.SlideArchive") → field number → sub-message full name.
     public let messageFields: [String: [Int: String]]
+    /// Message full name → field number → field name, for every `uint32` field (the calculation
+    /// engine's internal owner identifiers are uint32 fields named `…owner_id…`).
+    public let uint32Fields: [String: [Int: String]]
 
     public func subMessage(of message: String, field: Int) -> String? { messageFields[message]?[field] }
 
@@ -22,6 +25,7 @@ public struct FieldIndex: Sendable {
     public init(descriptors: Data) throws {
         let set = try Google_Protobuf_FileDescriptorSet(serializedBytes: descriptors)
         var fields = [String: [Int: String]]()
+        var uint32s = [String: [Int: String]]()
         func strip(_ name: String) -> String { name.hasPrefix(".") ? String(name.dropFirst()) : name }
         func add(_ field: Google_Protobuf_FieldDescriptorProto, to message: String) {
             guard field.type == .message || field.type == .group else { return }
@@ -31,6 +35,7 @@ public struct FieldIndex: Sendable {
             let name = prefix.isEmpty ? message.name : "\(prefix).\(message.name)"
             fields[name, default: [:]] = fields[name] ?? [:]
             message.field.forEach { add($0, to: name) }
+            for f in message.field where f.type == .uint32 { uint32s[name, default: [:]][Int(f.number)] = f.name }
             message.extension.forEach { add($0, to: strip($0.extendee)) }
             message.nestedType.forEach { walk($0, prefix: name) }
         }
@@ -39,5 +44,6 @@ public struct FieldIndex: Sendable {
             file.extension.forEach { add($0, to: strip($0.extendee)) }
         }
         messageFields = fields
+        uint32Fields = uint32s
     }
 }

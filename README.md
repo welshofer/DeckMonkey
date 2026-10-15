@@ -17,7 +17,7 @@ Pinned to Keynote 15.4 (7051.0.79). Every gate below is checked against Keynote 
 | 0 Foundation | lossless open → inspect → validate → save; schema and type registry extracted from Keynote | Gate 0 passed: 146/146 decks round-trip CLEAN, oracle 0 mismatched pixels |
 | 1 Text | find and replace text, offset tables remapped, overlapping hyperlinks removed and reported | Gate 1 passed: 25/25 |
 | 2 Media | replace images (PNG, JPEG, GIF, TIFF), movies and audio; no orphaned data | macOS 12/12 (the iPad oracle, AT-27, is not built) |
-| 3a Slides | move, delete and duplicate slides within a deck | Gate 3a passed: 26/26 |
+| 3a Slides | move, delete and duplicate slides within a deck | Gate 3a passed: 28/28 |
 | 3b, 4, 5 | cross-deck clone, new drawables and Deck IR, builds and transitions | not started |
 
 ## Command line
@@ -39,7 +39,7 @@ swift run deckmonkey verify    deck.key                      # the validator
 
 Exit codes: 0 pass, 1 fail, 2 usage, 3 refused by design (a Keynote '09 file). Edits refuse what
 they cannot do faithfully (a paragraph break inside a replacement, a Keynote-edited image, a slide
-with a table to clone) instead of guessing; every save runs the validator first and writes nothing
+with a chart to clone) instead of guessing; every save runs the validator first and writes nothing
 if it fails.
 
 ## As a library
