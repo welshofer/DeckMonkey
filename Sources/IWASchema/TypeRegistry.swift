@@ -61,3 +61,14 @@ public enum SchemaRuntime {
         "\(SwiftProtobuf.Version.major).\(SwiftProtobuf.Version.minor).\(SwiftProtobuf.Version.revision)"
     }
 }
+
+extension SchemaError: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .registryNotFound(let version): return "no type registry for Keynote \(version)"
+        case .badTypeNumber(let value): return "registry type number \(value) is not an integer"
+        case .schemaNewerThanLibrary(let fileBuild, let pinned):
+            return "saved by \(fileBuild), newer than the pinned schema \(pinned); read-only"
+        }
+    }
+}

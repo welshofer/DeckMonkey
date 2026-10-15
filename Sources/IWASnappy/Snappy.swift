@@ -229,3 +229,16 @@ public enum Snappy {
         out.append(UInt8((offset >> 8) & 0xFF))
     }
 }
+
+extension SnappyError: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .truncated(let at): return "snappy: stream ends inside an element at byte \(at)"
+        case .invalidPreamble: return "snappy: missing or unreadable length preamble"
+        case .invalidCopy(let offset, let length, let at):
+            return "snappy: copy of \(length) byte(s) at offset \(offset) reaches before the output start (element at byte \(at))"
+        case .lengthMismatch(let declared, let actual):
+            return "snappy: decoded \(actual) byte(s), preamble declared \(declared)"
+        }
+    }
+}

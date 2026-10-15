@@ -99,6 +99,39 @@ struct DocumentTests {
         #expect(throws: KeynoteError.self) { try document.save(to: out) }
         #expect(!FileManager.default.fileExists(atPath: out.path))
     }
+
+    // First CLI contact: a truncated deck printed only `error: truncated(at: 4)`.
+    @Test("a truncated .iwa names its component and the decompress stage")
+    func truncatedComponentIsNamed() throws {
+        var package = try SynthDocument.package()
+        let slide = package.data("Index/Slide-10000.iwa")!
+        package.set("Index/Slide-10000.iwa", slide.prefix(slide.count / 2))
+        let error = #expect(throws: KeynoteError.self) { try KeynoteDocument.open(package) }
+        #expect(error.map { "\($0)" }?.hasPrefix("Index/Slide-10000.iwa: decompress failed: ") == true)
+        guard case .componentUnreadable("Index/Slide-10000.iwa", .decompress, let detail)? = error else {
+            Issue.record("unexpected error: \(String(describing: error))")
+            return
+        }
+        #expect(detail.contains("past the end"))
+    }
+
+    @Test("a well-framed stream with a bad record names its component and the split stage")
+    func badRecordIsNamed() throws {
+        var package = try SynthDocument.package()
+        // ArchiveInfo length 100 with only 2 bytes after it.
+        package.set("Index/Slide-10000.iwa", try IWAChunking.compress(Data([100, 0x08, 0x01])))
+        let error = #expect(throws: KeynoteError.self) { try KeynoteDocument.open(package) }
+        guard case .componentUnreadable("Index/Slide-10000.iwa", .split, _)? = error else {
+            Issue.record("unexpected error: \(String(describing: error))")
+            return
+        }
+    }
+
+    @Test("legacy and missing files say so in words, not enum dumps")
+    func packageErrorsReadAsText() {
+        #expect("\(IWAPackageError.unsupportedLegacyFormat("Old.key"))".contains("Keynote '09"))
+        #expect("\(IWAPackageError.notFound("/x.key"))" == "no such file: /x.key")
+    }
 }
 
 /// Runs the round-trip gate over every `.key` the environment points at. Private decks stay out

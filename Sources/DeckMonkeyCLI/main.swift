@@ -32,6 +32,16 @@ func url(_ path: String) -> URL {
     URL(fileURLWithPath: path)
 }
 
+/// The value after `flag`, nil when the flag is absent. A flag with no value is a usage error,
+/// never a silent default: a gate script with an empty `$OUT` must not pass on a temp file.
+func option(_ flag: String, in args: [String]) -> String? {
+    guard let i = args.firstIndex(of: flag) else { return nil }
+    guard i + 1 < args.count, !args[i + 1].hasPrefix("-") else {
+        fail("error: \(flag) needs a value\n\n\(CLI.usage)", code: 2)
+    }
+    return args[i + 1]
+}
+
 func runInspect(_ args: [String]) throws {
     guard let path = args.first else { fail(CLI.usage, code: 2) }
     let document = try DeckMonkey.open(url(path))
@@ -44,7 +54,7 @@ func runInspect(_ args: [String]) throws {
     print("components: \(s.components.count)")
     for name in s.components {
         let count = document.store.records(in: name)?.count ?? 0
-        print("  \(name)  \(count) records")
+        print("  \(name)  \(count) record\(count == 1 ? "" : "s")")
     }
     print("objects: \(s.objectCount)  records: \(s.recordCount)  merges: \(s.mergeRecordCount)  highest identifier: \(s.highestIdentifier)")
     print("data entries: \(s.dataEntries)")
@@ -69,7 +79,9 @@ func runDump(_ args: [String]) throws {
     let document = try DeckMonkey.open(url(path))
     let components = args.count > 1 ? [args[1]] : document.store.componentNames
     for name in components {
-        guard let records = document.store.records(in: name) else { fail("no component named \(name)") }
+        guard let records = document.store.records(in: name) else {
+            fail("error: no component named \(name); components:\n" + document.store.componentNames.map { "  \($0)" }.joined(separator: "\n"))
+        }
         print("# \(name)")
         for record in records {
             let merge = record.shouldMerge ? " merge" : ""
@@ -88,8 +100,8 @@ func runDump(_ args: [String]) throws {
 func runRoundtrip(_ args: [String]) throws {
     guard let path = args.first else { fail(CLI.usage, code: 2) }
     let output: URL
-    if let i = args.firstIndex(of: "-o"), i + 1 < args.count {
-        output = url(args[i + 1])
+    if let o = option("-o", in: args) {
+        output = url(o)
     } else {
         output = FileManager.default.temporaryDirectory
             .appendingPathComponent("deckmonkey-roundtrip-\(UUID().uuidString)")
@@ -121,10 +133,7 @@ func runVerify(_ args: [String]) throws {
 
 func runSnappyCheck(_ args: [String]) throws {
     guard let path = args.first else { fail(CLI.usage, code: 2) }
-    var emit: URL?
-    if let i = args.firstIndex(of: "--emit"), i + 1 < args.count {
-        emit = url(args[i + 1])
-    }
+    let emit = option("--emit", in: args).map(url)
     let report = try SnappyReference.check(manifestAt: url(path), emitTo: emit)
     print(report.summaryLine)
     for mismatch in report.mismatches.prefix(50) {

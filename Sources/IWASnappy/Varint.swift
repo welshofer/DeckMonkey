@@ -48,3 +48,12 @@ public enum Varint {
         return n
     }
 }
+
+extension VarintError: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .truncated(let at): return "varint at byte \(at) has no terminating byte"
+        case .overlong(let at): return "varint at byte \(at) is longer than 10 bytes"
+        }
+    }
+}

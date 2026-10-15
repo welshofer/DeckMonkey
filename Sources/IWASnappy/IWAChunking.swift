@@ -81,3 +81,14 @@ public enum IWAChunking {
         return bodies
     }
 }
+
+extension IWAChunkingError: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .invalidHeader(let expected, let found, let at):
+            return "chunk header at byte \(at) starts with 0x\(String(found, radix: 16)), expected 0x\(String(expected, radix: 16))"
+        case .truncated(let at): return "chunk at byte \(at) runs past the end of the file"
+        case .chunkTooLarge(let size): return "chunk body of \(size) byte(s) does not fit a 24-bit length"
+        }
+    }
+}

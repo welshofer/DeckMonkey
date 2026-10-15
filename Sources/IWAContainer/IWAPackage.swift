@@ -219,3 +219,15 @@ public struct IWAPackage: Sendable {
         return true
     }
 }
+
+extension IWAPackageError: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .notFound(let path): return "no such file: \(path)"
+        case .notAnIWorkPackage(let path): return "\(path) is neither a zip nor a package directory with Index/ entries"
+        case .unsupportedLegacyFormat(let path):
+            return "\(path) is a Keynote '09 (APXL) document, which DeckMonkey does not read; open and save it in a current Keynote first"
+        case .zipEntryUnreadable(let name): return "zip entry \(name) could not be read"
+        }
+    }
+}

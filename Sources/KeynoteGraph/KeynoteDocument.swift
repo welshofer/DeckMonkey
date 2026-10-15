@@ -10,6 +10,30 @@ public enum KeynoteError: Error, Equatable, Sendable {
     case validationFailed([ValidationIssue])
     /// The file was written by a newer Keynote than the pinned schema (AT-25); reads only.
     case schemaNewerThanLibrary(fileBuild: String, pinned: String)
+    /// One `.iwa` could not be read. `detail` is the lower layer's error, whose offsets are
+    /// relative to that stage's input (the compressed file, or its decompressed stream).
+    case componentUnreadable(component: String, stage: ComponentStage, detail: String)
+
+    public enum ComponentStage: String, Equatable, Sendable {
+        /// Chunk framing or Snappy (`IWAChunking.decompress`).
+        case decompress
+        /// Record split (`ArchiveStream.split`: varints, `ArchiveInfo`, payload lengths).
+        case split
+    }
+}
+
+extension KeynoteError: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .validationFailed(let issues):
+            return "validation failed with \(issues.count) error(s); nothing was written"
+                + issues.prefix(5).map { "\n  \($0)" }.joined()
+        case .schemaNewerThanLibrary(let fileBuild, let pinned):
+            return "saved by \(fileBuild), newer than the pinned schema \(pinned); read-only"
+        case .componentUnreadable(let component, let stage, let detail):
+            return "\(component): \(stage.rawValue) failed: \(detail)"
+        }
+    }
 }
 
 /// A Keynote document: its container plus the raw object store built from every `Index/*.iwa`.
@@ -32,8 +56,20 @@ public struct KeynoteDocument: Sendable {
     public static func open(_ package: IWAPackage) throws -> KeynoteDocument {
         var store = ObjectStore()
         for name in package.iwaNames {
-            let decompressed = try IWAChunking.decompress(package.data(name)!)
-            try store.load(component: name, decompressed: decompressed)
+            guard let compressed = package.data(name) else {
+                throw KeynoteError.componentUnreadable(component: name, stage: .decompress, detail: "entry has no data")
+            }
+            let decompressed: Data
+            do {
+                decompressed = try IWAChunking.decompress(compressed)
+            } catch {
+                throw KeynoteError.componentUnreadable(component: name, stage: .decompress, detail: "\(error)")
+            }
+            do {
+                try store.load(component: name, decompressed: decompressed)
+            } catch {
+                throw KeynoteError.componentUnreadable(component: name, stage: .split, detail: "\(error)")
+            }
         }
         store.finalize()
         let registry = try? TypeRegistry.load(version: TypeRegistry.pinnedVersion)

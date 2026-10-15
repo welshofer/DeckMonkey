@@ -144,3 +144,13 @@ public enum Wire {
         return .lengthDelimited(Data(out))
     }
 }
+
+extension WireError: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .truncated(let at): return "protobuf field at byte \(at) runs past the end"
+        case .badTag(let at): return "protobuf tag at byte \(at) is invalid"
+        case .unsupportedWireType(let type, let at): return "protobuf wire type \(type) at byte \(at) is not used by IWA"
+        }
+    }
+}

@@ -79,3 +79,12 @@ public enum ArchiveStream {
         return Data(out)
     }
 }
+
+extension ArchiveStreamError: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .truncated(let at): return "archive record at byte \(at) runs past the end of the stream"
+        case .headerTooLong(let at): return "ArchiveInfo length at byte \(at) runs past the end of the stream"
+        }
+    }
+}

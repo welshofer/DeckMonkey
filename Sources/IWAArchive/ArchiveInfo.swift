@@ -211,3 +211,13 @@ public struct ArchiveInfo: Equatable, Sendable {
         fields.removeAll { $0.number == Self.shouldMergeField }
     }
 }
+
+extension ArchiveInfoError: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .missingIdentifier: return "ArchiveInfo has no identifier"
+        case .missingType(let i): return "MessageInfo [\(i)] has no type"
+        case .missingLength(let i): return "MessageInfo [\(i)] has no length"
+        }
+    }
+}
