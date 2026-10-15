@@ -120,7 +120,7 @@ struct PackageTests {
 
     @Test("an entry name that could escape the package is refused on open and on write")
     func unsafeEntryNames() throws {
-        for bad in ["Data/../../escape.png", "/etc/x", "Index/./Document.iwa", "Data//x", "Data\\x", "Data/x\u{0}y", ""] {
+        for bad in ["Data/../../escape.png", "/etc/x", "Index/./Document.iwa", "Data//x", "Data\\x", "Data/x\u{0}y", "", "a/../\u{301}b", "Index/\u{301}../../x"] {
             #expect(!IWAPackage.isSafeEntryName(bad), "\(bad)")
         }
         for good in ["Index/Document.iwa", "Data/photo-2652582.jpg", "Index/Tables/Tile-2654602.iwa", "Data/a b..c.png"] {
@@ -138,5 +138,12 @@ struct PackageTests {
         #expect(throws: IWAPackageError.unsafeEntryName("Index/../../escape.iwa")) { try package.write(to: dir.appendingPathComponent("x.key"), as: .directory) }
         #expect(throws: IWAPackageError.unsafeEntryName("Index/../../escape.iwa")) { try package.zipData() }
         #expect(!FileManager.default.fileExists(atPath: dir.appendingPathComponent("escape.iwa").path))
+
+        // A package directory with a symbolic link inside is refused, not followed.
+        let linked = dir.appendingPathComponent("linked.key")
+        try IWAPackage.openZip(try SynthPackage.zip(SynthPackage.entries(iwa: Data([0])))).write(to: linked, as: .directory)
+        try FileManager.default.createDirectory(at: linked.appendingPathComponent("Data"), withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(atPath: linked.appendingPathComponent("Data/secret").path, withDestinationPath: "/etc/hosts")
+        #expect(throws: IWAPackageError.unsafeEntryName("Data/secret")) { try IWAPackage.open(linked) }
     }
 }

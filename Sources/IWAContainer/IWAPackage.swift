@@ -95,6 +95,10 @@ public struct IWAPackage: Sendable {
         var entries = [String: Data]()
         for sub in subpaths {
             let fileURL = url.appendingPathComponent(sub)
+            // A symbolic link would read a file from outside the package into its copy.
+            if (try? fm.attributesOfItem(atPath: fileURL.path)[.type] as? FileAttributeType) == .typeSymbolicLink {
+                throw IWAPackageError.unsafeEntryName(sub)
+            }
             var isDir: ObjCBool = false
             guard fm.fileExists(atPath: fileURL.path, isDirectory: &isDir), !isDir.boolValue else { continue }
             entries[sub] = try Data(contentsOf: fileURL)
@@ -105,10 +109,15 @@ public struct IWAPackage: Sendable {
     }
 
     /// True when `name` is a relative path of ordinary components: never absolute, no empty,
-    /// `.` or `..` component, no backslash, no NUL.
+    /// `.` or `..` component, no backslash, no NUL. Checked on the UTF-8 bytes, as the file
+    /// system and zip tools split them: a `/` followed by a combining mark is one Swift
+    /// Character, and splitting Characters would hide the `..` after it.
     public static func isSafeEntryName(_ name: String) -> Bool {
-        guard !name.isEmpty, !name.hasPrefix("/"), !name.contains("\\"), !name.contains("\u{0}") else { return false }
-        return name.split(separator: "/", omittingEmptySubsequences: false).allSatisfy { !$0.isEmpty && $0 != "." && $0 != ".." }
+        let bytes = Array(name.utf8)
+        guard !bytes.isEmpty, bytes.first != 0x2F, !bytes.contains(0x5C), !bytes.contains(0) else { return false }
+        return bytes.split(separator: 0x2F, omittingEmptySubsequences: false).allSatisfy { c in
+            !c.isEmpty && !c.elementsEqual([0x2E]) && !c.elementsEqual([0x2E, 0x2E])
+        }
     }
 
     private static func validate(_ entries: [String: Data], name: String) throws {
