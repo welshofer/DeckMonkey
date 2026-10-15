@@ -1,0 +1,23 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "RTL"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "bullets",
+   "title": "Mixed directions",
+   "body": {
+    "bullets": [
+     {
+      "text": "English then עברית text"
+     },
+     {
+      "text": "العربية مع English"
+     }
+    ]
+   }
+  }
+ ]
+}

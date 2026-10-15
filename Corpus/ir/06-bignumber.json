@@ -1,0 +1,16 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Number"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "bigNumber",
+   "body": {
+    "value": "42%",
+    "label": "share of new customers from referrals"
+   }
+  }
+ ]
+}

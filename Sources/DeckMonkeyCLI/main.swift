@@ -50,6 +50,8 @@ enum CLI {
       slide delete <file> --index <n> -o <out.key>
       slide clone <file> --index <n> [--to <m>] -o <out.key>
       slide import <file> --from <source.key> --index <n> [--to <m>] -o <out.key>
+      from-ir <deck.json> --template <t.key> -o <out.key>
+                                     build a .key from a lectern.deck/1 Deck IR on a template's masters
                                      move, delete or duplicate a slide (0-based indexes, show order);
                                      delete removes the slide's component and data only it used; a
                                      clone goes after its source unless --to says where
@@ -473,6 +475,19 @@ func runMedia(_ args: [String]) throws {
     print("output: \(url(out).path)")
 }
 
+func runFromIR(_ args: [String]) throws {
+    guard let path = args.first, !path.hasPrefix("-"), let template = option("--template", in: args), let out = option("-o", in: args) else {
+        fail(CLI.usage, code: 2)
+    }
+    let ir = try JSONDecoder().decode(DeckIR.self, from: Data(contentsOf: url(path)))
+    let (document, report) = try DeckIRWriter.build(ir, template: try DeckMonkey.open(url(template)))
+    try FileManager.default.createDirectory(at: url(out).deletingLastPathComponent(), withIntermediateDirectories: true)
+    try document.save(to: url(out))
+    print("built \(report.slides.count) slide(s) on \(Set(report.slides.map(\.master)).count) master(s)"
+        + (report.ignored.isEmpty ? "" : "; no place for: \(report.ignored.joined(separator: ", "))"))
+    print("output: \(url(out).path)")
+}
+
 func runSlide(_ args: [String]) throws {
     guard let verb = args.first, args.count >= 2, !args[1].hasPrefix("-") else { fail(CLI.usage, code: 2) }
     var document = try DeckMonkey.open(url(args[1]))
@@ -528,6 +543,7 @@ do {
     case "image": try runImage(rest)
     case "media": try runMedia(rest)
     case "slide": try runSlide(rest)
+    case "from-ir": try runFromIR(rest)
     case "corpus":
         switch rest.first {
         case "add": try runCorpusAdd(Array(rest.dropFirst()))

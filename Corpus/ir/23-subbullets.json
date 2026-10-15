@@ -1,0 +1,27 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Nested"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "bullets",
+   "title": "What went well",
+   "body": {
+    "bullets": [
+     {
+      "text": "Revenue up 12%",
+      "subBullets": [
+       "Strongest in EMEA",
+       "Two new partners"
+      ]
+     },
+     {
+      "text": "Churn down to 3%"
+     }
+    ]
+   }
+  }
+ ]
+}

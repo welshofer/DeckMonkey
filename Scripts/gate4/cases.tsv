@@ -1,0 +1,27 @@
+# Gate 4 (AT-24): Deck IR fixture, template. 23–25 have sub-bullets: they need a hand-built
+# <fixture>.golden.key (AppleScript cannot set list levels).
+Corpus/ir/01-title.json	Corpus/templates/basic-black_wide.key
+Corpus/ir/02-bullets.json	Corpus/templates/basic-white_wide.key
+Corpus/ir/03-agenda.json	Corpus/templates/basic-color_wide.key
+Corpus/ir/04-section.json	Corpus/templates/academy_wide.key
+Corpus/ir/05-statement.json	Corpus/templates/bold-color_wide.key
+Corpus/ir/06-bignumber.json	Corpus/templates/briefing_wide.key
+Corpus/ir/07-quote.json	Corpus/templates/classic-white_wide.key
+Corpus/ir/08-closing.json	Corpus/templates/color-gradient-light_wide.key
+Corpus/ir/09-full-run.json	Corpus/templates/color-gradient_wide.key
+Corpus/ir/10-long-title.json	Corpus/templates/dynamic-clouds-dark_wide.key
+Corpus/ir/11-many-bullets.json	Corpus/templates/dynamic-clouds-light_wide.key
+Corpus/ir/12-long-bullets.json	Corpus/templates/dynamic-color_wide.key
+Corpus/ir/13-unicode.json	Corpus/templates/dynamic-rainbow_wide.key
+Corpus/ir/14-rtl.json	Corpus/templates/dynamic-waves-dark_wide.key
+Corpus/ir/15-notes.json	Corpus/templates/dynamic-waves-light_wide.key
+Corpus/ir/16-agenda-long.json	Corpus/templates/feature-story_wide.key
+Corpus/ir/17-big-numbers.json	Corpus/templates/look-book_wide.key
+Corpus/ir/18-quotes.json	Corpus/templates/minimalist-dark_wide.key
+Corpus/ir/19-statements.json	Corpus/templates/minimalist-light_wide.key
+Corpus/ir/20-title-only.json	Corpus/templates/showcase_wide.key
+Corpus/ir/21-closing-plain.json	Corpus/templates/basic-black_wide.key
+Corpus/ir/22-mixed-punctuation.json	Corpus/templates/basic-white_wide.key
+Corpus/ir/23-subbullets.json	Corpus/templates/basic-color_wide.key
+Corpus/ir/24-subbullets-deep.json	Corpus/templates/academy_wide.key
+Corpus/ir/25-subbullets-mixed.json	Corpus/templates/bold-color_wide.key

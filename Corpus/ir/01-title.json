@@ -1,0 +1,16 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Quarterly Review"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "title",
+   "title": "Quarterly Review",
+   "body": {
+    "subtitle": "Q3 2026 · Operations"
+   }
+  }
+ ]
+}

@@ -1,0 +1,22 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Claims"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "statement",
+   "body": {
+    "claim": "Short."
+   }
+  },
+  {
+   "id": "s2",
+   "layout": "statement",
+   "body": {
+    "claim": "A longer claim that needs to wrap because it says rather more than a headline should."
+   }
+  }
+ ]
+}

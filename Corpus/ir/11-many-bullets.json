@@ -1,0 +1,38 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Many"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "bullets",
+   "title": "Seven bullets",
+   "body": {
+    "bullets": [
+     {
+      "text": "One"
+     },
+     {
+      "text": "Two"
+     },
+     {
+      "text": "Three"
+     },
+     {
+      "text": "Four"
+     },
+     {
+      "text": "Five"
+     },
+     {
+      "text": "Six"
+     },
+     {
+      "text": "Seven"
+     }
+    ]
+   }
+  }
+ ]
+}

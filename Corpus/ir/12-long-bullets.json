@@ -1,0 +1,23 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Long bullets"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "bullets",
+   "title": "Long lines",
+   "body": {
+    "bullets": [
+     {
+      "text": "A bullet long enough to wrap across the full width of the body placeholder in a wide deck, more than once if the theme's type is large"
+     },
+     {
+      "text": "A short one"
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,31 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Nested"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "bullets",
+   "title": "Plan",
+   "body": {
+    "bullets": [
+     {
+      "text": "Phase one",
+      "subBullets": [
+       "Discovery",
+       "Design"
+      ]
+     },
+     {
+      "text": "Phase two",
+      "subBullets": [
+       "Build",
+       "Ship"
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

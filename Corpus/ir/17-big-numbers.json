@@ -1,0 +1,32 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Numbers"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "bigNumber",
+   "body": {
+    "value": "$4.2M",
+    "label": "annual recurring revenue"
+   }
+  },
+  {
+   "id": "s2",
+   "layout": "bigNumber",
+   "body": {
+    "value": "99.99%",
+    "label": "uptime this quarter"
+   }
+  },
+  {
+   "id": "s3",
+   "layout": "bigNumber",
+   "body": {
+    "value": "1",
+    "label": "team"
+   }
+  }
+ ]
+}

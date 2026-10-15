@@ -1,0 +1,79 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Quarterly Review"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "title",
+   "title": "Quarterly Review",
+   "body": {
+    "subtitle": "Q3 2026"
+   }
+  },
+  {
+   "id": "s2",
+   "layout": "agenda",
+   "title": "Agenda",
+   "body": {
+    "items": [
+     "Results",
+     "Risks",
+     "Next steps"
+    ]
+   }
+  },
+  {
+   "id": "s3",
+   "layout": "sectionHeader",
+   "title": "Results"
+  },
+  {
+   "id": "s4",
+   "layout": "bullets",
+   "title": "What went well",
+   "body": {
+    "bullets": [
+     {
+      "text": "Revenue up 12%"
+     },
+     {
+      "text": "Churn down to 3%"
+     }
+    ]
+   }
+  },
+  {
+   "id": "s5",
+   "layout": "bigNumber",
+   "body": {
+    "value": "42%",
+    "label": "from referrals"
+   }
+  },
+  {
+   "id": "s6",
+   "layout": "statement",
+   "body": {
+    "claim": "Retention is our growth engine."
+   }
+  },
+  {
+   "id": "s7",
+   "layout": "quote",
+   "body": {
+    "quote": "Simplicity is prerequisite for reliability.",
+    "attribution": "Edsger Dijkstra"
+   }
+  },
+  {
+   "id": "s8",
+   "layout": "closing",
+   "body": {
+    "callToAction": "Thank you",
+    "contact": "team@example.com"
+   }
+  }
+ ]
+}

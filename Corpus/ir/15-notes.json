@@ -1,0 +1,30 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Notes"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "title",
+   "title": "With notes",
+   "body": {
+    "subtitle": "presenter notes below"
+   },
+   "notes": "First note line.\nSecond note line."
+  },
+  {
+   "id": "s2",
+   "layout": "bullets",
+   "title": "Bullets with notes",
+   "body": {
+    "bullets": [
+     {
+      "text": "Point"
+     }
+    ]
+   },
+   "notes": "Say this."
+  }
+ ]
+}

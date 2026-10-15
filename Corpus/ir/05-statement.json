@@ -1,0 +1,15 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Claim"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "statement",
+   "body": {
+    "claim": "Retention is now our growth engine."
+   }
+  }
+ ]
+}

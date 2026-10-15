@@ -1,0 +1,16 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Long"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "title",
+   "title": "A deliberately long title that has to wrap onto a second line in most themes",
+   "body": {
+    "subtitle": "and a subtitle that is also rather long, to see how it wraps"
+   }
+  }
+ ]
+}

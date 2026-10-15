@@ -1,0 +1,16 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Bye"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "closing",
+   "body": {
+    "callToAction": "See you next quarter",
+    "contact": ""
+   }
+  }
+ ]
+}
