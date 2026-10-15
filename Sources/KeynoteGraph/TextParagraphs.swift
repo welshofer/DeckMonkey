@@ -5,10 +5,10 @@ import SwiftProtobuf
 /// Phase 4: set a storage's whole text as paragraphs at list levels (docs/spec.md §9).
 ///
 /// The layout follows what Keynote 15.4 writes for a five-level master body ("Body Level One" …
-/// "Body Level Five", every template): paragraphs separated by U+000A; one `table_para_data` entry
-/// per paragraph whose `first` is its list level (0 = top level); one `table_para_style` entry per
-/// paragraph, the storage's existing entries reused in order and the last one repeated (Keynote's
-/// own masters name the style once and give later paragraphs a null entry, which inherits); and a
+/// "Body Level Five", every template, and over the corpus slides): paragraphs separated by U+000A;
+/// `table_para_data` entries where the list level changes, `first` the level (0 = top level); one
+/// `table_para_style` entry per paragraph, the first naming the storage's style and later ones
+/// null, which inherit it; and a
 /// single entry at 0 for the tables that describe the storage as a whole (list style, paragraph
 /// starts and bidi, character style, language, layout style). A manual line break inside a paragraph
 /// becomes U+2028, Keynote's line separator.
@@ -71,21 +71,23 @@ public enum TextParagraphs {
 
         var out = storage
         out.text = [text]
-        // One paragraph-style entry per paragraph: the existing ones in order, the last repeated.
-        let paraStyles = storage.tableParaStyle.entries
-        if !paraStyles.isEmpty {
+        // One paragraph-style entry per paragraph, as Keynote writes them: the first names the
+        // storage's style, later ones are null and inherit it (1,713 null to 300 explicit later
+        // entries over the corpus slides).
+        if let first = storage.tableParaStyle.entries.first {
             out.tableParaStyle.entries = starts.enumerated().map { i, start in
-                var e = paraStyles[min(i, paraStyles.count - 1)]
-                e.characterIndex = start
-                return e
+                if i == 0 { var e = first; e.characterIndex = 0; return e }
+                return TSWP_ObjectAttributeTable.ObjectAttribute.with { $0.characterIndex = start }
             }
         }
-        // One paragraph-data entry per paragraph: its list level (every corpus storage has the
-        // table; it is created only when a level needs it).
+        // Paragraph data carries the list level, with an entry where the level changes (the table
+        // is created only when a level needs it; every corpus storage has it).
         if storage.hasTableParaData || paragraphs.contains(where: { $0.level > 0 }) {
-            out.tableParaData.entries = zip(starts, paragraphs).map { start, p in
-                TSWP_ParaDataAttributeTable.ParaDataAttribute.with { $0.characterIndex = start; $0.first = UInt32(p.level); $0.second = 0 }
+            var entries = [TSWP_ParaDataAttributeTable.ParaDataAttribute]()
+            for (start, p) in zip(starts, paragraphs) where entries.last.map({ $0.first != UInt32(p.level) }) ?? true {
+                entries.append(.with { $0.characterIndex = start; $0.first = UInt32(p.level); $0.second = 0 })
             }
+            out.tableParaData.entries = entries
         }
         // Whole-storage tables keep the entry in force at 0.
         func first(_ t: TSWP_ObjectAttributeTable) -> TSWP_ObjectAttributeTable {

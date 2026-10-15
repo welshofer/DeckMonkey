@@ -338,6 +338,9 @@ public enum DeckIRWriter {
                 let key = "\(cells.count)x\(cells.first?.count ?? 0)"
                 guard let (deck, index) = tableSlides[key] else { throw Failure.layout(slide: s.id, "no parts table of size \(key) (tables-parts.key holds 2-10 rows by 2-6 columns)") }
                 newSlide = try document.importSlide(at: index, from: deck).slide
+                if let sample = sampleMasters.firstIndex(of: s.master) {
+                    try document.alignPlaceholders(of: newSlide, like: try document.slideList()[sample].slide)
+                }
                 guard let model = document.slideTables(newSlide).first else { throw Failure.layout(slide: s.id, "the parts slide lost its table") }
                 try document.setTableCells(model, cells)
             } else {
@@ -351,8 +354,10 @@ public enum DeckIRWriter {
                 let p = paragraphs.isEmpty ? [TextParagraphs.Paragraph("")] : paragraphs.map { TextParagraphs.Paragraph($0.text, level: $0.level) }
                 try document.setParagraphs(in: storage, p)
             }
-            try set(targets.title, "title placeholder", s.title)
-            try set(targets.body, "body placeholder", s.body)
+            // A placeholder the plan leaves alone is emptied, as on a slide Keynote makes from the
+            // master; the sample slide's own words never survive.
+            try set(targets.title, "title placeholder", s.title ?? (targets.title == nil ? nil : []))
+            try set(targets.body, "body placeholder", s.body ?? (targets.body == nil ? nil : []))
             try set(targets.textBoxes.first, "free text box", s.box)
             if s.notes != nil {
                 if targets.notes == nil { report.ignored.append("\(s.id): notes") } else { try set(targets.notes, "notes", s.notes) }

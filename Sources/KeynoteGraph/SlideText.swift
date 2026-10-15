@@ -52,6 +52,29 @@ extension KeynoteDocument {
         decoded(KN_SlideArchive.self, slide)?.ownedDrawables.map(\.identifier) ?? []
     }
 
+    /// Gives `slide`'s placeholders the geometry (frame and path) of the same-kind placeholders on
+    /// `sample`, a slide of this deck on the same master: a slide imported from another theme
+    /// keeps its own placeholder frames, while one Keynote makes from this deck's master takes the
+    /// master's.
+    public mutating func alignPlaceholders(of slide: UInt64, like sample: UInt64) throws {
+        func placeholders(_ s: UInt64) -> [Int: UInt64] {
+            guard let component = store.entry(for: s)?.component, let records = store.records(in: component) else { return [:] }
+            var out = [Int: UInt64]()
+            for r in records where r.info.messageInfos.first?.type == Self.placeholderArchiveType {
+                if let p = decoded(KN_PlaceholderArchive.self, r.identifier), out[p.kind.rawValue] == nil { out[p.kind.rawValue] = r.identifier }
+            }
+            return out
+        }
+        let model = placeholders(sample)
+        for (kind, id) in placeholders(slide) {
+            guard let source = model[kind], let from = decoded(KN_PlaceholderArchive.self, source),
+                  var to = decoded(KN_PlaceholderArchive.self, id) else { continue }
+            to.super.super.super.geometry = from.super.super.super.geometry
+            if from.super.super.hasPathsource { to.super.super.pathsource = from.super.super.pathsource }
+            try replacePayload(of: id, with: try to.serializedData(partial: true))
+        }
+    }
+
     /// The master each slide uses, in show order.
     public func slideMasters() throws -> [String?] {
         try slideList().map { slideText($0.slide)?.master }

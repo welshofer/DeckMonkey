@@ -104,6 +104,19 @@ extension KeynoteDocument {
         if sourceType == Self.chartDrawableType {
             // A chart: its geometry is fixed at the frame (flags 3, as AppleScript stores it).
             guard var chart = decoded(TSCH_ChartDrawableArchive.self, new) else { throw DrawableInsertFailure.notADrawable(drawable) }
+            // The style lists come from this theme's preset the chart maps to, as `add chart`
+            // applies a preset: a source theme's preset may list fewer paragraph styles, and a
+            // label whose slot is missing falls back to a default.
+            var unity = chart.TSCH_ChartArchive_unity
+            if unity.hasPreset, let preset = decoded(TSCH_ChartStylePreset.self, unity.preset.identifier) {
+                unity.chartStyle = preset.chartStyle
+                unity.legendStyle = preset.legendStyle
+                unity.valueAxisStyles = preset.valueAxisStyles
+                unity.categoryAxisStyles = preset.categoryAxisStyles
+                unity.seriesThemeStyles = preset.seriesStyles
+                unity.paragraphStyles = preset.paragraphStyles
+                chart.TSCH_ChartArchive_unity = unity
+            }
             chart.super.geometry.position = .with { $0.x = Float(frame.x); $0.y = Float(frame.y) }
             if frame.width > 0, frame.height > 0 {
                 chart.super.geometry.size = .with { $0.width = Float(frame.width); $0.height = Float(frame.height) }
