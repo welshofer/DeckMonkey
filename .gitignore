@@ -22,3 +22,4 @@ DerivedData/
 # Stale pre-rename copy of the CLI (the real one is Sources/DeckMonkeyCLI); delete when convenient.
 /Sources/deckmonkey-cli/
 /Scripts/gate1/images.local.tsv
+__pycache__/
