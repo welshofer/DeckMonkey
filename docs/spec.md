@@ -185,6 +185,8 @@ Phase 0 is the accent because it is the only phase whose output nobody else cons
 ## 13. CLI: deckmonkey
 
 `deckmonkey` is the acceptance surface, the way `pptx-tool` is for Rostrum: every gate is a `deckmonkey` invocation with a machine-readable exit code and JSON report.
+Exit codes: `0` pass, `1` fail, `2` usage error, `3` refused by design (a Keynote '09 APXL file, out
+of scope per section 2). Gates count a `3` as skipped, never as a pass or a failure.
 
 | Subcommand | Does | Phase |
 | --- | --- | --- |

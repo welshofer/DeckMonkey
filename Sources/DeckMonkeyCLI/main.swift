@@ -2,7 +2,8 @@ import DeckMonkey
 import Foundation
 
 // deckmonkey — the acceptance surface (docs/spec.md §13). Every gate is one of these subcommands
-// with a machine-readable exit code: 0 pass, 1 fail, 2 usage error.
+// with a machine-readable exit code: 0 pass, 1 fail, 2 usage error, 3 refused by design (a
+// Keynote '09 APXL file: out of scope, docs/spec.md §2, so neither a pass nor a failure).
 
 enum CLI {
     static let usage = """
@@ -18,7 +19,7 @@ enum CLI {
                                      --emit, also write our re-compression for verify-ours
       version
 
-    Exit codes: 0 pass, 1 fail, 2 usage.
+    Exit codes: 0 pass, 1 fail, 2 usage, 3 refused (Keynote '09 APXL, out of scope).
     """
 }
 let usage = CLI.usage
@@ -160,6 +161,8 @@ do {
     case "-h", "--help", "help": print(usage)
     default: fail(usage, code: 2)
     }
+} catch IWAPackageError.unsupportedLegacyFormat(let path) {
+    fail("refused: \(IWAPackageError.unsupportedLegacyFormat(path))", code: 3)
 } catch {
     fail("error: \(error)")
 }

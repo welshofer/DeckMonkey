@@ -20,25 +20,32 @@ gate: test roundtrip-corpus snappy-check snappy-vectors
 ## Round-trip every .key under $(CORPUS) and Corpus/ through the CLI.
 roundtrip-corpus:
 	@$(SWIFT) build --product deckmonkey >/dev/null
-	@fail=0; n=0; \
-	for f in $$(find $(CORPUS) Corpus -name '*.key' -prune 2>/dev/null); do \
-	  n=$$((n+1)); \
-	  if ! .build/debug/deckmonkey roundtrip "$$f" >/tmp/deckmonkey-rt.log 2>&1; then fail=$$((fail+1)); echo "FAIL $$f"; cat /tmp/deckmonkey-rt.log; fi; \
-	done; \
-	echo "roundtrip-corpus: $$((n-fail))/$$n clean"; [ $$fail -eq 0 ]
+	@find $(CORPUS) Corpus -name '*.key' -prune -print0 2>/dev/null | { \
+	  fail=0; n=0; skip=0; \
+	  while IFS= read -r -d '' f; do \
+	    .build/debug/deckmonkey roundtrip "$$f" >/tmp/deckmonkey-rt.log 2>&1; rc=$$?; \
+	    if [ $$rc -eq 3 ]; then skip=$$((skip+1)); continue; fi; \
+	    n=$$((n+1)); \
+	    if [ $$rc -ne 0 ]; then fail=$$((fail+1)); echo "FAIL $$f"; cat /tmp/deckmonkey-rt.log; fi; \
+	  done; \
+	  echo "roundtrip-corpus: $$((n-fail))/$$n clean ($$skip legacy '09 deck(s) refused as designed)"; [ $$fail -eq 0 ]; }
 
 ## Run the Keynote oracle over every corpus deck's round-trip output (macOS only).
 oracle-corpus:
 	@$(SWIFT) build --product deckmonkey >/dev/null
-	@fail=0; n=0; \
-	for f in $$(find $(CORPUS) Corpus -name '*.key' -prune 2>/dev/null); do \
-	  n=$$((n+1)); out=/tmp/deckmonkey-oracle-$$n.key; \
-	  .build/debug/deckmonkey roundtrip "$$f" -o $$out >/dev/null || { fail=$$((fail+1)); echo "FAIL roundtrip $$f"; continue; }; \
-	  golden="$${f%.key}.golden.pdf"; \
-	  if [ -f "$$golden" ]; then Scripts/oracle.sh $$out --golden "$$golden" || { fail=$$((fail+1)); echo "FAIL oracle $$f"; }; \
-	  else Scripts/oracle.sh $$out || { fail=$$((fail+1)); echo "FAIL oracle $$f"; }; fi; \
-	done; \
-	echo "oracle-corpus: $$((n-fail))/$$n pass"; [ $$fail -eq 0 ]
+	@find $(CORPUS) Corpus -name '*.key' -prune -print0 2>/dev/null | { \
+	  fail=0; n=0; skip=0; \
+	  while IFS= read -r -d '' f; do \
+	    out=/tmp/deckmonkey-oracle-$$((n+skip+1)).key; \
+	    .build/debug/deckmonkey roundtrip "$$f" -o $$out >/dev/null 2>&1; rc=$$?; \
+	    if [ $$rc -eq 3 ]; then skip=$$((skip+1)); continue; fi; \
+	    n=$$((n+1)); \
+	    [ $$rc -eq 0 ] || { fail=$$((fail+1)); echo "FAIL roundtrip $$f"; continue; }; \
+	    golden="$${f%.key}.golden.pdf"; \
+	    if [ -f "$$golden" ]; then Scripts/oracle.sh $$out --golden "$$golden" || { fail=$$((fail+1)); echo "FAIL oracle $$f"; }; \
+	    else Scripts/oracle.sh $$out || { fail=$$((fail+1)); echo "FAIL oracle $$f"; }; fi; \
+	  done; \
+	  echo "oracle-corpus: $$((n-fail))/$$n pass ($$skip legacy '09 deck(s) refused as designed)"; [ $$fail -eq 0 ]; }
 
 ## AT-01 (docs/spec.md §14). The reference Snappy decoder is cramjam, in a local venv.
 .venv/bin/python:
