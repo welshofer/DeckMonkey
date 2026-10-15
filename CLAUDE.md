@@ -42,7 +42,7 @@ acceptance oracle. The full spec is `docs/spec.md`; sections 5 (invariants), 9 (
 | `IWASchema` | generated SwiftProtobuf sources + type registry per pinned Keynote version — never hand-edited |
 | `KeynoteGraph` | `KeynoteDocument`, `IDAllocator`, `Validator`; later the typed graph and surgery ops |
 | `DeckMonkey` | public API, `roundTrip`, Deck IR bridge (Phase 4) |
-| `deckmonkey` | CLI: the acceptance surface; every gate is a subcommand with an exit code |
+| `deckmonkey` | CLI (`Sources/deckmonkey-cli`): the acceptance surface; every gate is a subcommand with an exit code |
 
 Design decision to keep: `IWAArchive` decodes `ArchiveInfo` with its own wire-format reader, not
 generated code, so a file from any Keynote version round-trips through the raw store with no

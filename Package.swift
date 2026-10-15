@@ -9,7 +9,8 @@ import PackageDescription
 //   IWASchema   → SwiftProtobuf (generated per pinned Keynote version)
 //   KeynoteGraph → IWAArchive, IWASchema, IWAContainer
 //   DeckMonkey  → KeynoteGraph, Rostrum (Deck IR)
-//   deckmonkey  → DeckMonkey (CLI, the acceptance surface)
+//   deckmonkey  → DeckMonkey (CLI, the acceptance surface; lives in Sources/deckmonkey-cli because
+//                 macOS is case-insensitive and would merge it with Sources/DeckMonkey)
 let package = Package(
     name: "DeckMonkey",
     platforms: [
@@ -40,7 +41,7 @@ let package = Package(
         .target(
             name: "DeckMonkey",
             dependencies: ["KeynoteGraph", "IWAArchive", "IWAContainer", .product(name: "Rostrum", package: "rostrum")]),
-        .executableTarget(name: "deckmonkey", dependencies: ["DeckMonkey"]),
+        .executableTarget(name: "deckmonkey", dependencies: ["DeckMonkey"], path: "Sources/deckmonkey-cli"),
         .testTarget(name: "IWASnappyTests", dependencies: ["IWASnappy"]),
         .testTarget(name: "IWAArchiveTests", dependencies: ["IWAArchive", "IWASnappy"]),
         .testTarget(
