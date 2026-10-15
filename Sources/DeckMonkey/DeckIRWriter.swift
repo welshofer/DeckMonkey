@@ -44,8 +44,11 @@ public enum DeckIRWriter {
         /// (grid rows) and categories (grid columns), values[series][category].
         public var chart: ChartPlan?
 
+        /// Frames are kept in whole points, as Keynote's own UI and AppleScript store them (Rostrum's
+        /// geometry is in EMU, whose conversion leaves fractions of a point).
         public init(kind: Kind, x: Double, y: Double, width: Double, height: Double, paragraphs: [Paragraph], chart: ChartPlan? = nil) {
-            self.kind = kind; self.x = x; self.y = y; self.width = width; self.height = height; self.paragraphs = paragraphs; self.chart = chart
+            self.kind = kind; self.x = x.rounded(); self.y = y.rounded(); self.width = width.rounded(); self.height = height.rounded()
+            self.paragraphs = paragraphs; self.chart = chart
         }
     }
 
