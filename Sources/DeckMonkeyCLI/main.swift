@@ -27,7 +27,8 @@ enum CLI {
       corpus hostile --from <template.key> [--out Corpus/hostile]
                                      AT-26: one broken copy of a Keynote-authored template per
                                      validator rule, plus expected.json naming each one's error
-      text <file>                    every TSWP text storage: identifier and its text (read-only)
+      text <file> [--tables]         every TSWP text storage: identifier and its text (¶ = paragraph
+                                     break); --tables adds each offset table (index→object id)
       version
 
     Exit codes: 0 pass, 1 fail, 2 usage, 3 refused (Keynote '09 APXL, out of scope).
@@ -303,7 +304,8 @@ func runCorpusHostile(_ args: [String]) throws {
 }
 
 func runText(_ args: [String]) throws {
-    guard let path = args.first else { fail(CLI.usage, code: 2) }
+    let tables = args.contains("--tables")
+    guard let path = args.first(where: { !$0.hasPrefix("--") }) else { fail(CLI.usage, code: 2) }
     let document = try DeckMonkey.open(url(path))
     for component in document.store.components {
         for record in component.records {
@@ -311,7 +313,14 @@ func runText(_ args: [String]) throws {
                 guard let storage = try? TSWP_StorageArchive(serializedBytes: record.payloads[i], extensions: Schema.extensions, partial: true) else { continue }
                 let text = storage.text.joined()
                 guard !text.isEmpty else { continue }
-                print("\(record.identifier)\t\(text.replacingOccurrences(of: "\n", with: "⏎").replacingOccurrences(of: "\u{2029}", with: "¶"))")
+                let shown = text.replacingOccurrences(of: "\r", with: "¶").replacingOccurrences(of: "\n", with: "⏎").replacingOccurrences(of: "\u{2029}", with: "¶")
+                print("\(record.identifier)\t\(shown)")
+                if tables {
+                    if storage.text.count != 1 { print("    text: \(storage.text.count) strings") }
+                    for (name, entries) in TextOffsets.tables(of: storage) where !entries.isEmpty {
+                        print("    \(name): " + entries.map { "\($0.index)\($0.object.map { "→\($0)" } ?? "")" }.joined(separator: " "))
+                    }
+                }
             }
         }
     }

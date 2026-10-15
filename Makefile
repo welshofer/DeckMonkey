@@ -48,10 +48,11 @@ oracle-corpus:
 	  done; \
 	  echo "oracle-corpus: $$((n-fail))/$$n pass ($$skip legacy '09 deck(s) refused as designed)"; [ $$fail -eq 0 ]; }
 
-## The whole local corpus from the committed scripts (macOS, Keynote): the 106 template decks,
-## the hostile copies (AT-26) and the golden PDFs. Nothing it writes is committed.
+## The whole local corpus from the committed scripts (macOS, Keynote): the 106 template decks, the
+## 12 feature decks, the hostile copies (AT-26) and the golden PDFs. Nothing it writes is committed.
 corpus:
 	Scripts/corpus-gen/corpus-gen.sh --out Corpus/templates
+	Scripts/corpus-gen/features.sh --out Corpus/features
 	@$(SWIFT) build --product deckmonkey >/dev/null
 	.build/debug/deckmonkey corpus hostile --from Corpus/templates/basic-white_wide.key --out Corpus/hostile
 	@$(MAKE) goldens

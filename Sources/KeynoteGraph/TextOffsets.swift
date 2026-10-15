@@ -30,6 +30,34 @@ public enum TextOffsets {
         }
     }
 
+    /// One offset-table entry: where it starts, and the object it attaches there (a style, a
+    /// field, an attachment), if any. Paragraph-data and string tables carry no object.
+    public struct Entry: Equatable, Sendable {
+        public var index: UInt32
+        public var object: UInt64?
+    }
+
+    /// Every character-indexed table of a storage, by field name, in field order.
+    public static func tables(of s: TSWP_StorageArchive) -> [(name: String, entries: [Entry])] {
+        func object(_ t: TSWP_ObjectAttributeTable) -> [Entry] {
+            t.entries.map { Entry(index: $0.characterIndex, object: $0.hasObject ? $0.object.identifier : nil) }
+        }
+        func paraData(_ t: TSWP_ParaDataAttributeTable) -> [Entry] { t.entries.map { Entry(index: $0.characterIndex, object: nil) } }
+        func string(_ t: TSWP_StringAttributeTable) -> [Entry] { t.entries.map { Entry(index: $0.characterIndex, object: nil) } }
+        return [
+            ("table_para_style", object(s.tableParaStyle)), ("table_para_data", paraData(s.tableParaData)),
+            ("table_list_style", object(s.tableListStyle)), ("table_char_style", object(s.tableCharStyle)),
+            ("table_attachment", object(s.tableAttachment)), ("table_smartfield", object(s.tableSmartfield)),
+            ("table_layout_style", object(s.tableLayoutStyle)), ("table_para_starts", paraData(s.tableParaStarts)),
+            ("table_bookmark", object(s.tableBookmark)), ("table_footnote", object(s.tableFootnote)),
+            ("table_section", object(s.tableSection)), ("table_rubyfield", object(s.tableRubyfield)),
+            ("table_language", string(s.tableLanguage)), ("table_dictation", string(s.tableDictation)),
+            ("table_insertion", object(s.tableInsertion)), ("table_deletion", object(s.tableDeletion)),
+            ("table_highlight", object(s.tableHighlight)), ("table_para_bidi", paraData(s.tableParaBidi)),
+            ("table_tatechuyoko", object(s.tableTatechuyoko)), ("table_drop_cap_style", object(s.tableDropCapStyle)),
+        ]
+    }
+
     /// The storage's text length in UTF-16 code units.
     public static func textLength(_ storage: TSWP_StorageArchive) -> Int {
         storage.text.reduce(0) { $0 + $1.utf16.count }

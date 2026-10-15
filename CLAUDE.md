@@ -138,9 +138,12 @@ AT-09 roundtrip 134/134 CLEAN, AT-10 oracle 134/134 (the 106 templates at 0 mism
 against their goldens; private decks have no goldens and are open-checked), AT-11, AT-12, AT-13
 (Linux), AT-25, AT-26. Don't use Keynote while the oracle runs: it refuses an edited copy.
 
-Before Phase 1, recommended (Jay): hand-author `Corpus/features` (spec §11, ≥ 30 decks: lists,
-bidi, smart fields, hyperlinks, tables, charts, builds…), then `make reference-strength` and
-`make goldens`. The templates exercise 126 reference fields; the feature decks widen that, and
-Phase 1's AT-16/AT-17 need smart fields and hyperlinks to replace across.
+Feature corpus (2026-10-14): `Scripts/corpus-gen/features.sh` has Keynote author 12 feature decks
+(multi-run, Unicode/astral/combining, bidi and list text; tables with formulas, formats, merges;
+all 17 chart types; shapes, lines, images, movie, audio; notes and skipped slides; 43 transitions;
+80 slides). AppleScript cannot make hyperlinks, smart fields, equations, groups or builds: those
+still need hand-authored decks (Jay), and Phase 1's AT-17 needs smart fields and hyperlinks.
+Objects are created with `tell s to make new …`. The strength table now covers 210 fields (169 of
+the 201 in the older decks, 99% of their reference occurrences).
 
 Phase 1 (text replace) may start: Gate 0 is complete.
