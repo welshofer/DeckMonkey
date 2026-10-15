@@ -100,21 +100,30 @@ struct DocumentTests {
 }
 
 /// Runs the round-trip gate over every `.key` the environment points at. Private decks stay out
-/// of the repo: set `DECKMONKEY_CORPUS=/path/to/decks` (recursive). The in-repo `Corpus/` is
-/// scanned too once synthetic decks land there.
+/// of the repo: set `DECKMONKEY_CORPUS=/path/to/decks`, or put that path in a git-ignored
+/// `.deckmonkey-corpus` file at the repo root. Both are scanned recursively, as is the in-repo
+/// `Corpus/` once synthetic decks land there.
 @Suite("Corpus round-trip")
 struct CorpusTests {
-    static func corpusFiles() -> [URL] {
+    static let repoRoot = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+
+    static func corpusRoots() -> [URL] {
         var roots = [URL]()
         if let env = ProcessInfo.processInfo.environment["DECKMONKEY_CORPUS"], !env.isEmpty {
             roots.append(URL(fileURLWithPath: env))
+        } else if let pointer = try? String(contentsOf: repoRoot.appendingPathComponent(".deckmonkey-corpus"), encoding: .utf8),
+                  let line = pointer.split(whereSeparator: \.isNewline).first?.trimmingCharacters(in: .whitespaces),
+                  !line.isEmpty {
+            roots.append(URL(fileURLWithPath: (line as NSString).expandingTildeInPath))
         }
-        let repoCorpus = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("Corpus")
-        roots.append(repoCorpus)
+        roots.append(repoRoot.appendingPathComponent("Corpus"))
+        return roots
+    }
+
+    static func corpusFiles() -> [URL] {
         var files = [URL]()
-        for root in roots {
+        for root in corpusRoots() {
             guard let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil) else { continue }
             for case let url as URL in enumerator where url.pathExtension.lowercased() == "key" {
                 files.append(url)
@@ -124,28 +133,52 @@ struct CorpusTests {
         return files.sorted { $0.path < $1.path }
     }
 
-    @Test("AT-09: every corpus file round-trips clean", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus: set DECKMONKEY_CORPUS or add decks under Corpus/"))
+    @Test("AT-09: every corpus file opens, validates, and round-trips clean", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus: set DECKMONKEY_CORPUS, write .deckmonkey-corpus, or add decks under Corpus/"))
     func corpusRoundTrip() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("deckmonkey-corpus-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }
+        let files = Self.corpusFiles()
         var clean = 0
-        for file in Self.corpusFiles() {
-            let document = try KeynoteDocument.open(file)
-            let errors = document.validate().filter { $0.severity == .error }
-            #expect(errors.isEmpty, "\(file.lastPathComponent): \(errors)")
-            let out = dir.appendingPathComponent(file.lastPathComponent)
-            try document.save(to: out)
-            let reread = try KeynoteDocument.open(out)
+        print("corpus: \(files.count) deck(s) under \(Self.corpusRoots().map(\.path).joined(separator: ", "))")
+        for file in files {
+            let name = file.lastPathComponent
+            let document: KeynoteDocument
+            do {
+                document = try KeynoteDocument.open(file)
+            } catch {
+                Issue.record("\(name): open failed: \(error)")
+                continue
+            }
+            let s = document.summary
+            let issues = document.validate()
+            let errors = issues.filter { $0.severity == .error }
+            print("  \(name): form=\(document.package.form) nested=\(document.package.nestedIndex) components=\(s.components.count) objects=\(s.objectCount) merges=\(s.mergeRecordCount) maxID=\(s.highestIdentifier) types=\(s.typeHistogram.count) data=\(s.dataEntries) saved-by=\(s.buildVersionHistory.last ?? "-") issues=\(issues.count)")
+            #expect(errors.isEmpty, "\(name): \(errors)")
+            let out = dir.appendingPathComponent(name)
+            do {
+                try document.save(to: out)
+            } catch {
+                Issue.record("\(name): save failed: \(error)")
+                continue
+            }
+            let reread: KeynoteDocument
+            do {
+                reread = try KeynoteDocument.open(out)
+            } catch {
+                Issue.record("\(name): re-open of saved output failed: \(error)")
+                continue
+            }
             let a = document.store.joinedComponents()
             let b = reread.store.joinedComponents()
             var identical = a.count == b.count
             for (x, y) in zip(a, b) where x.decompressed != y.decompressed {
                 identical = false
-                Issue.record("\(file.lastPathComponent): \(x.name) differs after round-trip")
+                Issue.record("\(name): \(x.name) differs after round-trip")
             }
             if identical { clean += 1 }
         }
-        print("corpus roundtrip CLEAN \(clean)/\(Self.corpusFiles().count)")
+        print("corpus roundtrip CLEAN \(clean)/\(files.count)")
+        #expect(clean == files.count)
     }
 }

@@ -1,7 +1,8 @@
 # DeckMonkey developer entry points. The merge gate is `make gate`.
 
 SWIFT ?= swift
-CORPUS ?= $(DECKMONKEY_CORPUS)
+# Private decks live outside the tree: DECKMONKEY_CORPUS, or a git-ignored .deckmonkey-corpus pointer file.
+CORPUS ?= $(shell if [ -n "$$DECKMONKEY_CORPUS" ]; then echo "$$DECKMONKEY_CORPUS"; elif [ -f .deckmonkey-corpus ]; then head -1 .deckmonkey-corpus; fi)
 
 .PHONY: build test gate roundtrip-corpus oracle-corpus schema schema-diff clean
 

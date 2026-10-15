@@ -58,6 +58,6 @@ public enum SchemaError: Error, Equatable, Sendable {
 /// `deckmonkey inspect` can report it.
 public enum SchemaRuntime {
     public static var protobufVersion: String {
-        "\(SwiftProtobuf.Version.major).\(SwiftProtobuf.Version.minor).\(SwiftProtobuf.Version.patch)"
+        "\(SwiftProtobuf.Version.major).\(SwiftProtobuf.Version.minor).\(SwiftProtobuf.Version.revision)"
     }
 }

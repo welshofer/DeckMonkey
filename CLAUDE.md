@@ -14,8 +14,10 @@ acceptance oracle. The full spec is `docs/spec.md`; sections 5 (invariants), 9 (
   Phase 4, the Deck IR (`DeckOutline`). SwiftProtobuf is the only other dependency.
 - **License:** MIT. WorkKit (AGPL-3.0) and keynote-parser are design references only — read them,
   never copy code or protos from them. Our protos come from our own extraction (Scripts/schema).
-- **Private corpus:** Jay's test decks never enter the repo. Point `DECKMONKEY_CORPUS` at a
-  directory outside the tree; the test suite and `make roundtrip-corpus` scan it recursively.
+- **Private corpus:** Jay's test decks never enter the repo. They live in
+  `~/Developer/DeckMonkey-corpus` (a sibling of the repo). Point `DECKMONKEY_CORPUS` at it, or
+  write the path into the git-ignored `.deckmonkey-corpus` file at the repo root; the test suite
+  and `make roundtrip-corpus` scan it recursively.
   `Corpus/` in-repo holds only synthetic decks (templates, features, hostile) generated later.
 
 ## Invariants (docs/spec.md §5) — a change that breaks one is a design change, not a bug fix

@@ -5,8 +5,9 @@ Open a terminal in the repo and run `claude`. Paste the prompt below as the firs
 day's work. Set `DECKMONKEY_CORPUS` first so the corpus suite has something to chew on.
 
 ```
-export DECKMONKEY_CORPUS=/path/to/your/private/decks   # never inside the repo
-cd ~/Developer/DeckMonkey && claude
+cd ~/Developer/DeckMonkey
+echo ~/Developer/DeckMonkey-corpus > .deckmonkey-corpus   # git-ignored pointer to the private decks
+claude
 ```
 
 ---
@@ -24,7 +25,7 @@ Work in this order, committing after each step with a message that says what and
    rejects (the code was written blind; expect a handful of strict-concurrency or API nits).
    Target: zero warnings, every suite green. `CorpusTests` is skipped until step 3.
 
-2. **First contact with a real deck.** With `DECKMONKEY_CORPUS` set, run
+2. **First contact with a real deck.** With `.deckmonkey-corpus` pointing at the private decks, run
    `swift run deckmonkey inspect <any .key>` and then `swift run deckmonkey dump <same file>
    Index/Document.iwa`. Compare what you see against `docs/spec.md` §4: component names, whether
    `Index/` is flat or a nested `Index.zip`, `MessageInfo` field numbers (type=1, version=2,

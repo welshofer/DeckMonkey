@@ -11,5 +11,6 @@
 Every committed deck ships with `<name>.golden.pdf`, the PDF Keynote exported at ingest. Decks and
 PDFs are stored through git LFS (see `.gitattributes`).
 
-Private decks: `export DECKMONKEY_CORPUS=/path/to/decks` — `swift test` (CorpusTests) and
-`make roundtrip-corpus` / `make oracle-corpus` pick them up recursively.
+Private decks: `export DECKMONKEY_CORPUS=/path/to/decks`, or write that path into the git-ignored
+`.deckmonkey-corpus` file at the repo root — `swift test` (CorpusTests) and `make roundtrip-corpus` /
+`make oracle-corpus` pick them up recursively.
