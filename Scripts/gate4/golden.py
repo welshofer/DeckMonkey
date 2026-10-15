@@ -11,9 +11,10 @@ deletes the template's sample slides and saves. The golden is Keynote's own rend
 content: DeckMonkey's output must match it at 0 mismatched pixels.
 
 AppleScript cannot set a paragraph's list level (exit 3 for a plan that has one: those fixtures
-need hand-built reference decks). Geometry: AppleScript's position of an auto-height text item is
-offset by half its height from the stored one, so a text box is placed at y - height / 2 once its
-text has set its height; a shape's position and size are stored as given.
+need hand-built reference decks). Geometry: a shape's position and size are stored as given; a
+text box keeps an automatic height, and AppleScript rounds the position it is given to whole points
+before storing y + height / 2, so it is placed at y - height / 2, and a plan whose text box that
+cannot reach exactly exits 4 (it needs a hand-built golden too).
 """
 import json, os, shutil, subprocess, sys, tempfile, uuid
 
@@ -63,9 +64,13 @@ def slide_lines(slide):
                     f"set width of n to {d['width']!r}", f"set height of n to {d['height']!r}",
                     f"set position of n to {{{d['x']!r}, {d['y']!r}}}"]
         else:
+            # An auto-height text item: AppleScript rounds the position it is given to whole
+            # points, then stores y + height / 2. Exact only when y - height / 2 is whole.
             out += [f"tell s to set n to make new text item with properties {{object text:{q(d['paragraphs'])}}}",
                     f"set width of n to {d['width']!r}", "set h to height of n",
-                    f"set position of n to {{{d['x']!r}, {d['y']!r} - h / 2}}"]
+                    f"set p to {d['y']!r} - h / 2",
+                    'if p mod 1 is not 0 then error "inexact text box position"',
+                    f"set position of n to {{{d['x']!r}, p}}"]
     return out
 
 
@@ -108,6 +113,9 @@ def main():
   return "saved"
 end run'''
     r = subprocess.run(["osascript", "-", copy, token, saved], input=script, capture_output=True, text=True)
+    if "inexact text box position" in r.stderr:
+        print("AppleScript cannot place this plan's text box exactly (it rounds positions): needs a hand-built golden", file=sys.stderr)
+        raise SystemExit(4)
     if r.stdout.strip() != "saved" or not os.path.exists(saved):
         raise SystemExit(f"Keynote did not build the golden: {r.stderr.strip() or r.stdout.strip()}")
     if os.path.exists(out): shutil.rmtree(out) if os.path.isdir(out) else os.remove(out)

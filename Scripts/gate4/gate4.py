@@ -39,6 +39,7 @@ def main():
                 golden_deck = os.path.join(work, f"golden{n}.key")
                 g = subprocess.run(["python3", "-I", "Scripts/gate4/golden.py", plan, template, golden_deck], capture_output=True, text=True)
                 if g.returncode == 3: raise RuntimeError("needs a hand-built golden (sub-bullets): " + hand)
+                if g.returncode == 4: raise RuntimeError("needs a hand-built golden (AppleScript cannot place its text box exactly): " + hand)
                 if g.returncode != 0: raise RuntimeError(f"golden: {g.stderr.strip() or g.stdout.strip()}")
             gv = oracle(golden_deck, os.path.join(work, f"golden{n}"))
             if not gv["pass"]: raise RuntimeError(f"the golden does not pass the oracle: {gv}")
