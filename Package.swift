@@ -38,7 +38,7 @@ let package = Package(
             resources: [.copy("Registry")]),
         .target(
             name: "KeynoteGraph",
-            dependencies: ["IWAArchive", "IWASchema", "IWAContainer"]),
+            dependencies: ["IWAArchive", "IWASchema", "IWAContainer", .product(name: "SwiftProtobuf", package: "swift-protobuf")]),
         .target(
             name: "DeckMonkey",
             dependencies: ["KeynoteGraph", "IWAArchive", "IWAContainer", "IWASnappy", .product(name: "Rostrum", package: "rostrum")]),
@@ -51,7 +51,9 @@ let package = Package(
         .testTarget(
             name: "IWAContainerTests",
             dependencies: ["IWAContainer", .product(name: "Rostrum", package: "rostrum")]),
-        .testTarget(name: "KeynoteGraphTests", dependencies: ["KeynoteGraph", "IWAArchive", "IWASnappy", "IWAContainer"]),
+        .testTarget(
+            name: "KeynoteGraphTests",
+            dependencies: ["KeynoteGraph", "IWAArchive", "IWASnappy", "IWAContainer", "IWASchema", .product(name: "SwiftProtobuf", package: "swift-protobuf")]),
         // Fixtures are read through #filePath, not Bundle.module, so they are excluded, not copied.
         .testTarget(name: "DeckMonkeyTests", dependencies: ["DeckMonkey", "IWASnappy"], exclude: ["Fixtures"]),
     ],

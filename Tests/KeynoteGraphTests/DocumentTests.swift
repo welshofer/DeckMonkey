@@ -2,6 +2,8 @@ import Foundation
 import IWAArchive
 import IWAContainer
 import IWASnappy
+import IWASchema
+import SwiftProtobuf
 import Testing
 @testable import KeynoteGraph
 
@@ -130,6 +132,30 @@ struct DocumentTests {
         #expect(!FileManager.default.fileExists(atPath: out.path))
     }
 
+    @Test("reference derivation: every TSP.Reference and TSP.DataReference in a decoded payload, in traversal order")
+    func deriveReferences() throws {
+        // KN.SlideNodeArchive (type 4): children and slide are references, thumbnails data refs.
+        var node = KN_SlideNodeArchive()
+        node.isSkipped = false
+        node.hasBuilds_p = false       // protoc-gen-swift escapes has-prefixed field names
+        node.hasTransition_p = false
+        node.children = [TSP_Reference.with { $0.identifier = 30 }, TSP_Reference.with { $0.identifier = 31 }]
+        node.slide = TSP_Reference.with { $0.identifier = 40 }
+        node.thumbnails = [TSP_DataReference.with { $0.identifier = 7 }, TSP_DataReference.with { $0.identifier = 7 }]
+        let derived = try ReferenceDerivation.derive(type: 4, payload: try node.serializedData())
+        #expect(derived.objects == [30, 31, 40])
+        #expect(derived.objectFields == ["KN.SlideNodeArchive.1", "KN.SlideNodeArchive.1", "KN.SlideNodeArchive.2"])
+        #expect(derived.data == [7, 7])
+        #expect(!derived.hasUnknownFields)
+
+        #expect(throws: ReferenceDerivation.Failure.noMessage(type: 6219)) {
+            try ReferenceDerivation.derive(type: 6219, payload: Data())
+        }
+        #expect(throws: ReferenceDerivation.Failure.self) {
+            try ReferenceDerivation.derive(type: 4, payload: Data([0x0A, 0x05, 0x08]))   // truncated child
+        }
+    }
+
     // First CLI contact: a truncated deck printed only `error: truncated(at: 4)`.
     @Test("a truncated .iwa names its component and the decompress stage")
     func truncatedComponentIsNamed() throws {
@@ -218,6 +244,63 @@ struct CorpusTests {
             + "\(deprecated.count) declared deprecated (\(deprecated.sorted().map(String.init).joined(separator: ", "))), \(unresolved.count) unresolved"
             + unresolved.sorted().map { "\n      type \($0) ×\(seen[$0]!)" }.joined())
         #expect(unresolved.isEmpty)
+    }
+
+    /// What the corpus proves about Keynote's reference lists (28 decks, 54,348 typed payloads):
+    /// - every payload with a message decodes under the 15.4 schema, with no unknown fields;
+    /// - data_references are exactly the set of derived TSP.DataReference ids, minus 0 (the null
+    ///   sentinel: six TSD image payloads carry one) — AT-08;
+    /// - object_references are always a subset of the derived TSP.Reference ids, never equal by
+    ///   rule: Keynote lists strong references only. 179 reference fields are always listed, 17 never
+    ///   (parent and owner back-pointers, UI state), 5 are mixed — so AT-07 as written in spec §14
+    ///   does not hold and its reformulation is an open design question (see CLAUDE.md);
+    /// - every listed reference resolves; every dangling one (807) is unlisted — AT-06 holds for the
+    ///   strong references, and Keynote's own files carry dangling weak ones.
+    @Test("AT-06/07/08: derived references against Keynote's stored lists", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus: set DECKMONKEY_CORPUS, write .deckmonkey-corpus, or add decks under Corpus/"))
+    func corpusReferences() throws {
+        var payloads = 0, deprecated = 0, objectListsEqual = 0, danglingWeak = 0
+        var failures = [String]()
+        func fail(_ message: String) { if failures.count < 20 { failures.append(message) } }
+        for url in CorpusTests.corpusFiles() {
+            guard let document = try? KeynoteDocument.open(url) else { continue }
+            for component in document.store.components {
+                for record in component.records {
+                    for (i, info) in record.info.messageInfos.enumerated() where info.baseMessageIndex == nil {
+                        let label = "\(url.lastPathComponent) object \(record.identifier) type \(info.type)"
+                        let derived: DerivedReferences
+                        do {
+                            derived = try ReferenceDerivation.derive(type: info.type, payload: record.payloads[i])
+                        } catch .noMessage {
+                            deprecated += 1
+                            continue
+                        } catch {
+                            fail("\(label): \(error)")
+                            continue
+                        }
+                        payloads += 1
+                        if derived.hasUnknownFields { fail("\(label): unknown fields under the pinned schema") }
+                        // AT-08
+                        if Set(info.dataReferences) != Set(derived.data).subtracting([0]) {
+                            fail("\(label): data_references \(info.dataReferences), derived \(derived.data)")
+                        }
+                        // AT-07 as measured: Keynote never lists a reference the payload does not hold.
+                        let listed = Set(info.objectReferences)
+                        if !listed.isSubset(of: derived.objects) {
+                            fail("\(label): lists \(listed.subtracting(derived.objects).sorted()) not in the payload")
+                        }
+                        if listed == Set(derived.objects) { objectListsEqual += 1 }
+                        // AT-06 for strong references; weak ones may dangle in Keynote's own files.
+                        for ref in derived.objects where document.store.entry(for: ref) == nil {
+                            if listed.contains(ref) { fail("\(label): listed reference \(ref) is dangling") } else { danglingWeak += 1 }
+                        }
+                    }
+                }
+            }
+        }
+        print("references: \(payloads) typed payloads (+\(deprecated) deprecated-type), object lists equal to the derived set: "
+            + "\(objectListsEqual), strict subset: \(payloads - objectListsEqual); dangling weak references: \(danglingWeak)")
+        failures.forEach { print("  FAIL \($0)") }
+        #expect(failures.isEmpty)
     }
 
     @Test("AT-09: every corpus file opens, validates, and round-trips clean", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus: set DECKMONKEY_CORPUS, write .deckmonkey-corpus, or add decks under Corpus/"))
