@@ -138,6 +138,48 @@ public struct ReferenceRewriter: Sendable {
     }
 
     /// A `TSP.Reference` or `TSP.DataReference`: field 1 is the identifier.
+    /// Every internal owner identifier in a payload (the uint32 owner fields of `TSCE.*`, packed or
+    /// not, at any depth). Needs `ownerIDs` non-empty, which selects the fields.
+    public func ownerIdentifiers(in payload: Data, message: String) throws -> Set<UInt64> {
+        var out = Set<UInt64>()
+        try collectOwners([UInt8](payload)[...], message: message, depth: 0, into: &out)
+        return out
+    }
+
+    func collectOwners(_ b: ArraySlice<UInt8>, message: String, depth: Int, into out: inout Set<UInt64>) throws {
+        guard depth <= Self.maximumDepth else { throw Failure.tooDeep }
+        var i = b.startIndex
+        while i < b.endIndex {
+            guard let (tag, afterTag) = Self.varint(b, i) else { throw Failure.malformed(at: i - b.startIndex) }
+            let number = Int(tag >> 3), owner = ownerIDFields[message]?.contains(number) == true
+            switch tag & 7 {
+            case 0:
+                guard let (value, next) = Self.varint(b, afterTag) else { throw Failure.malformed(at: afterTag - b.startIndex) }
+                if owner { out.insert(value) }
+                i = next
+            case 2:
+                guard let (length, bodyStart) = Self.varint(b, afterTag), length <= UInt64(b.endIndex - bodyStart) else {
+                    throw Failure.malformed(at: afterTag - b.startIndex)
+                }
+                let body = b[bodyStart..<(bodyStart + Int(length))]
+                if owner {
+                    var j = body.startIndex
+                    while j < body.endIndex {
+                        guard let (value, next) = Self.varint(body, j) else { throw Failure.malformed(at: j - b.startIndex) }
+                        out.insert(value)
+                        j = next
+                    }
+                } else if let sub = index.subMessage(of: message, field: number) {
+                    try collectOwners(body, message: sub, depth: depth + 1, into: &out)
+                }
+                i = body.endIndex
+            default:
+                guard let end = Self.fieldEnd(b, tag: tag, afterTag: afterTag) else { throw Failure.groups }
+                i = end
+            }
+        }
+    }
+
     func rewriteReference(_ b: ArraySlice<UInt8>, _ identifiers: [UInt64: UInt64]) -> [UInt8]? {
         var out = [UInt8](), changed = false, i = b.startIndex
         while i < b.endIndex, let (tag, afterTag) = Self.varint(b, i) {

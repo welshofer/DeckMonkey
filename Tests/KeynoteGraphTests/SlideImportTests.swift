@@ -41,11 +41,13 @@ struct SlideImportTests {
                         case .unmatchedStyles: reason = "unmatched styles"
                         case .unmatchedMaster: reason = "unmatched master"
                         case .ambiguousMaster: reason = "ambiguous master"
-                        case .unsupportedContent: reason = "tables, charts or builds"
+                        case .unsupportedContent: reason = "builds"
                         case .unsupportedReference(let type): reason = "no rule for \(type)"
                         case .noStylesheet, .unplaceable: reason = "\(failure)"
                         }
                         refused[reason, default: 0] += 1
+                    } catch let failure as TableRegistration.Failure {
+                        refused["\(failure)".hasPrefix("table") ? "cross-table formulas" : "\(failure)", default: 0] += 1
                     } catch {
                         fail("\(url.lastPathComponent) #\(i): \(error)")
                     }

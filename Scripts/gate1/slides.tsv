@@ -45,3 +45,9 @@ Corpus/templates/basic-black_wide.key	import 2 Corpus/templates/minimalist-dark_
 Corpus/templates/basic-black_wide.key	import 4 Corpus/templates/academy_wide.key	AT-20
 Corpus/templates/basic-black_wide.key	import 5 Corpus/templates/kyoto_wide.key	AT-20
 Corpus/templates/basic-black_wide.key	import 6 Corpus/templates/photo-essay_wide.key	AT-20
+Corpus/templates/basic-black_wide.key	import 0 Corpus/features/tables.key	AT-20
+Corpus/templates/basic-black_wide.key	import 1 Corpus/features/tables.key	AT-20
+Corpus/templates/basic-black_wide.key	import 1 Corpus/features/charts.key	AT-20
+Corpus/templates/basic-black_wide.key	import 16 Corpus/features/charts.key	AT-20
+Corpus/templates/basic-black_wide.key	import 0 Corpus/features/mixed.key	AT-20
+Corpus/templates/basic-black_wide.key	import 0 Corpus/features/cross-table.key	AT-20

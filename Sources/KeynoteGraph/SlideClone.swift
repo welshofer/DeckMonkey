@@ -108,58 +108,11 @@ extension KeynoteDocument {
                 })
             }
         }
-        var families = [ReferenceRewriter.UUIDFamily]()
-        var engineCopies = [UInt64]()                                      // dependency records and their tiles
-        var tableIDs = [UInt64: String]()                                 // copied model → new table_id
-        for id in copied where store.record(for: id)?.info.messageInfos.first?.type == Self.tableModelType {
-            guard let model = decoded(TST_TableModelArchive.self, id), let old = Self.uuidValue(model.tableID) else { continue }
-            let uuid = Foundation.UUID()
-            guard let new = Self.uuidValue(uuid.uuidString) else { continue }
-            families.append(.init(old: old, new: new, span: Self.ownerFamilySpan))
-            tableIDs[id] = uuid.uuidString
-        }
-        // The copied tables' formula owners, registered as Keynote's duplicate registers them: each
-        // owner-ID map entry of a source family gets a twin at the new UUID under a fresh internal
-        // identifier; each dependency record of the family (and the tiles only it holds) is copied
-        // into the engine's component with UUIDs and internal identifiers moved; the family's
-        // UUID-map entries are copied too.
-        func uuidOf(_ o: TSP_CFUUIDArchive) -> ReferenceRewriter.UUIDValue {
-            .init(lower: UInt64(o.uuidW1) << 32 | UInt64(o.uuidW0), upper: UInt64(o.uuidW3) << 32 | UInt64(o.uuidW2))
-        }
-        func inFamily(_ u: ReferenceRewriter.UUIDValue) -> Bool {
-            families.contains { u.upper == $0.old.upper && u.lower >= $0.old.lower && u.lower - $0.old.lower < $0.span }
-        }
-        var engineID: UInt64?, engine: TSCE_CalculationEngineArchive?
-        var ownerIDs = [UInt64: UInt64](), copiedDependencies = [UInt64]()
-        if !families.isEmpty {
-            guard let id = store.identifiers.first(where: { store.record(for: $0)?.info.messageInfos.first?.type == Self.calculationEngineType }),
-                  let e = decoded(TSCE_CalculationEngineArchive.self, id) else {
-                throw SlideEditFailure.unsupportedTree("a table without a calculation engine")
-            }
-            engineID = id; engine = e
-            let map = e.dependencyTracker.ownerIDMap
-            var next = UInt64((map.mapEntry.map(\.internalOwnerID) + map.unregisteredInternalOwnerID).max() ?? 0) + 1
-            for entry in map.mapEntry where inFamily(uuidOf(entry.ownerID)) {
-                guard next <= UInt64(UInt32.max) else { throw SlideCloneFailure.ownerIdentifiersExhausted }
-                ownerIDs[UInt64(entry.internalOwnerID)] = next
-                next += 1
-            }
-            var roots = Set<UInt64>()
-            for ref in e.dependencyTracker.formulaOwnerDependencies {
-                guard let d = decoded(TSCE_FormulaOwnerDependenciesArchive.self, ref.identifier) else { continue }
-                let owner = ReferenceRewriter.UUIDValue(lower: d.formulaOwnerUid.lower, upper: d.formulaOwnerUid.upper)
-                if inFamily(owner) || (d.hasBaseOwnerUid && inFamily(.init(lower: d.baseOwnerUid.lower, upper: d.baseOwnerUid.upper))) {
-                    roots.insert(ref.identifier)
-                    copiedDependencies.append(ref.identifier)
-                }
-            }
-            for id in heldOnly(by: roots, referrers: referrerIndex(), keeping: [showID, id]).sorted() where identifiers[id] == nil {
-                identifiers[id] = allocator.allocate()
-                engineCopies.append(id)
-            }
-        }
+        // The copied tables, registered with the calculation engine (TableRegistration).
+        let tables = try TableRegistration.plan(source: self, target: self, copied: copied, keeping: [showID], strict: false,
+                                                identifiers: &identifiers, allocator: &allocator)
         let rewriter = ReferenceRewriter(index: try FieldIndex.load(version: TypeRegistry.pinnedVersion), identifiers: identifiers, uuids: uuids,
-                                         families: families, ownerIDs: ownerIDs)
+                                         families: tables.families, ownerIDs: tables.ownerIDs)
 
         func copy(_ record: ArchiveRecord) throws -> ArchiveRecord {
             var info = record.info
@@ -168,11 +121,7 @@ extension KeynoteDocument {
             for (i, m) in info.messageInfos.enumerated() where i < payloads.count {
                 if m.baseMessageIndex == nil, let type = Schema.messageType(for: m.type) {
                     payloads[i] = try rewriter.rewrite(payloads[i], message: type.protoMessageName)
-                    if i == 0, let tableID = tableIDs[record.identifier] {
-                        var model = try TST_TableModelArchive(serializedBytes: payloads[i], extensions: Schema.extensions, partial: true)
-                        model.tableID = tableID
-                        payloads[i] = try model.serializedData(partial: true)
-                    }
+                    if i == 0 { payloads[i] = try tables.withTableID(payloads[i], record: record.identifier) }
                 }
                 info.messageInfos[i] = try Self.remapped(m, identifiers: identifiers, length: UInt32(payloads[i].count))
             }
@@ -215,32 +164,8 @@ extension KeynoteDocument {
             }
         }
 
-        if let engineID, var engine {
-            for id in engineCopies {
-                guard let record = store.record(for: id), let home = store.entry(for: id)?.component else { continue }
-                store.append(try copy(record), to: home)
-            }
-            for id in copiedDependencies {
-                engine.dependencyTracker.formulaOwnerDependencies.append(TSP_Reference.with { $0.identifier = identifiers[id]! })
-            }
-            var added = [TSCE_OwnerIDMapArchive.OwnerIDMapArchiveEntry]()
-            for entry in engine.dependencyTracker.ownerIDMap.mapEntry {
-                guard let newInternal = ownerIDs[UInt64(entry.internalOwnerID)], let new = rewriter.mapped(uuidOf(entry.ownerID)) else { continue }
-                added.append(.with {
-                    $0.internalOwnerID = UInt32(truncatingIfNeeded: newInternal)      // ≤ UInt32.max, checked above
-                    $0.ownerID = TSP_CFUUIDArchive.with {
-                        $0.uuidW0 = UInt32(truncatingIfNeeded: new.lower); $0.uuidW1 = UInt32(truncatingIfNeeded: new.lower >> 32)
-                        $0.uuidW2 = UInt32(truncatingIfNeeded: new.upper); $0.uuidW3 = UInt32(truncatingIfNeeded: new.upper >> 32)
-                    }
-                })
-            }
-            engine.dependencyTracker.ownerIDMap.mapEntry += added
-            for refs in engine.uuidReferenceMap.cellRefsForUuid where inFamily(.init(lower: refs.uuid.lower, upper: refs.uuid.upper)) {
-                let moved = try rewriter.rewrite(try refs.serializedData(partial: true), message: "TSCE.UuidReferenceMapArchive.CellRefsForUuid")
-                engine.uuidReferenceMap.cellRefsForUuid.append(try TSCE_UuidReferenceMapArchive.CellRefsForUuid(serializedBytes: moved, partial: true))
-            }
-            try replacePayload(of: engineID, with: try engine.serializedData(partial: true))
-        }
+        let snapshot = self
+        try tables.apply(to: &self, source: snapshot, rewriter: rewriter, identifiers: identifiers, copy: copy)
 
         show.slideTree.slides.insert(TSP_Reference.with { $0.identifier = newNode }, at: insertAt)
         try replacePayload(of: showID, with: try show.serializedData(partial: true))

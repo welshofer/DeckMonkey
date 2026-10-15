@@ -18,7 +18,7 @@ Pinned to Keynote 15.4 (7051.0.79). Every gate below is checked against Keynote 
 | 1 Text | find and replace text, offset tables remapped, overlapping hyperlinks removed and reported | Gate 1 passed: 25/25 |
 | 2 Media | replace images (PNG, JPEG, GIF, TIFF), movies and audio; no orphaned data | macOS 12/12 (the iPad oracle, AT-27, is not built) |
 | 3a Slides | move, delete and duplicate slides within a deck | Gate 3a passed: 30/30 |
-| 3b Import | copy a slide from another deck, restyled to this deck's theme (styles and masters by reference; refuses on no match) | 8/8 oracle cases; tables and charts not yet |
+| 3b Import | copy a slide from another deck, restyled to this deck's theme (styles, masters and presets by reference; refuses on no match), tables and charts included | 14/14 oracle cases |
 | 4, 5 | new drawables and Deck IR, builds and transitions | not started |
 
 ## Command line

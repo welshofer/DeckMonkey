@@ -20,10 +20,13 @@ import SwiftProtobuf
 ///
 /// The slide's data (images, movies, audio) comes along under new data identifiers, sharing data
 /// this deck already holds with the same digest. The copy therefore takes on this deck's theme, as
-/// a slide pasted into a deck with another theme does when the styles match. Refused for now: slides
-/// with tables or charts (their presets and the calculation engine need a mapping of their own) and
-/// builds, and any outside reference of a kind no rule covers.
+/// a slide pasted into a deck with another theme does when the styles match. Tables and charts take
+/// this theme's preset of the same slot (`learnPresets`), and a table is registered with this
+/// deck's calculation engine (`TableRegistration`, strict: a table whose formulas read another
+/// table is refused). Refused for now: builds, and any outside reference of a kind no rule covers.
 extension KeynoteDocument {
+    static let objectContainerType: UInt32 = 11008, objectContainerIdentifier: UInt64 = 61
+
     public struct SlideImportReport: Equatable, Sendable {
         public var source: UInt64
         public var slide: UInt64
@@ -51,7 +54,7 @@ extension KeynoteDocument {
                 return "this deck has no match for \(styles.count) style(s) the slide uses: \(styles.joined(separator: ", ")); no styles are created (invariant 6)"
             case .unmatchedMaster(let name): return "this deck has no master named “\(name)”"
             case .ambiguousMaster(let name): return "this deck has more than one master named “\(name)”"
-            case .unsupportedContent(let slide, let type): return "slide \(slide) holds \(type); Phase 3b imports slides without tables, charts or builds"
+            case .unsupportedContent(let slide, let type): return "slide \(slide) holds \(type); Phase 3b imports slides without builds"
             case .unsupportedReference(let type): return "the slide references a \(type) outside itself, which Phase 3b has no rule to map"
             case .noStylesheet: return "this deck has no document stylesheet"
             case .unplaceable(let component): return "this deck has no component \(component) to hold the copy's objects"
@@ -84,7 +87,7 @@ extension KeynoteDocument {
             guard let record = source.store.record(for: id) else { continue }
             for info in record.info.messageInfos where info.baseMessageIndex == nil {
                 let name = source.registry?.name(for: info.type) ?? ""
-                if name.hasPrefix("TST.") || name.hasPrefix("TSCH.") || name.hasPrefix("TSCE.") || name.contains("Build") {
+                if (name.hasPrefix("TSCE.") && name != "TSCE.TrackedReferenceStoreArchive") || name.contains("Build") {
                     throw SlideImportFailure.unsupportedContent(slide: entry.slide, type: name)
                 }
             }
@@ -98,10 +101,16 @@ extension KeynoteDocument {
         for id in copied.sorted() where identifiers[id] == nil { identifiers[id] = allocator.allocate() }
 
         // Every reference leaving the copy, re-pointed at this deck.
+        // Tables among the copies, registered with this deck's calculation engine; their dependency
+        // records may name no owner outside their own table (strict).
+        let tables = try TableRegistration.plan(source: source, target: self, copied: copied, keeping: [sourceShow], strict: true,
+                                                identifiers: &identifiers, allocator: &allocator)
+
         var resolver = try ForeignResolver(target: self)
         resolver.learnVariations(from: source)
+        resolver.learnPresets(from: source)
         var unmatched = [String](), mapped = 0
-        for id in copied.sorted() {
+        for id in copied.union(tables.engineCopies).sorted() {
             guard let record = source.store.record(for: id) else { continue }
             for (i, info) in record.info.messageInfos.enumerated() where info.baseMessageIndex == nil && i < record.payloads.count {
                 guard let derived = try? ReferenceDerivation.derive(type: info.type, payload: record.payloads[i]) else { continue }
@@ -180,7 +189,7 @@ extension KeynoteDocument {
         }
 
         let rewriter = ReferenceRewriter(index: try FieldIndex.load(version: TypeRegistry.pinnedVersion), identifiers: identifiers, uuids: uuids,
-                                         dataIdentifiers: dataIdentifiers)
+                                         families: tables.families, ownerIDs: tables.ownerIDs, dataIdentifiers: dataIdentifiers)
         func copy(_ record: ArchiveRecord) throws -> ArchiveRecord {
             var info = record.info
             info.setIdentifier(identifiers[record.identifier]!)
@@ -188,6 +197,7 @@ extension KeynoteDocument {
             for (i, m) in info.messageInfos.enumerated() where i < payloads.count {
                 if m.baseMessageIndex == nil, let type = Schema.messageType(for: m.type) {
                     payloads[i] = try rewriter.rewrite(payloads[i], message: type.protoMessageName)
+                    if i == 0 { payloads[i] = try tables.withTableID(payloads[i], record: record.identifier) }
                 }
                 info.messageInfos[i] = try Self.remapped(m, identifiers: identifiers, dataIdentifiers: dataIdentifiers, length: UInt32(payloads[i].count))
             }
@@ -205,6 +215,7 @@ extension KeynoteDocument {
             throw SlideCloneFailure.noComponentInfo(entry.component)
         }
         var placements = [(record: ArchiveRecord, component: String, info: TSP_ComponentInfo?)]()
+        var newComponentInfos = [TSP_ComponentInfo]()
         for id in copied.subtracting(roots).sorted() {
             guard let record = source.store.record(for: id), let home = source.store.entry(for: id)?.component,
                   let records = source.store.records(in: home) else { continue }
@@ -218,15 +229,58 @@ extension KeynoteDocument {
                 own.dataReferences = []
                 placements.append((try copy(record), "Index/\(own.locator).iwa", own))
             } else {
-                guard store.records(in: home) != nil else { throw SlideImportFailure.unplaceable(home) }
+                guard store.records(in: home) != nil || records.contains(where: { $0.info.messageInfos.first?.type == Self.objectContainerType }) else {
+                    throw SlideImportFailure.unplaceable(home)
+                }
                 placements.append((try copy(record), home, nil))
             }
+        }
+        // An object container (charts keep their non-style archives in one: a component whose root
+        // TSP.ObjectContainer lists its objects) gains the copies; this deck gets one, copied from
+        // the source's, when it has none.
+        var containers = [String: TSP_ObjectContainer]()               // component → its container, updated
+        var containerIDs = [String: UInt64]()
+        for p in placements where p.info == nil {
+            if containers[p.component] == nil {
+                if let records = store.records(in: p.component),
+                   let root = records.first(where: { $0.info.messageInfos.first?.type == Self.objectContainerType }),
+                   let container = decoded(TSP_ObjectContainer.self, root.identifier) {
+                    containers[p.component] = container
+                    containerIDs[p.component] = root.identifier
+                } else if store.records(in: p.component) == nil,
+                          let root = source.store.records(in: p.component)?.first(where: { $0.info.messageInfos.first?.type == Self.objectContainerType }),
+                          var container = source.decoded(TSP_ObjectContainer.self, root.identifier),
+                          var own = sourceMetadata.components.first(where: { "Index/\(locatorOf($0)).iwa" == p.component }) {
+                    // Keynote's object container is always object 61 (as the document is 1 and the
+                    // package metadata 2); a fresh identifier makes Keynote rewrite the deck on read.
+                    let id = store.entry(for: Self.objectContainerIdentifier) == nil ? Self.objectContainerIdentifier : allocator.allocate()
+                    container.objects = []
+                    var info = root.info
+                    info.setIdentifier(id)
+                    let payload = try container.serializedData(partial: true)
+                    info.messageInfos[0] = try Self.remapped(info.messageInfos[0], identifiers: [:], length: UInt32(payload.count))
+                    store.addComponent(p.component, records: [ArchiveRecord(info: info, payloads: [payload], isDirty: true)])
+                    own.identifier = id
+                    own.objectUuidMapEntries = []
+                    own.externalReferences = []
+                    own.dataReferences = []
+                    newComponentInfos.append(own)
+                    containers[p.component] = container
+                    containerIDs[p.component] = id
+                }
+            }
+            containers[p.component]?.objects.append(TSP_Reference.with { $0.identifier = p.record.identifier })
         }
         store.addComponent(newComponent, records: try sourceRecords.map(copy))
         store.append(try copy(nodeRecord), to: nodeComponent)
         for p in placements {
             if p.info != nil { store.addComponent(p.component, records: [p.record]) } else { store.append(p.record, to: p.component) }
         }
+        for (component, container) in containers {
+            if let id = containerIDs[component] { try replacePayload(of: id, with: try container.serializedData(partial: true)) }
+        }
+
+        try tables.apply(to: &self, source: source, rewriter: rewriter, identifiers: identifiers, copy: copy)
 
         if !dataMetadata.isEmpty, let mapID = metadata.hasDataMetadataMap ? metadata.dataMetadataMap.identifier : nil,
            var map = decoded(TSP_DataMetadataMap.self, mapID), let home = store.entry(for: mapID)?.component {
@@ -249,7 +303,7 @@ extension KeynoteDocument {
         info.externalReferences = []
         info.dataReferences = []
         metadata.components.append(info)
-        metadata.components += placements.compactMap(\.info)
+        metadata.components += placements.compactMap(\.info) + newComponentInfos
         let nodeLocator = String(nodeComponent.dropFirst("Index/".count).dropLast(".iwa".count))
         for p in placements where p.info == nil {
             let locator = String(p.component.dropFirst("Index/".count).dropLast(".iwa".count))
@@ -285,9 +339,12 @@ struct ForeignResolver {
     /// Source style → this deck's style, for the anonymous variations a master's placeholders use
     /// (filled by `learnVariations`).
     var variations = [UInt64: UInt64]()
+    /// Source object → this deck's object at the same preset position (`learnPresets`): presets
+    /// and the unnamed styles under them.
+    var presets = [UInt64: UInt64]()
     var variationsByParent = [UInt64: [UInt64]]()                 // this deck: parent → variations
 
-    static let slideType: UInt32 = 5, placeholderType: UInt32 = 7, stylesheetType: UInt32 = 401
+    static let slideType: UInt32 = 5, placeholderType: UInt32 = 7, themeType: UInt32 = 10, stylesheetType: UInt32 = 401
 
     init(target: KeynoteDocument) throws {
         self.target = target
@@ -324,10 +381,20 @@ struct ForeignResolver {
             guard found.count == 1 else { throw KeynoteDocument.SlideImportFailure.ambiguousMaster(slide.name) }
             return .found(found[0])
         }
-        guard let style = Self.styleSuper(record) else { throw KeynoteDocument.SlideImportFailure.unsupportedReference(type: typeName) }
+        guard let style = Self.styleSuper(record) else {
+            if let found = presets[id] { return .found(found) }                   // a preset
+            throw KeynoteDocument.SlideImportFailure.unsupportedReference(type: typeName)
+        }
         if style.hasStyleIdentifier, let found = byIdentifier[type]?[style.styleIdentifier], found.count == 1 { return .found(found[0]) }
         if style.hasName, let found = byName[type]?[style.name], found.count == 1 { return .found(found[0]) }
+        // The style the counterpart in this deck's same-named master uses for the same role: a match
+        // by role, for any style (Kyoto's title placeholder style "Title Alt" → this master's title
+        // style).
         if let found = variations[id] { return .found(found) }
+        // The style at the same preset position stands in only for an unnamed style (anonymous, or
+        // with only an internal identifier such as a chart preset's "chart-0-paragraphStyle_20"):
+        // position is weaker evidence than a name or a role.
+        if !style.hasName, let found = presets[id] { return .found(found) }
         // A variation this deck holds too: same type, the counterpart parent, the same bytes once
         // its parent and stylesheet are re-pointed here.
         if style.isVariation, style.hasParent, case .found(let parent)? = try? resolve(style.parent.identifier, in: source),
@@ -399,6 +466,45 @@ struct ForeignResolver {
         }
         for (style, counts) in votes {
             variations[style] = counts.max { ($0.value, $1.key) < ($1.value, $0.key) }!.key
+        }
+    }
+
+    /// Presets and the anonymous styles under them, learned from the themes: every Apple theme lists
+    /// the same preset slots (six table, six chart, … presets), so the source theme's presets pair
+    /// with this deck's by field and position, and everything under a pair (a table preset's style
+    /// network and its cell, table and paragraph styles; a chart preset's chart, legend, axis and
+    /// series styles) pairs field by field in order, recursively, objects of the same type only.
+    /// A table or chart then takes on this theme's preset of the same slot.
+    mutating func learnPresets(from source: KeynoteDocument) {
+        func theme(_ d: KeynoteDocument) -> UInt64? {
+            d.store.identifiers.first { d.store.record(for: $0)?.info.messageInfos.first?.type == Self.themeType }
+        }
+        func references(_ d: KeynoteDocument, _ id: UInt64) -> [String: [UInt64]] {
+            guard let r = d.store.record(for: id), let derived = try? ReferenceDerivation.derive(type: r.info.messageInfos[0].type, payload: r.payloads[0]) else { return [:] }
+            var out = [String: [UInt64]]()
+            for (ref, field) in zip(derived.objects, derived.objectFields) { out[field, default: []].append(ref) }
+            return out
+        }
+        func type(_ d: KeynoteDocument, _ id: UInt64) -> UInt32? { d.store.record(for: id)?.info.messageInfos.first?.type }
+        guard let mine = theme(source), let theirs = theme(target) else { return }
+        var votes = [UInt64: [UInt64: Int]](), visited = Set<UInt64>()
+        func walk(_ a: UInt64, _ b: UInt64, depth: Int) {
+            guard depth < 8, type(source, a) != nil, type(source, a) == type(target, b) else { return }
+            votes[a, default: [:]][b, default: 0] += 1
+            guard visited.insert(a).inserted else { return }
+            let left = references(source, a), right = references(target, b)
+            for (field, refs) in left {
+                guard let others = right[field] else { continue }
+                for (x, y) in zip(refs, others) { walk(x, y, depth: depth + 1) }
+            }
+        }
+        let left = references(source, mine), right = references(target, theirs)
+        for (field, refs) in left where field.contains("PresetsArchive.") {
+            guard let others = right[field] else { continue }
+            for (x, y) in zip(refs, others) { walk(x, y, depth: 0) }
+        }
+        for (object, counts) in votes {
+            presets[object] = counts.max { ($0.value, $1.key) < ($1.value, $0.key) }!.key
         }
     }
 

@@ -177,12 +177,14 @@ table's calculation-engine owners go as a family: its `table_id` UUID is the bas
 others sit at a small offset in the low word, and sub-owners name it as `base_owner_uid`; their
 dependency records, owner-ID map entries and UUID-map entries are removed. Phase 3b (2026-10-15): `deckmonkey slide import <deck> --from <source> --index N` appends another
 deck's slide, re-pointing every outside reference at this deck's styles, masters and stylesheet
-(docs/spec.md §9); no match refuses, naming the styles. Anonymous placeholder and text-box
-variations map through master correspondence. Over the templates into Basic Black: 1,270 of 1,642
-slides import and validate; 309 refused for a master name the target lacks, 63 for unmatched
-styles. Gate 3 import cases: 8/8 (opens clean, target pages identical, re-save idempotent, the
-imported page carries the source's words, a same-theme import pixel-identical). Tables and charts
-are refused in 3b v1. Open: tables/charts across decks, builds, a master-name fallback.
+(docs/spec.md §9); no match refuses, naming the styles. Unnamed placeholder and text-box variations
+(and named styles the target lacks) map by role through same-named masters; tables and charts take
+the target theme's preset in the same slot; imported tables are registered with the target's
+calculation engine and recalculate there (AppleScript cell edit); a table whose formulas read
+another table is refused. A new object container must be object 61. Over the templates into Basic
+Black: 1,299 of 1,642 slides import and validate (309 refused for a master name the target lacks, 34
+for unmatched styles). Gate 3 import cases: 14/14 (templates of six themes, tables, charts, a mixed
+slide, a referenced table). Open: builds, a master-name fallback for the 309.
 
 Corpus at 150 (2026-10-15): four more feature decks (`cross-table`: a formula on one slide
 reading a table on another, which needs the slide-qualified `Slide 1::Inputs::B2`; `layouts`: every
