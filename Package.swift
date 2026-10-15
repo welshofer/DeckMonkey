@@ -49,7 +49,9 @@ let package = Package(
             name: "IWAContainerTests",
             dependencies: ["IWAContainer", .product(name: "Rostrum", package: "rostrum")]),
         .testTarget(name: "KeynoteGraphTests", dependencies: ["KeynoteGraph", "IWAArchive", "IWASnappy", "IWAContainer"]),
-        .testTarget(name: "DeckMonkeyTests", dependencies: ["DeckMonkey", "IWASnappy"]),
+        // Fixtures are read by path (#filePath), not through Bundle.module, so they are excluded
+        // rather than declared as resources.
+        .testTarget(name: "DeckMonkeyTests", dependencies: ["DeckMonkey", "IWASnappy"], exclude: ["Fixtures"]),
     ],
     swiftLanguageModes: [.v6]
 )
