@@ -159,7 +159,7 @@ refused.
 
 External references (2026-10-15): `PackageMetadata.components[].external_references` is re-derived
 at save for every changed component (`ExternalReferences.swift`): one entry per referenced object in
-another component, a component's root object stored as 0, `is_weak` only when every reference is
+another component, a component's root object stored with no object identifier (never an explicit 0), `is_weak` only when every reference is
 weak. A full refresh reproduces Keynote's metadata byte for byte in all 118 decks 15.4 alone saved
 (8 stale Keynote entries preserved, as invariant 2 asks).
 

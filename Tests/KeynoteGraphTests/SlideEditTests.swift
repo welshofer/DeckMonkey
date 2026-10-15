@@ -143,6 +143,9 @@ extension KeynoteDocument {
             if let missing = derived.first(where: { !stored.contains([$0.component, $0.object]) }) {
                 return "\(name) lacks external reference \(missing.component)/\(missing.object)"
             }
+            if c.externalReferences.contains(where: { $0.hasObjectIdentifier && $0.objectIdentifier == 0 }) {
+                return "\(name) has an external reference with an explicit object identifier 0"
+            }
             if let gone = c.externalReferences.first(where: { !names.contains($0.componentIdentifier) || ($0.objectIdentifier != 0 && store.entry(for: $0.objectIdentifier) == nil) }) {
                 return "\(name) keeps external reference \(gone.componentIdentifier)/\(gone.objectIdentifier) to nothing"
             }

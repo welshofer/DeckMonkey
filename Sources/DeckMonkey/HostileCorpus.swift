@@ -97,6 +97,24 @@ public enum HostileCorpus {
             }
             out.append(Case(name: "offset-past-text-length", expected: "textOffset", package: p))
         }
+
+        // External reference with an explicit object identifier 0: the spelling Keynote calls
+        // damaged (a reference to a component's root object leaves the identifier out).
+        do {
+            var p = base
+            try edit(&p, "Index/Metadata.iwa") { records in
+                guard let i = records.firstIndex(where: { $0.identifier == 2 }) else { return }
+                var metadata = try TSP_PackageMetadata(serializedBytes: records[i].payloads[0], extensions: Schema.extensions, partial: true)
+                guard let c = metadata.components.firstIndex(where: { $0.externalReferences.contains { !$0.hasObjectIdentifier } }),
+                      let e = metadata.components[c].externalReferences.firstIndex(where: { !$0.hasObjectIdentifier })
+                else { throw Failure.templateLacks("root-object external reference") }
+                metadata.components[c].externalReferences[e].objectIdentifier = 0
+                let payload = try metadata.serializedData(partial: true)
+                records[i].info.messageInfos[0].setLength(UInt32(payload.count))
+                records[i].payloads[0] = payload
+            }
+            out.append(Case(name: "external-reference-zero", expected: "externalReference", package: p))
+        }
         return out
     }
 

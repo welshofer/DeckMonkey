@@ -527,6 +527,7 @@ struct CorpusTests {
             for c in metadata.components {
                 let name = "Index/\(c.locator.isEmpty ? c.preferredLocator : c.locator).iwa"
                 let derived = Set(document.derivedExternalReferences(of: name, componentIDs: ids, strength: strength).map { [$0.component, $0.object] })
+                if c.externalReferences.contains(where: { $0.hasObjectIdentifier && $0.objectIdentifier == 0 }) { failures.append("\(url.lastPathComponent): Keynote wrote an explicit object identifier 0") }
                 stale += c.externalReferences.filter { !derived.contains([$0.componentIdentifier, $0.objectIdentifier]) }.count
             }
             for component in document.store.components {
@@ -552,7 +553,7 @@ struct CorpusTests {
         let dir = CorpusTests.repoRoot.appendingPathComponent("Corpus/hostile")
         let expected = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: dir.appendingPathComponent("expected.json")))
             .filter { !$0.key.hasPrefix("_") }
-        #expect(Set(expected.values) == ["duplicateIdentifier", "danglingObjectReference", "componentUnreadable", "unknownType", "textOffset"])
+        #expect(Set(expected.values) == ["duplicateIdentifier", "danglingObjectReference", "componentUnreadable", "unknownType", "textOffset", "externalReference"])
         for (file, error) in expected.sorted(by: { $0.key < $1.key }) {
             let url = dir.appendingPathComponent(file)
             let document: KeynoteDocument
@@ -763,6 +764,7 @@ struct CorpusTests {
                     case .textOffset: kind = "textOffset"
                     case .danglingDataReference: kind = "danglingDataReference"
                     case .componentList: kind = "componentList"
+                    case .externalReference: kind = "externalReference"
                     }
                     kinds[kind, default: 0] += 1
                 }

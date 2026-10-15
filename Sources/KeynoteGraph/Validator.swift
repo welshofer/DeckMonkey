@@ -21,6 +21,9 @@ public struct ValidationIssue: Equatable, Sendable, CustomStringConvertible {
         case danglingDataReference(from: UInt64, to: UInt64)
         /// A component file without a ComponentInfo, or a ComponentInfo without its file.
         case componentList(unlisted: [String], missing: [String])
+        /// An external reference to a component that is not listed, or one that spells a root
+        /// object reference as an explicit object identifier 0 (Keynote: "damaged").
+        case externalReference(component: UInt64, target: UInt64, object: UInt64?)
     }
 
     public let severity: Severity
@@ -42,6 +45,8 @@ public struct ValidationIssue: Equatable, Sendable, CustomStringConvertible {
             return "\(severity.rawValue): object \(from) references data \(to), which has no DataInfo"
         case .componentList(let unlisted, let missing):
             return "\(severity.rawValue): components not in PackageMetadata \(unlisted), listed but absent \(missing)"
+        case .externalReference(let component, let target, let object):
+            return "\(severity.rawValue): component \(component) has a malformed external reference to \(target)/\(object.map(String.init) ?? "root")"
         }
     }
 }
@@ -111,6 +116,15 @@ public enum Validator {
             if !listed.isEmpty, files != listed {
                 issues.append(ValidationIssue(severity: .error, kind: .componentList(
                     unlisted: files.subtracting(listed).sorted(), missing: listed.subtracting(files).sorted())))
+            }
+            // External references name a listed component, and a component's root object by
+            // leaving the object identifier out: Keynote reads an explicit 0 as a damaged file.
+            let components = Set(metadata.components.map(\.identifier))
+            for c in metadata.components {
+                for e in c.externalReferences where !components.contains(e.componentIdentifier) || (e.hasObjectIdentifier && e.objectIdentifier == 0) {
+                    issues.append(ValidationIssue(severity: .error, kind: .externalReference(
+                        component: c.identifier, target: e.componentIdentifier, object: e.hasObjectIdentifier ? e.objectIdentifier : nil)))
+                }
             }
             for d in metadata.datas {
                 if let name = d.storedFileName, document.package.data("Data/" + name) == nil {
