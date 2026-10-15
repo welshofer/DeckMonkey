@@ -155,8 +155,13 @@ media`, a caller-supplied poster for video), SHA-1 DataInfo, orphan removal, the
 index rebuilt at save. **Gate 2 on macOS: 12/12** (`Scripts/gate1/gate2.py`: four image formats,
 a rotated reflected image, theme photos, a movie, an audio clip). AT-27 (iPad oracle) needs an iOS
 runner that does not exist yet. Open: Keynote-edited images (kept originals, adjustments) are
-refused; `PackageMetadata.components[].external_references` is not yet re-derived (no edit so far
-changes a cross-component reference).
+refused.
+
+External references (2026-10-15): `PackageMetadata.components[].external_references` is re-derived
+at save for every changed component (`ExternalReferences.swift`): one entry per referenced object in
+another component, a component's root object stored as 0, `is_weak` only when every reference is
+weak. A full refresh reproduces Keynote's metadata byte for byte in all 118 decks 15.4 alone saved
+(8 stale Keynote entries preserved, as invariant 2 asks).
 
 Phase 3a (2026-10-15): `deckmonkey slide list | move | delete | clone`. Delete removes the slide's
 component and collects what only it kept alive (table and chart internals, their calculation-engine

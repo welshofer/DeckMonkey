@@ -103,7 +103,8 @@ extension KeynoteDocument {
         try replacePayload(of: showID, with: try show.serializedData(partial: true))
         metadata = packageMetadata ?? metadata
 
-        // The new component's ComponentInfo; the Document component's reference to it.
+        // The new component's ComponentInfo (its external references, and the Document
+        // component's reference to it, are re-derived at save).
         var info = sourceInfo
         info.identifier = newSlide
         info.locator = newLocator
@@ -117,12 +118,6 @@ extension KeynoteDocument {
         metadata.components.append(info)
         let nodeLocator = String(nodeComponent.dropFirst("Index/".count).dropLast(".iwa".count))
         if let d = metadata.components.firstIndex(where: { ($0.locator.isEmpty ? $0.preferredLocator : $0.locator) == nodeLocator }) {
-            if let toSource = metadata.components[d].externalReferences.first(where: { $0.componentIdentifier == sourceInfo.identifier }) {
-                var reference = toSource
-                reference.componentIdentifier = newSlide
-                if reference.hasObjectIdentifier { reference.objectIdentifier = identifiers[reference.objectIdentifier] ?? reference.objectIdentifier }
-                metadata.components[d].externalReferences.append(reference)
-            }
             if metadata.components[d].objectUuidMapEntries.contains(where: { $0.identifier == entry.node }) {
                 metadata.components[d].objectUuidMapEntries.append(TSP_ObjectUUIDMapEntry.with {
                     $0.identifier = newNode

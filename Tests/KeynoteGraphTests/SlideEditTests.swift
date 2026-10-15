@@ -28,6 +28,7 @@ struct SlideEditTests {
                 let after = try reread.slideList().map(\.slide)
                 if after != Array(list.dropFirst().map(\.slide)) + [list[0].slide] { fail("\(url.lastPathComponent): move order \(after)") }
                 if let e = reread.validate().first(where: { $0.severity == .error }) { fail("\(url.lastPathComponent) move: \(e)") }
+                if let e = reread.externalReferenceIssue() { fail("\(url.lastPathComponent) move: \(e)") }
                 moved += 1
             } catch {
                 fail("\(url.lastPathComponent) move: \(error)")
@@ -51,6 +52,7 @@ struct SlideEditTests {
                 if after != expected { fail("\(url.lastPathComponent): delete order") }
                 if reread.store.entry(for: list[victim].slide) != nil { fail("\(url.lastPathComponent): the deleted slide is still there") }
                 if let e = reread.validate().first(where: { $0.severity == .error }) { fail("\(url.lastPathComponent) delete: \(e)") }
+                if let e = reread.externalReferenceIssue() { fail("\(url.lastPathComponent) delete: \(e)") }
                 let m = try #require(reread.packageMetadata)
                 var referenced = Set<UInt64>()
                 for c in reread.store.components { for r in c.records { for i in r.info.messageInfos { referenced.formUnion(i.dataReferences) } } }
@@ -95,6 +97,7 @@ struct SlideEditTests {
                 try document.save(to: out)
                 let reread = try KeynoteDocument.open(out)
                 if let e = reread.validate().first(where: { $0.severity == .error }) { fail("\(url.lastPathComponent): \(e)") }
+                if let e = reread.externalReferenceIssue() { fail("\(url.lastPathComponent): \(e)") }
                 let after = try reread.slideList().map(\.slide)
                 if after.count != list.count + 1 || !after.contains(report.slide) { fail("\(url.lastPathComponent): slide list") }
                 let m = try #require(reread.packageMetadata)
@@ -123,5 +126,27 @@ struct SlideEditTests {
         #expect(throws: KeynoteDocument.SlideEditFailure.indexOutOfRange(9, count: 5)) { try document.moveSlide(from: 9, to: 0) }
         for _ in 0..<4 { try document.deleteSlide(at: 0) }
         #expect(throws: KeynoteDocument.SlideEditFailure.lastSlide) { try document.deleteSlide(at: 0) }
+    }
+}
+
+extension KeynoteDocument {
+    /// Nil when every component's `external_references` holds each reference the rule derives and
+    /// nothing whose target is gone.
+    func externalReferenceIssue() -> String? {
+        guard let metadata = packageMetadata, let strength = try? ReferenceStrength.load(version: TypeRegistry.pinnedVersion) else { return "no metadata" }
+        let ids = componentIdentifiers(metadata)
+        let names = Set(ids.values)
+        for c in metadata.components {
+            let name = "Index/\(c.locator.isEmpty ? c.preferredLocator : c.locator).iwa"
+            let stored = Set(c.externalReferences.map { [$0.componentIdentifier, $0.objectIdentifier] })
+            let derived = derivedExternalReferences(of: name, componentIDs: ids, strength: strength)
+            if let missing = derived.first(where: { !stored.contains([$0.component, $0.object]) }) {
+                return "\(name) lacks external reference \(missing.component)/\(missing.object)"
+            }
+            if let gone = c.externalReferences.first(where: { !names.contains($0.componentIdentifier) || ($0.objectIdentifier != 0 && store.entry(for: $0.objectIdentifier) == nil) }) {
+                return "\(name) keeps external reference \(gone.componentIdentifier)/\(gone.objectIdentifier) to nothing"
+            }
+        }
+        return nil
     }
 }

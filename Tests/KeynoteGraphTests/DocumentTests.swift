@@ -511,6 +511,41 @@ struct CorpusTests {
         #expect(failures.isEmpty)
     }
 
+    /// The external-reference rule (ExternalReferences.swift) against Keynote: in every deck 15.4
+    /// alone saved, marking every record changed and refreshing reproduces `PackageMetadata`
+    /// byte for byte — derived entries, Keynote's stale ones, order and `is_weak` encoding.
+    @Test("external_references: a full refresh reproduces Keynote's PackageMetadata in every 15.4 deck", .enabled(if: !CorpusTests.corpusFiles().isEmpty, "no corpus"))
+    func corpusExternalReferences() throws {
+        var decks = 0, stale = 0
+        var failures = [String]()
+        for url in CorpusTests.corpusFiles() {
+            guard var document = try? KeynoteDocument.open(url), document.authoredByPinnedKeynote,
+                  let metadata = document.packageMetadata else { continue }
+            decks += 1
+            let strength = try ReferenceStrength.load(version: TypeRegistry.pinnedVersion)
+            let ids = document.componentIdentifiers(metadata)
+            for c in metadata.components {
+                let name = "Index/\(c.locator.isEmpty ? c.preferredLocator : c.locator).iwa"
+                let derived = Set(document.derivedExternalReferences(of: name, componentIDs: ids, strength: strength).map { [$0.component, $0.object] })
+                stale += c.externalReferences.filter { !derived.contains([$0.componentIdentifier, $0.objectIdentifier]) }.count
+            }
+            for component in document.store.components {
+                for record in component.records where document.store.entry(for: record.identifier)?.component == component.name {
+                    document.store.replaceRecord(for: record.identifier, with: record)
+                }
+            }
+            try document.refreshExternalReferences()
+            if document.packageMetadata != metadata, failures.count < 10 {
+                let after = document.packageMetadata?.components ?? []
+                let diff = zip(metadata.components, after).first { $0.0 != $0.1 }
+                failures.append("\(url.lastPathComponent): \(diff.map { "\($0.0.locator) \($0.0.externalReferences.count) → \($0.1.externalReferences.count)" } ?? "component count")")
+            }
+        }
+        print("external references: \(decks) deck(s) reproduced by a full refresh, \(stale) stale Keynote entr(ies) preserved")
+        failures.forEach { print("  FAIL \($0)") }
+        #expect(failures.isEmpty)
+    }
+
     /// AT-26: every file in Corpus/hostile raises the error expected.json names, and writes nothing.
     @Test("AT-26: each Corpus/hostile file raises its named error and writes nothing", .enabled(if: FileManager.default.fileExists(atPath: CorpusTests.repoRoot.appendingPathComponent("Corpus/hostile/expected.json").path), "no Corpus/hostile: run `deckmonkey corpus hostile`"))
     func hostileCorpus() throws {

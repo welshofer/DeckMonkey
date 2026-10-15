@@ -192,14 +192,15 @@ public struct KeynoteDocument: Sendable {
     // MARK: Save
 
     /// Writes the document. Every component is re-joined from the store; untouched records are
-    /// emitted from their original bytes. The component data index is brought up to date for every
-    /// changed object first (invariant 4). Refuses on any validation issue.
+    /// emitted from their original bytes. The component data index and the external references of
+    /// every changed component are brought up to date first (invariant 4). Refuses on any validation issue.
     public func save(to url: URL, as form: IWAPackage.Form? = nil) throws {
         if let newer = writtenByNewerKeynote {
             throw KeynoteError.schemaNewerThanLibrary(fileBuild: newer, pinned: "\(TypeRegistry.pinnedVersion) (\(TypeRegistry.pinnedBuild))")
         }
         var document = self
         try document.refreshComponentDataIndex()
+        try document.refreshExternalReferences()
         try document.write(to: url, as: form)
     }
 
