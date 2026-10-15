@@ -167,9 +167,10 @@ Phase 3a (2026-10-15): `deckmonkey slide list | move | delete | clone`. Delete r
 component and collects what only it kept alive (table and chart internals, their calculation-engine
 dependency records); clone copies the component with fresh identifiers and UUIDs through the
 schema-driven ReferenceRewriter (complete on 686,910 corpus references) and refuses slides with
-tables, charts or builds. `Scripts/gate1/gate3.py`: 25/26 with every page pixel-identical and
-Keynote's re-save idempotent (AT-23, `Scripts/resave.sh`); the exception is deleting a slide that
-holds a table, after which Keynote's save rebuilds a few dependency records of the remaining tables
-(17 → 14). Open: cross-deck clone (3b), cloning tables/charts/builds, corpus ≥ 150 for Gate 3.
+tables, charts or builds. **Gate 3a passed 26/26** (`Scripts/gate1/gate3.py`, 2026-10-15) with every
+page pixel-identical and Keynote's re-save idempotent (AT-23, `Scripts/resave.sh`). A deleted
+table's calculation-engine owners go as a family: its `table_id` UUID is the base owner, the
+others sit at a small offset in the low word, and sub-owners name it as `base_owner_uid`; their
+dependency records, owner-ID map entries and UUID-map entries are removed. Open: cross-deck clone (3b), cloning tables/charts/builds, corpus ≥ 150 for Gate 3.
 
 Leave the machine alone while the oracle runs: input during a run fails the verdict ("rerun").

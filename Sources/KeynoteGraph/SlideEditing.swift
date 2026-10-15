@@ -131,10 +131,7 @@ extension KeynoteDocument {
         // The calculation engine tracks each formula owner (a table, a chart) through a dependency
         // record that names its owner; Keynote drops the records of owners that are gone. Drop them
         // from the tracker's list, then collect them and what only they kept alive (their tiles).
-        // Known limit: after deleting a table, Keynote's next save also rebuilds a few dependency
-        // records of the tables that remain (tables.key: 17 of ours become 14 of its own); the deck
-        // opens clean and renders identically, and that cache is Keynote's to maintain.
-        let calcEngineType: UInt32 = 4000, ownerDependenciesType: UInt32 = 4008
+        let calcEngineType: UInt32 = 4000, ownerDependenciesType: UInt32 = 4008, tableModelType: UInt32 = 6001
         if let engineID = store.identifiers.first(where: { store.record(for: $0)?.info.messageInfos.first?.type == calcEngineType }),
            !gone.contains(engineID), var engine = decoded(TSCE_CalculationEngineArchive.self, engineID) {
             // Owners are named by reference or by UUID (a table registers several owners, each with
@@ -146,16 +143,49 @@ extension KeynoteDocument {
                     if let d = try? ReferenceDerivation.derive(type: info.type, payload: record.payloads[i]) { goneUUIDs.formUnion(d.uuids) }
                 }
             }
-            let orphaned = engine.dependencyTracker.formulaOwnerDependencies.map(\.identifier).filter { id in
-                guard store.record(for: id)?.info.messageInfos.first?.type == ownerDependenciesType,
-                      let deps = decoded(TSCE_FormulaOwnerDependenciesArchive.self, id) else { return false }
-                if deps.hasFormulaOwner && gone.contains(deps.formulaOwner.identifier) { return true }
-                let owner = ReferenceRewriter.UUIDValue(lower: deps.formulaOwnerUid.lower, upper: deps.formulaOwnerUid.upper)
-                if goneUUIDs.contains(owner) { return true }
-                // Sub-owners (filters, summaries, categories) name the table as their base owner.
-                return deps.hasBaseOwnerUid && goneUUIDs.contains(.init(lower: deps.baseOwnerUid.lower, upper: deps.baseOwnerUid.upper))
+            // A table names its owners by its `table_id` UUID (the base owner) plus a small
+            // per-kind offset in the low word (conditional styles, merges, categories, …): in
+            // tables.key every owner of a table lies within 0x23 of its base.
+            var goneTables = Set<ReferenceRewriter.UUIDValue>()
+            for id in gone where store.record(for: id)?.info.messageInfos.first?.type == tableModelType {
+                if let model = decoded(TST_TableModelArchive.self, id), let uuid = Self.uuidValue(model.tableID) { goneTables.insert(uuid) }
             }
-            if !orphaned.isEmpty {
+            func ofGoneTable(_ u: ReferenceRewriter.UUIDValue) -> Bool {
+                goneTables.contains { $0.upper == u.upper && u.lower >= $0.lower && u.lower - $0.lower < 0x100 }
+            }
+            // Owners go with their objects, their table, or their base owner, to a fixpoint.
+            var dependencies = [UInt64: TSCE_FormulaOwnerDependenciesArchive]()
+            for ref in engine.dependencyTracker.formulaOwnerDependencies where store.record(for: ref.identifier)?.info.messageInfos.first?.type == ownerDependenciesType {
+                dependencies[ref.identifier] = decoded(TSCE_FormulaOwnerDependenciesArchive.self, ref.identifier)
+            }
+            func value(_ u: TSP_UUID) -> ReferenceRewriter.UUIDValue { .init(lower: u.lower, upper: u.upper) }
+            var orphaned = Set<UInt64>(), goneOwners = Set<ReferenceRewriter.UUIDValue>()
+            var grew = true
+            while grew {
+                grew = false
+                for (id, deps) in dependencies where !orphaned.contains(id) {
+                    let owner = value(deps.formulaOwnerUid)
+                    let base = deps.hasBaseOwnerUid ? value(deps.baseOwnerUid) : nil
+                    let goes = (deps.hasFormulaOwner && gone.contains(deps.formulaOwner.identifier))
+                        || goneUUIDs.contains(owner) || ofGoneTable(owner)
+                        || base.map { goneUUIDs.contains($0) || goneOwners.contains($0) || ofGoneTable($0) } == true
+                    if goes {
+                        orphaned.insert(id)
+                        goneOwners.insert(owner)
+                        grew = true
+                    }
+                }
+            }
+            // The tracker's owner-ID map and the UUID reference map forget the removed owners too,
+            // as Keynote's own save does.
+            func value(_ u: TSP_CFUUIDArchive) -> ReferenceRewriter.UUIDValue {
+                .init(lower: UInt64(u.uuidW1) << 32 | UInt64(u.uuidW0), upper: UInt64(u.uuidW3) << 32 | UInt64(u.uuidW2))
+            }
+            let mapBefore = engine.dependencyTracker.ownerIDMap.mapEntry.count, uuidMapBefore = engine.uuidReferenceMap.cellRefsForUuid.count
+            engine.dependencyTracker.ownerIDMap.mapEntry.removeAll { goneOwners.contains(value($0.ownerID)) || ofGoneTable(value($0.ownerID)) }
+            engine.uuidReferenceMap.cellRefsForUuid.removeAll { goneOwners.contains(value($0.uuid)) || ofGoneTable(value($0.uuid)) }
+            let mapsChanged = engine.dependencyTracker.ownerIDMap.mapEntry.count != mapBefore || engine.uuidReferenceMap.cellRefsForUuid.count != uuidMapBefore
+            if !orphaned.isEmpty || mapsChanged {
                 engine.dependencyTracker.formulaOwnerDependencies.removeAll { orphaned.contains($0.identifier) }
                 try replacePayload(of: engineID, with: try engine.serializedData(partial: true))
                 referrers = [:]
@@ -166,7 +196,7 @@ extension KeynoteDocument {
                         }
                     }
                 }
-                for id in orphaned where referrers[id, default: []].isSubset(of: gone) {
+                for id in orphaned.sorted() where referrers[id, default: []].isSubset(of: gone) {
                     gone.insert(id)
                     frontier.append(id)
                 }
@@ -223,5 +253,14 @@ extension KeynoteDocument {
         let removed = try commitData([], replacing: candidates, metadata: &metadata)
         return SlideDeleteReport(slide: entry.slide, component: entry.component, removedObjects: gone.count,
                                  removedData: removed.data, removedFiles: removed.files)
+    }
+
+    /// A UUID string as Keynote's (lower, upper) pair: the first eight bytes little-endian, then
+    /// the last eight ("9918D8F8-C872-4CB9-…" → lower 0xB94C72C8F8D81899).
+    static func uuidValue(_ string: String) -> ReferenceRewriter.UUIDValue? {
+        guard let uuid = Foundation.UUID(uuidString: string) else { return nil }
+        let b = withUnsafeBytes(of: uuid.uuid) { Array($0) }
+        func le(_ r: Range<Int>) -> UInt64 { r.reversed().reduce(0) { $0 << 8 | UInt64(b[$1]) } }
+        return .init(lower: le(0..<8), upper: le(8..<16))
     }
 }

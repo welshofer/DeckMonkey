@@ -12,8 +12,8 @@ import SwiftProtobuf
 /// template slides, the stylesheet, the theme, data) stay shared. Each copied object gets a fresh
 /// UUID in the new component's UUID map, and a `TSP.UUID` inside a copied payload that named a
 /// copied object is rewritten to match. The new component gets its own `ComponentInfo` (the
-/// source's, with the copies' identifiers), the Document component an external reference to it,
-/// and the new node is inserted after the source in the show.
+/// source's, with the copies' identifiers; external references are re-derived at save), and the
+/// new node is inserted after the source in the show.
 ///
 /// Refused rather than guessed: slides holding tables, charts or builds (they register owners and
 /// targets by UUID with the calculation engine and the build system), and trees Phase 3a does not

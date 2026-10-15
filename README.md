@@ -17,7 +17,7 @@ Pinned to Keynote 15.4 (7051.0.79). Every gate below is checked against Keynote 
 | 0 Foundation | lossless open → inspect → validate → save; schema and type registry extracted from Keynote | Gate 0 passed: 146/146 decks round-trip CLEAN, oracle 0 mismatched pixels |
 | 1 Text | find and replace text, offset tables remapped, overlapping hyperlinks removed and reported | Gate 1 passed: 25/25 |
 | 2 Media | replace images (PNG, JPEG, GIF, TIFF), movies and audio; no orphaned data | macOS 12/12 (the iPad oracle, AT-27, is not built) |
-| 3a Slides | move, delete and duplicate slides within a deck | 25/26; see `CLAUDE.md` |
+| 3a Slides | move, delete and duplicate slides within a deck | Gate 3a passed: 26/26 |
 | 3b, 4, 5 | cross-deck clone, new drawables and Deck IR, builds and transitions | not started |
 
 ## Command line

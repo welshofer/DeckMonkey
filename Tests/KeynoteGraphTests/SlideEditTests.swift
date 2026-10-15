@@ -129,6 +129,49 @@ struct SlideEditTests {
     }
 }
 
+@Suite("Calculation engine on slide delete")
+struct CalcEngineDeleteTests {
+    @Test("a UUID string maps to Keynote's (lower, upper) pair")
+    func uuidValue() {
+        let v = KeynoteDocument.uuidValue("9918D8F8-C872-4CB9-92DF-48F04DA4962A")
+        #expect(v == .init(lower: 0xB94C72C8F8D81899, upper: 0x2A96A44DF048DF92))
+        #expect(KeynoteDocument.uuidValue("not a uuid") == nil)
+    }
+
+    /// tables.key slide 0 holds a table with formulas; Keynote's re-save of the deleted deck keeps
+    /// no owner of that table: no dependency record, owner-map entry or UUID-map entry.
+    @Test("deleting a table's slide removes the table's whole formula-owner family", .enabled(if: FileManager.default.fileExists(atPath: CorpusTests.repoRoot.appendingPathComponent("Corpus/features/tables.key").path), "no Corpus/features: run `make corpus`"))
+    func tableOwnerFamily() throws {
+        var document = try KeynoteDocument.open(CorpusTests.repoRoot.appendingPathComponent("Corpus/features/tables.key"))
+        let slide = try document.slideList()[0]
+        #expect(document.store.records(in: slide.component)?.isEmpty == false)
+        var bases = Set<ReferenceRewriter.UUIDValue>()
+        for id in document.store.identifiers where document.store.record(for: id)?.info.messageInfos.first?.type == 6001 {
+            if let m = document.decoded(TST_TableModelArchive.self, id), let u = KeynoteDocument.uuidValue(m.tableID) { bases.insert(u) }
+        }
+        try document.deleteSlide(at: 0)
+        var remaining = Set<ReferenceRewriter.UUIDValue>()
+        for id in document.store.identifiers where document.store.record(for: id)?.info.messageInfos.first?.type == 6001 {
+            if let m = document.decoded(TST_TableModelArchive.self, id), let u = KeynoteDocument.uuidValue(m.tableID) { remaining.insert(u) }
+        }
+        let deleted = bases.subtracting(remaining)
+        #expect(!deleted.isEmpty, "slide 0 of tables.key holds a table")
+        func family(_ lower: UInt64, _ upper: UInt64) -> Bool { deleted.contains { $0.upper == upper && lower >= $0.lower && lower - $0.lower < 0x100 } }
+        let engineID = try #require(document.store.identifiers.first { document.store.record(for: $0)?.info.messageInfos.first?.type == 4000 })
+        let engine = try #require(document.decoded(TSCE_CalculationEngineArchive.self, engineID))
+        for ref in engine.dependencyTracker.formulaOwnerDependencies {
+            let d = try #require(document.decoded(TSCE_FormulaOwnerDependenciesArchive.self, ref.identifier))
+            #expect(!family(d.formulaOwnerUid.lower, d.formulaOwnerUid.upper) && !(d.hasBaseOwnerUid && family(d.baseOwnerUid.lower, d.baseOwnerUid.upper)), "dependency record \(ref.identifier) belongs to the deleted table")
+        }
+        for e in engine.dependencyTracker.ownerIDMap.mapEntry {
+            let o = e.ownerID
+            #expect(!family(UInt64(o.uuidW1) << 32 | UInt64(o.uuidW0), UInt64(o.uuidW3) << 32 | UInt64(o.uuidW2)), "owner map entry \(e.internalOwnerID)")
+        }
+        #expect(!engine.uuidReferenceMap.cellRefsForUuid.contains { family($0.uuid.lower, $0.uuid.upper) })
+        #expect(document.validate().filter { $0.severity == .error }.isEmpty)
+    }
+}
+
 extension KeynoteDocument {
     /// Nil when every component's `external_references` holds each reference the rule derives and
     /// nothing whose target is gone.
