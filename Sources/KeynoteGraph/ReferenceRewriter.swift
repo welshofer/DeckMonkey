@@ -34,11 +34,15 @@ public struct ReferenceRewriter: Sendable {
     /// named `owner_id`, `to_owner_id`, `internal_owner_id`, `internal_formula_owner_id`,
     /// `internal_owner_id_for_edge`), old → new.
     public var ownerIDs: [UInt64: UInt64]
+    /// `TSP.DataReference` identifiers, old → new (a slide imported from another deck brings its
+    /// data along under new identifiers).
+    public var dataIdentifiers: [UInt64: UInt64]
     let ownerIDFields: [String: Set<Int>]
 
     public init(index: FieldIndex, identifiers: [UInt64: UInt64], uuids: [UUIDValue: UUIDValue] = [:], families: [UUIDFamily] = [],
-                ownerIDs: [UInt64: UInt64] = [:]) {
+                ownerIDs: [UInt64: UInt64] = [:], dataIdentifiers: [UInt64: UInt64] = [:]) {
         self.index = index
+        self.dataIdentifiers = dataIdentifiers
         self.identifiers = identifiers
         self.uuids = uuids
         self.families = families
@@ -73,7 +77,8 @@ public struct ReferenceRewriter: Sendable {
     /// Nil when nothing changed (the caller keeps the original bytes).
     func rewrite(_ b: ArraySlice<UInt8>, message: String, depth: Int) throws -> [UInt8]? {
         guard depth <= Self.maximumDepth else { throw Failure.tooDeep }
-        if message == "TSP.Reference" { return rewriteReference(b) }
+        if message == "TSP.Reference" { return rewriteReference(b, identifiers) }
+        if message == "TSP.DataReference" { return dataIdentifiers.isEmpty ? nil : rewriteReference(b, dataIdentifiers) }
         if message == "TSP.UUID" { return rewriteUUID(b) }
         if message == "TSP.CFUUIDArchive" { return rewriteCFUUID(b) }
         var out = [UInt8](), changed = false, i = b.startIndex
@@ -132,7 +137,8 @@ public struct ReferenceRewriter: Sendable {
         return changed ? out : nil
     }
 
-    func rewriteReference(_ b: ArraySlice<UInt8>) -> [UInt8]? {
+    /// A `TSP.Reference` or `TSP.DataReference`: field 1 is the identifier.
+    func rewriteReference(_ b: ArraySlice<UInt8>, _ identifiers: [UInt64: UInt64]) -> [UInt8]? {
         var out = [UInt8](), changed = false, i = b.startIndex
         while i < b.endIndex, let (tag, afterTag) = Self.varint(b, i) {
             if tag == 0x08, let (id, next) = Self.varint(b, afterTag), let new = identifiers[id] {

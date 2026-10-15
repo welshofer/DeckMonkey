@@ -3,7 +3,11 @@
 
 usage: Scripts/gate1/gate3.py [cases.tsv ...] [--work DIR]   (default: Scripts/gate1/slides.tsv)
 
-Each case: deck, operation ("move N M", "delete N" or "clone N", 0-based show-order indexes), kind. A case
+Each case: deck, operation ("move N M", "delete N", "clone N" or "import N SOURCE", 0-based show-order
+indexes), kind. An import (Phase 3b) appends slide N of SOURCE to the deck: its page must carry the
+source page's words (letters only: slide numbers change, and case and bullets are the target theme's
+styling) and, when SOURCE is the deck itself (same
+theme), be pixel-identical to the source page. A case
 passes when the edit succeeds, the output validates, Keynote opens it with no sheet and no
 persistence errors, and every page of its PDF is pixel-identical to the original page expected
 there: the original's non-skipped slides, in the new order, minus a deleted one (AT-21: the page
@@ -12,7 +16,7 @@ and when Keynote opens the output and saves it again, the object histogram by ty
 (AT-23, Scripts/resave.sh). Needs macOS and Keynote; run from the repo root
 with the machine left alone.
 """
-import json, os, sys, tempfile
+import json, os, re, sys, tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gate1 import corpus_root, oracle, run  # noqa: E402
@@ -52,12 +56,17 @@ def main():
                 run(dm, "slide", "delete", deck, "--index", op[1], "-o", out)
             elif op[0] == "clone":
                 run(dm, "slide", "clone", deck, "--index", op[1], "-o", out)
+            elif op[0] == "import":
+                run(dm, "slide", "import", deck, "--from", op[2], "--index", op[1], "-o", out)
             else:
                 raise RuntimeError(f"unknown operation {operation}")
             if "FAIL" in run(dm, "verify", out, check=False).stdout: raise RuntimeError("validator fails on the output")
             after = shown(dm, out)
             # The original page shown at each new page; a clone shows its source's page.
             source = [l.split("\t")[2] for l in run(dm, "slide", "list", deck).stdout.splitlines()][int(op[1])] if op[0] == "clone" else None
+            if op[0] == "import":
+                imported = after[-1]
+                after = after[:-1]
             expected = [before.index(s if s in before else source) + 1 for s in after]
             if op[0] == "delete" and len(after) not in (len(before), len(before) - 1): raise RuntimeError("AT-21: page count")
             golden = deck[:-4] + ".golden.pdf"
@@ -71,7 +80,26 @@ def main():
             if not v["opens"] or v["sheet"] is not None or v["logHits"] != 0 or not v["pdf"]:
                 raise RuntimeError(f"oracle: opens={v['opens']} sheet={v['sheet']} logHits={v['logHits']}")
             m = json.loads(run("swift", "Scripts/pdfmatch.swift", golden, v["pdf"]).stdout)
-            if m["pages"][1] != len(expected): raise RuntimeError(f"{m['pages'][1]} pages, expected {len(expected)}")
+            if m["pages"][1] != len(expected) + (1 if op[0] == "import" else 0): raise RuntimeError(f"{m['pages'][1]} pages, expected {len(expected)}")
+            if op[0] == "import":
+                # The imported page: the source page's words; pixel-identical within one theme.
+                src = op[2]
+                src_golden = src[:-4] + ".golden.pdf"
+                if not os.path.exists(src_golden):
+                    sv = oracle(src, os.path.join(work, f"source{n}"))
+                    if not sv["pass"]: raise RuntimeError(f"the source does not pass the oracle: {sv}")
+                    src_golden = sv["pdf"]
+                src_page = shown(dm, src).index([l.split("\t")[2] for l in run(dm, "slide", "list", src).stdout.splitlines()][int(op[1])])
+                def words(pdf, page):
+                    text = json.loads(run("swift", "Scripts/pdftext.swift", pdf).stdout)[page]
+                    # Words only: case, bullets and attachments (U+FFFC) are styling, which the
+                    # target theme decides (Kyoto titles are all caps; an "Image" list style draws
+                    # its bullet as a picture).
+                    return sorted(re.findall(r"[^\W\d_]+", text.casefold()))
+                if words(src_golden, src_page) != words(v["pdf"], len(expected)): raise RuntimeError("the imported page's words differ from the source page's")
+                if os.path.realpath(src) == os.path.realpath(deck):
+                    pm = json.loads(run("swift", "Scripts/pdfmatch.swift", src_golden, v["pdf"]).stdout)
+                    if src_page + 1 not in pm["matches"][len(expected)]: raise RuntimeError("same-theme import: the page is not pixel-identical to its source")
             wrong = [(j + 1, e, got) for j, (e, got) in enumerate(zip(expected, m["matches"])) if e not in got]
             if wrong: raise RuntimeError(f"pages not identical to the expected originals (page, expected, equal-to): {wrong[:5]}")
             # AT-23: Keynote's own re-save of the output keeps the object histogram by type.

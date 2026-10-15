@@ -175,7 +175,14 @@ ids): same internal ids and records as Keynote's duplicate, and the copy recalcu
 page pixel-identical and Keynote's re-save idempotent (AT-23, `Scripts/resave.sh`). A deleted
 table's calculation-engine owners go as a family: its `table_id` UUID is the base owner, the
 others sit at a small offset in the low word, and sub-owners name it as `base_owner_uid`; their
-dependency records, owner-ID map entries and UUID-map entries are removed. Open: cross-deck clone (3b), cloning builds, corpus ≥ 150 for Gate 3.
+dependency records, owner-ID map entries and UUID-map entries are removed. Phase 3b (2026-10-15): `deckmonkey slide import <deck> --from <source> --index N` appends another
+deck's slide, re-pointing every outside reference at this deck's styles, masters and stylesheet
+(docs/spec.md §9); no match refuses, naming the styles. Anonymous placeholder and text-box
+variations map through master correspondence. Over the templates into Basic Black: 1,270 of 1,642
+slides import and validate; 309 refused for a master name the target lacks, 63 for unmatched
+styles. Gate 3 import cases: 8/8 (opens clean, target pages identical, re-save idempotent, the
+imported page carries the source's words, a same-theme import pixel-identical). Tables and charts
+are refused in 3b v1. Open: tables/charts across decks, builds, a master-name fallback.
 
 Corpus at 150 (2026-10-15): four more feature decks (`cross-table`: a formula on one slide
 reading a table on another, which needs the slide-qualified `Slide 1::Inputs::B2`; `layouts`: every

@@ -130,7 +130,7 @@ extension KeynoteDocument {
         }
         for (info, bytes) in new {
             metadata.datas.append(info)
-            package.set("Data/" + info.fileName, bytes)
+            if let name = info.storedFileName { package.set("Data/" + name, bytes) }       // app resources have no file
         }
         try replacePayload(of: 2, with: try metadata.serializedData(partial: true))
         try removeDataMetadata(for: Set(removedData), map: metadata.hasDataMetadataMap ? metadata.dataMetadataMap.identifier : nil)

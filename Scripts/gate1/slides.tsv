@@ -36,3 +36,12 @@ Corpus/features/cross-table.key	move 1 0	AT-22
 Corpus/features/mixed.key	clone 0	AT-20
 Corpus/features/layouts.key	clone 5	AT-20
 Corpus/features/layouts.key	delete 3	AT-21
+# Phase 3b: import slide N of another deck (appended). Same theme: pixel-identical to the source page.
+Corpus/templates/basic-black_wide.key	import 3 Corpus/templates/basic-black_wide.key	AT-20
+Corpus/templates/basic-black_wide.key	import 0 Corpus/templates/basic-white_wide.key	AT-20
+Corpus/templates/basic-black_wide.key	import 1 Corpus/templates/basic-white_wide.key	AT-20
+Corpus/templates/basic-black_wide.key	import 14 Corpus/templates/basic-white_wide.key	AT-20
+Corpus/templates/basic-black_wide.key	import 2 Corpus/templates/minimalist-dark_wide.key	AT-20
+Corpus/templates/basic-black_wide.key	import 4 Corpus/templates/academy_wide.key	AT-20
+Corpus/templates/basic-black_wide.key	import 5 Corpus/templates/kyoto_wide.key	AT-20
+Corpus/templates/basic-black_wide.key	import 6 Corpus/templates/photo-essay_wide.key	AT-20

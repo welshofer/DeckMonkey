@@ -278,19 +278,24 @@ extension KeynoteDocument {
 
     /// A MessageInfo for a copied payload: identifiers remapped in the reference list and in each
     /// field info's references, the new length; everything else as it was.
-    static func remapped(_ info: MessageInfo, identifiers: [UInt64: UInt64], length: UInt32) throws -> MessageInfo {
+    static func remapped(_ info: MessageInfo, identifiers: [UInt64: UInt64], dataIdentifiers: [UInt64: UInt64] = [:], length: UInt32) throws -> MessageInfo {
         var fields = info.fields
         for i in fields.indices where fields[i].number == MessageInfo.fieldInfosField {
             guard case .lengthDelimited(let bytes) = fields[i].value,
                   var fieldInfo = try? TSP_FieldInfo(serializedBytes: bytes, partial: true),
-                  fieldInfo.objectReferences.contains(where: { identifiers[$0] != nil }) else { continue }
+                  fieldInfo.objectReferences.contains(where: { identifiers[$0] != nil })
+                    || fieldInfo.dataReferences.contains(where: { dataIdentifiers[$0] != nil }) else { continue }
             fieldInfo.objectReferences = fieldInfo.objectReferences.map { identifiers[$0] ?? $0 }
+            fieldInfo.dataReferences = fieldInfo.dataReferences.map { dataIdentifiers[$0] ?? $0 }
             fields[i] = WireField(number: fields[i].number, value: .lengthDelimited(try fieldInfo.serializedData(partial: true)))
         }
         var out = try MessageInfo(fields: fields)
         out.setLength(length)
         if out.objectReferences.contains(where: { identifiers[$0] != nil }) {
             out.setObjectReferences(out.objectReferences.map { identifiers[$0] ?? $0 })
+        }
+        if out.dataReferences.contains(where: { dataIdentifiers[$0] != nil }) {
+            out.setDataReferences(out.dataReferences.map { dataIdentifiers[$0] ?? $0 })
         }
         return out
     }

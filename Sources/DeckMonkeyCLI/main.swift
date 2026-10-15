@@ -49,6 +49,7 @@ enum CLI {
       slide move <file> --index <n> --to <m> -o <out.key>
       slide delete <file> --index <n> -o <out.key>
       slide clone <file> --index <n> [--to <m>] -o <out.key>
+      slide import <file> --from <source.key> --index <n> [--to <m>] -o <out.key>
                                      move, delete or duplicate a slide (0-based indexes, show order);
                                      delete removes the slide's component and data only it used; a
                                      clone goes after its source unless --to says where
@@ -490,6 +491,12 @@ func runSlide(_ args: [String]) throws {
     case "clone":
         let report = try document.cloneSlide(at: i, to: option("--to", in: args).flatMap(Int.init))
         print("cloned slide \(i) (\(report.source)) as \(report.slide) in \(report.component): \(report.copiedObjects) objects")
+    case "import":
+        guard let from = option("--from", in: args) else { fail(CLI.usage, code: 2) }
+        let source = try DeckMonkey.open(url(from))
+        let report = try document.importSlide(at: i, from: source, to: option("--to", in: args).flatMap(Int.init))
+        print("imported slide \(i) (\(report.source)) of \(from) as \(report.slide) in \(report.component): \(report.copiedObjects) objects, "
+            + "\(report.mappedObjects) references mapped to this deck, \(report.copiedData) data copied, \(report.sharedData) shared")
     case "delete":
         let report = try document.deleteSlide(at: i)
         print("deleted slide \(i) (\(report.slide), \(report.component)): \(report.removedObjects) objects"
