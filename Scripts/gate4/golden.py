@@ -46,6 +46,9 @@ def slide_lines(slide):
     if slide.get("table") is not None:
         cells = slide["table"]
         out.append(f"tell s to set t to make new table with properties {{row count:{len(cells)}, column count:{len(cells[0])}}}")
+        if slide.get("tableFrame"):
+            x, y, w, h = slide["tableFrame"]
+            out += [f"set width of t to {w!r}", f"set height of t to {h!r}", f"set position of t to {{{x!r}, {y!r}}}"]
         for r, row in enumerate(cells, 1):
             for c, value in enumerate(row, 1):
                 v = value.replace("\\", "\\\\").replace('"', '\\"')

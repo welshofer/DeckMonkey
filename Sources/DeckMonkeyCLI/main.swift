@@ -481,17 +481,17 @@ func runFromIR(_ args: [String]) throws {
     }
     let ir = try JSONDecoder().decode(DeckIR.self, from: Data(contentsOf: url(path)))
     let base = try DeckMonkey.open(url(template))
-    let plan = try DeckIRWriter.plan(ir, template: base)
+    // New shapes, text boxes, charts and tables are copied from parts decks of Keynote-made drawables.
+    var partsPaths = [String](), i = 0
+    while i < args.count { if args[i] == "--parts", i + 1 < args.count { partsPaths.append(args[i + 1]); i += 2 } else { i += 1 } }
+    if partsPaths.isEmpty { partsPaths = ["Corpus/features/drawables.key", "Corpus/features/charts.key", "Corpus/features/tables-parts.key"] }
+    let parts = try partsPaths.filter { FileManager.default.fileExists(atPath: url($0).path) }.map { try DeckMonkey.open(url($0)) }
+    let plan = try DeckIRWriter.plan(ir, template: base, parts: parts)
     if let planOut = option("--plan-out", in: args) {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try encoder.encode(plan).write(to: url(planOut))
     }
-    // New shapes, text boxes and charts are copied from parts decks of Keynote-made drawables.
-    var partsPaths = [String](), i = 0
-    while i < args.count { if args[i] == "--parts", i + 1 < args.count { partsPaths.append(args[i + 1]); i += 2 } else { i += 1 } }
-    if partsPaths.isEmpty { partsPaths = ["Corpus/features/drawables.key", "Corpus/features/charts.key", "Corpus/features/tables-parts.key"] }
-    let parts = try partsPaths.filter { FileManager.default.fileExists(atPath: url($0).path) }.map { try DeckMonkey.open(url($0)) }
     let (document, report) = try DeckIRWriter.apply(plan, template: base, parts: parts)
     try FileManager.default.createDirectory(at: url(out).deletingLastPathComponent(), withIntermediateDirectories: true)
     try document.save(to: url(out))

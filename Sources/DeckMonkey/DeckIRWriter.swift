@@ -78,9 +78,11 @@ public enum DeckIRWriter {
         public var box: [Paragraph]?
         public var notes: [Paragraph]?
         public var drawables: [DrawablePlan] = []
-        /// A table's cells, header row first, every row padded to the widest: the slide is a
-        /// parts-deck table slide of that size (tables-parts.key), its strings replaced.
+        /// A table's cells, header row first, every row padded to the widest: the table is a
+        /// parts-deck table of that size (tables-parts.key), its strings replaced.
         public var table: [[String]]?
+        /// The table's frame (points): the parts table's, which the golden gives Keynote's table.
+        public var tableFrame: [Double]?
     }
 
     public struct DeckPlan: Codable, Equatable, Sendable {
@@ -133,7 +135,7 @@ public enum DeckIRWriter {
     public static var supportedLayouts: [String] { masters.keys.sorted() }
 
     /// The plan for `ir` on `template`.
-    public static func plan(_ ir: DeckIR, template: KeynoteDocument) throws -> DeckPlan {
+    public static func plan(_ ir: DeckIR, template: KeynoteDocument, parts: [KeynoteDocument] = []) throws -> DeckPlan {
         guard !ir.slides.isEmpty else { throw Failure.emptyDeck }
         let list = try template.slideList()
         let sampleMasters = try template.slideMasters()
@@ -148,6 +150,10 @@ public enum DeckIRWriter {
             var s = SlidePlan(id: slide.id, master: master)
             try fill(&s, slide: slide, meta: ir.meta, region: region, ignored: &plan.ignored)
             if let notes = slide.notes { s.notes = notes.components(separatedBy: "\n").map { Paragraph($0) } }
+            if s.table != nil, let r = region {
+                // The theme's body area in whole points, as for every other new drawable.
+                s.tableFrame = [r.x.rounded(), r.y.rounded(), r.width.rounded(), r.height.rounded()]
+            }
             plan.slides.append(s)
         }
         return plan
@@ -296,6 +302,29 @@ public enum DeckIRWriter {
         return out
     }
 
+    /// The parts deck, slide index and table drawable holding a table of `rows` × `columns`.
+    static func tablePart(rows: Int, columns: Int, in parts: [KeynoteDocument]) -> (deck: KeynoteDocument, index: Int, table: UInt64)? {
+        for deck in parts {
+            guard let list = try? deck.slideList() else { continue }
+            for (i, entry) in list.enumerated() {
+                for info in deck.slideTableInfos(entry.slide) {
+                    guard let model = deck.slideTables(entry.slide).first, let size = deck.tableSize(model),
+                          size.rows == rows, size.columns == columns else { continue }
+                    return (deck, i, info)
+                }
+            }
+        }
+        return nil
+    }
+
+    /// A Keynote-made header-name tile in the parts decks (tables-parts.key has one).
+    static func headerNameTile(in parts: [KeynoteDocument]) -> (KeynoteDocument, UInt64)? {
+        for deck in parts {
+            if let id = deck.store.identifiers.first(where: { deck.store.record(for: $0)?.info.messageInfos.first?.type == 6365 }) { return (deck, id) }
+        }
+        return nil
+    }
+
     // MARK: Apply
 
     /// Builds `plan` on `template`, copying new drawables from `parts` (needed only when a slide
@@ -322,30 +351,20 @@ public enum DeckIRWriter {
                 }
             }
         }
-        // Table parts: the parts deck slide holding a table of each size.
-        var tableSlides = [String: (KeynoteDocument, Int)]()
-        for deck in parts {
-            guard let list = try? deck.slideList() else { continue }
-            for (i, entry) in list.enumerated() {
-                for model in deck.slideTables(entry.slide) {
-                    if let size = deck.tableSize(model), tableSlides["\(size.rows)x\(size.columns)"] == nil { tableSlides["\(size.rows)x\(size.columns)"] = (deck, i) }
-                }
-            }
-        }
         for s in plan.slides {
             let newSlide: UInt64
+            guard let index = sampleMasters.firstIndex(of: s.master) else { throw Failure.noSampleSlide(slide: s.id, masters: [s.master]) }
+            newSlide = try document.cloneSlide(at: index, to: try document.slideList().count).slide
             if let cells = s.table {
-                let key = "\(cells.count)x\(cells.first?.count ?? 0)"
-                guard let (deck, index) = tableSlides[key] else { throw Failure.layout(slide: s.id, "no parts table of size \(key) (tables-parts.key holds 2-10 rows by 2-6 columns)") }
-                newSlide = try document.importSlide(at: index, from: deck).slide
-                if let sample = sampleMasters.firstIndex(of: s.master) {
-                    try document.alignPlaceholders(of: newSlide, like: try document.slideList()[sample].slide)
+                // The table alone comes from the parts deck, onto this theme's own slide.
+                guard let (deck, partsIndex, info) = tablePart(rows: cells.count, columns: cells.first?.count ?? 0, in: parts) else {
+                    throw Failure.layout(slide: s.id, "no parts table of \(cells.count) × \(cells.first?.count ?? 0) (tables-parts.key holds 2-10 rows by 2-6 columns)")
                 }
-                guard let model = document.slideTables(newSlide).first else { throw Failure.layout(slide: s.id, "the parts slide lost its table") }
+                let copies = try document.importDrawables([info], ofSlide: partsIndex, from: deck, onto: newSlide)
+                guard let table = copies.first, let model = document.slideTables(newSlide).first else { throw Failure.layout(slide: s.id, "the table did not arrive") }
                 try document.setTableCells(model, cells)
-            } else {
-                guard let index = sampleMasters.firstIndex(of: s.master) else { throw Failure.noSampleSlide(slide: s.id, masters: [s.master]) }
-                newSlide = try document.cloneSlide(at: index, to: try document.slideList().count).slide
+                try document.registerHeaderNames(model, cells: cells, tileSource: headerNameTile(in: parts))
+                if let f = s.tableFrame, f.count == 4 { try document.setTableFrame(table, .init(x: f[0], y: f[1], width: f[2], height: f[3])) }
             }
             guard let targets = document.slideText(newSlide) else { throw Failure.noPlaceholder(slide: s.id, role: "text") }
             func set(_ storage: UInt64?, _ role: String, _ paragraphs: [Paragraph]?) throws {
@@ -383,6 +402,6 @@ public enum DeckIRWriter {
 
     /// Plan and apply.
     public static func build(_ ir: DeckIR, template: KeynoteDocument, parts: [KeynoteDocument] = []) throws -> (KeynoteDocument, Report) {
-        try apply(try plan(ir, template: template), template: template, parts: parts)
+        try apply(try plan(ir, template: template, parts: parts), template: template, parts: parts)
     }
 }
