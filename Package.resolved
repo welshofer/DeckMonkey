@@ -1,13 +1,13 @@
 {
-  "originHash" : "e3c6a6619baacfa00386cd97fcac186d34967b4762dd36f3896c8c4daef35454",
+  "originHash" : "fb498487bf42a95e55c568916d4bdb54e1a421e094d6db110d949c85f501db29",
   "pins" : [
     {
       "identity" : "rostrum",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/welshofer/rostrum.git",
       "state" : {
-        "revision" : "1c683a71b49833ad7291f19b6cfee82ede38e049",
-        "version" : "1.0.0"
+        "revision" : "62b62e13bc41ed4dd00c107ae1a17e0aae00732a",
+        "version" : "1.1.0"
       }
     },
     {

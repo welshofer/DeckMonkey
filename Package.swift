@@ -24,7 +24,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.28.0"),
-        .package(url: "https://github.com/welshofer/rostrum.git", from: "1.0.0"),
+        .package(url: "https://github.com/welshofer/rostrum.git", from: "1.1.0"),
     ],
     targets: [
         .target(name: "IWASnappy"),
