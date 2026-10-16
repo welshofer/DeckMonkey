@@ -171,7 +171,8 @@ struct Canvas {
             if let m = document.decoded(TSD_MovieArchive.self, id) { drawMovie(m) }
         case Self.groupType:
             if let g = document.decoded(TSD_GroupArchive.self, id) { drawGroup(g) }
-        case Self.tableType: problems.insert("table")
+        case Self.tableType:
+            if let t = document.decoded(TST_TableInfoArchive.self, id) { drawTable(t) } else { problems.insert("table") }
         case Self.chartType: problems.insert("chart")
         case Self.equationType: problems.insert("equation")
         case let t?: problems.insert("drawable type \(t)")

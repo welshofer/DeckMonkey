@@ -41,6 +41,10 @@ struct StyleResolver {
         var columns = 1
         var columnGap = 0.0
         var paragraphStyle: UInt64?
+        /// What "natural" alignment means here: a table puts numbers on the right.
+        var naturalAlignment: TSWP_ParagraphStylePropertiesArchive.TextAlignmentType?
+        /// False for a table cell's number or date: it stays on one line.
+        var wraps = true
     }
 
     func shapeLook(_ styleID: UInt64?) -> ShapeLook {

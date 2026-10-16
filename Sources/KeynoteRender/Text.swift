@@ -176,10 +176,16 @@ extension Canvas {
     /// millions of attribute entries; the renderer draws the first part and says so.
     static let maximumTextUnits = 65_536
     static let maximumEntries = 65_536
+    static let maximumLines = 4_096
 
     /// The text of `storage` laid out in a `width × height` frame, as `<text>` elements.
     mutating func textMarkup(storage: UInt64, width: Double, height: Double, look shape: StyleResolver.ShapeLook) -> String {
         guard let archive = document.decoded(TSWP_StorageArchive.self, storage) else { problems.insert("text storage"); return "" }
+        return textMarkup(archive: archive, width: width, height: height, look: shape)
+    }
+
+    /// `archive`'s text laid out in a `width × height` frame (a table cell builds one in memory).
+    mutating func textMarkup(archive: TSWP_StorageArchive, width: Double, height: Double, look shape: StyleResolver.ShapeLook) -> String {
         var units = Array(archive.text.joined().utf16)
         guard !units.isEmpty else { return "" }
         if units.count > Self.maximumTextUnits {
@@ -336,7 +342,7 @@ extension Canvas {
                     current = Line()
                     current.x = shape.padding.left + left + (isFirst ? first : 0)
                     current.available = max(1, available - left - (isFirst ? first : 0) - para.rightIndent * scale)
-                    current.alignment = para.alignment
+                    current.alignment = para.alignment == .tatvalue4 ? (shape.naturalAlignment ?? para.alignment) : para.alignment
                 }
                 start(true)
                 func append(_ text: String, _ look: CharLook) {
@@ -367,10 +373,12 @@ extension Canvas {
                 }
                 for (text, look, forced) in pieces {
                     let trimmedWidth = measure(String(text.reversed().drop(while: { $0 == " " }).reversed()), look)
-                    if !current.spans.isEmpty && current.width + trimmedWidth > current.available + 0.01 {
+                    let limit = shape.wraps ? current.available : .infinity
+                    if !current.spans.isEmpty && current.width + trimmedWidth > limit + 0.01 {
                         finishLine(justify: para.alignment == .tatvalue3)
+                        guard paraLines.count < Self.maximumLines else { break }
                     }
-                    if current.spans.isEmpty && trimmedWidth > current.available + 0.01 {
+                    if current.spans.isEmpty && trimmedWidth > limit + 0.01 {
                         // A word wider than the line breaks between characters.
                         var chunk = "", chunkWidth = 0.0
                         for ch in text {
