@@ -1,0 +1,47 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Tables"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "table",
+   "title": "Regions",
+   "body": {
+    "table": {
+     "headers": [
+      "Region",
+      "Lead",
+      "Status",
+      "Next step",
+      "Due"
+     ],
+     "rows": [
+      [
+       "North",
+       "Ana",
+       "On track",
+       "Review",
+       "Mar"
+      ],
+      [
+       "South",
+       "Ben",
+       "At risk",
+       "Hire",
+       "Apr"
+      ],
+      [
+       "East",
+       "Cy",
+       "Done",
+       "—",
+       "—"
+      ]
+     ]
+    }
+   }
+  }
+ ]
+}

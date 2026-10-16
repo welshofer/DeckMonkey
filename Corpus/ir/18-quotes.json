@@ -1,0 +1,24 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Quotes"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "quote",
+   "body": {
+    "quote": "Make it work, make it right, make it fast.",
+    "attribution": "Kent Beck"
+   }
+  },
+  {
+   "id": "s2",
+   "layout": "quote",
+   "body": {
+    "quote": "A short one.",
+    "attribution": "Anonymous"
+   }
+  }
+ ]
+}

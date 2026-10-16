@@ -1,0 +1,26 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Wins"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "bullets",
+   "title": "What went well",
+   "body": {
+    "bullets": [
+     {
+      "text": "Revenue up 12%"
+     },
+     {
+      "text": "Churn down to 3%"
+     },
+     {
+      "text": "Two new partners"
+     }
+    ]
+   }
+  }
+ ]
+}

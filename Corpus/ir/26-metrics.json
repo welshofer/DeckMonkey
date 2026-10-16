@@ -1,0 +1,29 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Structures"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "metrics",
+   "title": "This quarter",
+   "body": {
+    "stats": [
+     {
+      "value": "12%",
+      "label": "revenue growth"
+     },
+     {
+      "value": "3%",
+      "label": "churn"
+     },
+     {
+      "value": "42",
+      "label": "NPS"
+     }
+    ]
+   }
+  }
+ ]
+}

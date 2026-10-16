@@ -1,0 +1,57 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Charts"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "chart",
+   "title": "Headcount",
+   "body": {
+    "chart": {
+     "kind": "stackedbar",
+     "categories": [
+      "2024",
+      "2025",
+      "2026"
+     ],
+     "series": [
+      {
+       "name": "Eng",
+       "values": [
+        10,
+        14,
+        18
+       ]
+      },
+      {
+       "name": "Sales",
+       "values": [
+        5,
+        7,
+        9
+       ]
+      },
+      {
+       "name": "Ops",
+       "values": [
+        3,
+        3,
+        4
+       ]
+      },
+      {
+       "name": "Design",
+       "values": [
+        2,
+        3,
+        4
+       ]
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

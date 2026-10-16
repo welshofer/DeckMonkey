@@ -1,0 +1,18 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Sections"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "sectionHeader",
+   "title": "Results"
+  },
+  {
+   "id": "s2",
+   "layout": "sectionHeader",
+   "title": "Risks and mitigations"
+  }
+ ]
+}

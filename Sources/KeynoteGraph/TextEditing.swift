@@ -40,6 +40,12 @@ extension KeynoteDocument {
         }
     }
 
+    /// The text of storage `identifier` (UTF-16 as Keynote stores it: U+000A between paragraphs,
+    /// U+2028 for a line break, U+FFFC for an attachment), nil when it is not a storage.
+    public func storageText(_ identifier: UInt64) -> String? {
+        (try? storageArchive(identifier))?.text.joined()
+    }
+
     func storageArchive(_ identifier: UInt64) throws -> TSWP_StorageArchive {
         guard let record = store.record(for: identifier), let info = record.info.messageInfos.first,
               info.type == Self.storageType, info.baseMessageIndex == nil else {

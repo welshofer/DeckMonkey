@@ -1,0 +1,20 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Agenda"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "agenda",
+   "title": "Agenda",
+   "body": {
+    "items": [
+     "Results",
+     "Risks",
+     "Next steps"
+    ]
+   }
+  }
+ ]
+}

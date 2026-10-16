@@ -1,0 +1,36 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Tables"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "table",
+   "title": "Notes",
+   "body": {
+    "table": {
+     "headers": [
+      "Item",
+      "Comment",
+      "Flag"
+     ],
+     "rows": [
+      [
+       "Alpha",
+       "short"
+      ],
+      [
+       "Beta",
+       "a longer comment that wraps",
+       "yes"
+      ],
+      [
+       "Gamma"
+      ]
+     ]
+    }
+   }
+  }
+ ]
+}

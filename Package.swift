@@ -24,7 +24,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.28.0"),
-        .package(url: "https://github.com/welshofer/rostrum.git", from: "1.0.0"),
+        .package(url: "https://github.com/welshofer/rostrum.git", from: "1.1.0"),
     ],
     targets: [
         .target(name: "IWASnappy"),
@@ -41,7 +41,9 @@ let package = Package(
             dependencies: ["IWAArchive", "IWASchema", "IWAContainer", .product(name: "SwiftProtobuf", package: "swift-protobuf")]),
         .target(
             name: "DeckMonkey",
-            dependencies: ["KeynoteGraph", "IWAArchive", "IWAContainer", "IWASchema", "IWASnappy", .product(name: "Rostrum", package: "rostrum"), .product(name: "SwiftProtobuf", package: "swift-protobuf")]),
+            dependencies: ["KeynoteGraph", "IWAArchive", "IWAContainer", "IWASchema", "IWASnappy", .product(name: "Rostrum", package: "rostrum"),
+                           .product(name: "LecternIR", package: "rostrum"), .product(name: "RostrumLayout", package: "rostrum"),
+                           .product(name: "SwiftProtobuf", package: "swift-protobuf")]),
         .executableTarget(name: "DeckMonkeyCLI", dependencies: ["DeckMonkey"], path: "Sources/DeckMonkeyCLI"),
         .testTarget(name: "IWASnappyTests", dependencies: ["IWASnappy"]),
         .testTarget(name: "IWAArchiveTests", dependencies: ["IWAArchive", "IWASnappy"]),

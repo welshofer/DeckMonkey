@@ -1,0 +1,33 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Charts"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "chart",
+   "title": "Traffic sources",
+   "body": {
+    "chart": {
+     "kind": "pie",
+     "categories": [
+      "Search",
+      "Referral",
+      "Direct"
+     ],
+     "series": [
+      {
+       "name": "Share",
+       "values": [
+        55,
+        30,
+        15
+       ]
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

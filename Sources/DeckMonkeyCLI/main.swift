@@ -50,6 +50,8 @@ enum CLI {
       slide delete <file> --index <n> -o <out.key>
       slide clone <file> --index <n> [--to <m>] -o <out.key>
       slide import <file> --from <source.key> --index <n> [--to <m>] -o <out.key>
+      from-ir <deck.json> --template <t.key> [--parts <deck.key>]... [--plan-out <plan.json>] -o <out.key>
+                                     build a .key from a lectern.deck/1 Deck IR on a template's masters
                                      move, delete or duplicate a slide (0-based indexes, show order);
                                      delete removes the slide's component and data only it used; a
                                      clone goes after its source unless --to says where
@@ -473,6 +475,31 @@ func runMedia(_ args: [String]) throws {
     print("output: \(url(out).path)")
 }
 
+func runFromIR(_ args: [String]) throws {
+    guard let path = args.first, !path.hasPrefix("-"), let template = option("--template", in: args), let out = option("-o", in: args) else {
+        fail(CLI.usage, code: 2)
+    }
+    let ir = try JSONDecoder().decode(DeckIR.self, from: Data(contentsOf: url(path)))
+    let base = try DeckMonkey.open(url(template))
+    // New shapes, text boxes, charts and tables are copied from parts decks of Keynote-made drawables.
+    var partsPaths = [String](), i = 0
+    while i < args.count { if args[i] == "--parts", i + 1 < args.count { partsPaths.append(args[i + 1]); i += 2 } else { i += 1 } }
+    if partsPaths.isEmpty { partsPaths = ["Corpus/features/drawables.key", "Corpus/features/charts.key", "Corpus/features/tables-parts.key"] }
+    let parts = try partsPaths.filter { FileManager.default.fileExists(atPath: url($0).path) }.map { try DeckMonkey.open(url($0)) }
+    let plan = try DeckIRWriter.plan(ir, template: base, parts: parts)
+    if let planOut = option("--plan-out", in: args) {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try encoder.encode(plan).write(to: url(planOut))
+    }
+    let (document, report) = try DeckIRWriter.apply(plan, template: base, parts: parts)
+    try FileManager.default.createDirectory(at: url(out).deletingLastPathComponent(), withIntermediateDirectories: true)
+    try document.save(to: url(out))
+    print("built \(report.slides.count) slide(s) on \(Set(report.slides.map(\.master)).count) master(s)"
+        + (report.ignored.isEmpty ? "" : "; no place for: \(report.ignored.joined(separator: ", "))"))
+    print("output: \(url(out).path)")
+}
+
 func runSlide(_ args: [String]) throws {
     guard let verb = args.first, args.count >= 2, !args[1].hasPrefix("-") else { fail(CLI.usage, code: 2) }
     var document = try DeckMonkey.open(url(args[1]))
@@ -528,6 +555,7 @@ do {
     case "image": try runImage(rest)
     case "media": try runMedia(rest)
     case "slide": try runSlide(rest)
+    case "from-ir": try runFromIR(rest)
     case "corpus":
         switch rest.first {
         case "add": try runCorpusAdd(Array(rest.dropFirst()))

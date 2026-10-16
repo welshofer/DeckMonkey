@@ -1,0 +1,16 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "End"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "closing",
+   "body": {
+    "callToAction": "Questions?",
+    "contact": "ops@example.com"
+   }
+  }
+ ]
+}

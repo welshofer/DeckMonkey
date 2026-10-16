@@ -1,0 +1,26 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Unicode"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "bullets",
+   "title": "Ünïcödé · 日本語 · emoji",
+   "body": {
+    "bullets": [
+     {
+      "text": "Café, naïve, façade"
+     },
+     {
+      "text": "中文 · 한국어 · Русский"
+     },
+     {
+      "text": "Ελληνικά and ½ ⅓ ¼"
+     }
+    ]
+   }
+  }
+ ]
+}

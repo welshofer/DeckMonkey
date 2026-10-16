@@ -1,0 +1,20 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Structures"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "bands",
+   "title": "Bands",
+   "body": {
+    "items": [
+     "First band",
+     "Second band",
+     "Third band"
+    ]
+   }
+  }
+ ]
+}

@@ -37,6 +37,8 @@ extension KeynoteDocument {
         public var mappedObjects: Int
         public var copiedData: Int
         public var sharedData: Int
+        /// Drawables mode: the copies' identifiers, in the order asked.
+        public var drawables: [UInt64] = []
     }
 
     public enum SlideImportFailure: Error, Equatable, Sendable, CustomStringConvertible {
@@ -64,6 +66,20 @@ extension KeynoteDocument {
 
     @discardableResult
     public mutating func importSlide(at index: Int, from source: KeynoteDocument, to position: Int? = nil) throws -> SlideImportReport {
+        try importCore(index, from: source, drawables: nil, onto: nil, to: position)
+    }
+
+    /// Copies `drawables` of slide `index` of `source` (and what only they keep alive: a table's
+    /// model, tiles and data lists, a chart's archives, text storages) onto `slide` of this deck,
+    /// re-pointing everything else at this deck as `importSlide` does. They join the slide's
+    /// drawables, last in z order. Returns the copies' identifiers, in order.
+    @discardableResult
+    public mutating func importDrawables(_ drawables: [UInt64], ofSlide index: Int, from source: KeynoteDocument, onto slide: UInt64) throws -> [UInt64] {
+        let report = try importCore(index, from: source, drawables: drawables, onto: slide, to: nil)
+        return report.drawables
+    }
+
+    mutating func importCore(_ index: Int, from source: KeynoteDocument, drawables only: [UInt64]?, onto targetSlide: UInt64?, to position: Int?) throws -> SlideImportReport {
         if let newer = source.writtenByNewerKeynote {
             throw KeynoteError.schemaNewerThanLibrary(fileBuild: newer, pinned: "\(TypeRegistry.pinnedVersion) (\(TypeRegistry.pinnedBuild))")
         }
@@ -80,9 +96,13 @@ extension KeynoteDocument {
             throw SlideEditFailure.unsupportedTree("no show, package metadata or slide records")
         }
 
-        // What is copied, and what it may not hold yet.
-        let roots = Set(sourceRecords.map(\.identifier)).union([entry.node])
-        let copied = source.heldOnly(by: roots, referrers: source.referrerIndex(), keeping: [sourceShow])
+        // What is copied, and what it may not hold yet: the whole slide, or the chosen drawables
+        // (the source slide itself then stays behind and stands for the target slide).
+        let roots = only.map(Set.init) ?? Set(sourceRecords.map(\.identifier)).union([entry.node])
+        let keep: Set<UInt64> = only == nil ? [sourceShow] : [sourceShow, entry.slide]
+        let copied = source.heldOnly(by: roots, referrers: source.referrerIndex(), keeping: keep)
+        let targetComponent = targetSlide.flatMap { store.entry(for: $0)?.component }
+        if targetSlide != nil, targetComponent == nil { throw SlideEditFailure.unsupportedTree("no target slide") }
         for id in copied.sorted() {
             guard let record = source.store.record(for: id) else { continue }
             for info in record.info.messageInfos where info.baseMessageIndex == nil {
@@ -96,8 +116,12 @@ extension KeynoteDocument {
         // Fresh identifiers for the copies.
         var allocator = IDAllocator(seed: max(store.highestIdentifier, metadata.lastObjectIdentifier) + 1)
         var identifiers = [UInt64: UInt64]()
-        for id in sourceRecords.map(\.identifier) { identifiers[id] = allocator.allocate() }
-        identifiers[entry.node] = allocator.allocate()
+        if let targetSlide {
+            identifiers[entry.slide] = targetSlide
+        } else {
+            for id in sourceRecords.map(\.identifier) { identifiers[id] = allocator.allocate() }
+            identifiers[entry.node] = allocator.allocate()
+        }
         for id in copied.sorted() where identifiers[id] == nil { identifiers[id] = allocator.allocate() }
 
         // Every reference leaving the copy, re-pointed at this deck.
@@ -207,7 +231,7 @@ extension KeynoteDocument {
         // Placement: the slide's component becomes a new one; the node joins this deck's nodes; an
         // object alone in its source component gets a new component of its own; one in a shared
         // component joins this deck's component of the same name.
-        let newSlide = identifiers[entry.slide]!, newNode = identifiers[entry.node]!
+        let newSlide = identifiers[entry.slide]!, newNode = identifiers[entry.node] ?? 0
         let newLocator = "Slide-\(newSlide)"
         let newComponent = "Index/\(newLocator).iwa"
         let sourceLocator = String(entry.component.dropFirst("Index/".count).dropLast(".iwa".count))
@@ -216,9 +240,14 @@ extension KeynoteDocument {
         }
         var placements = [(record: ArchiveRecord, component: String, info: TSP_ComponentInfo?)]()
         var newComponentInfos = [TSP_ComponentInfo]()
-        for id in copied.subtracting(roots).sorted() {
+        var onSlide = [ArchiveRecord]()                                   // drawables mode: into the target slide
+        for id in (targetSlide == nil ? copied.subtracting(roots) : copied).sorted() {
             guard let record = source.store.record(for: id), let home = source.store.entry(for: id)?.component,
                   let records = source.store.records(in: home) else { continue }
+            if targetSlide != nil, home == entry.component {
+                onSlide.append(try copy(record))
+                continue
+            }
             let homeLocator = String(home.dropFirst("Index/".count).dropLast(".iwa".count))
             if records.count == 1, var own = sourceMetadata.components.first(where: { locatorOf($0) == homeLocator }) {
                 own.identifier = identifiers[id]!
@@ -271,8 +300,12 @@ extension KeynoteDocument {
             }
             containers[p.component]?.objects.append(TSP_Reference.with { $0.identifier = p.record.identifier })
         }
-        store.addComponent(newComponent, records: try sourceRecords.map(copy))
-        store.append(try copy(nodeRecord), to: nodeComponent)
+        if let targetComponent {
+            for r in onSlide { store.append(r, to: targetComponent) }
+        } else {
+            store.addComponent(newComponent, records: try sourceRecords.map(copy))
+            store.append(try copy(nodeRecord), to: nodeComponent)
+        }
         for p in placements {
             if p.info != nil { store.addComponent(p.component, records: [p.record]) } else { store.append(p.record, to: p.component) }
         }
@@ -291,18 +324,36 @@ extension KeynoteDocument {
             try replacePayload(of: mapID, with: try map.serializedData(partial: true))
         }
 
-        show.slideTree.slides.insert(TSP_Reference.with { $0.identifier = newNode }, at: insertAt)
-        try replacePayload(of: showID, with: try show.serializedData(partial: true))
+        let copiedDrawables = (only ?? []).compactMap { identifiers[$0] }
+        if let targetSlide, var slide = decoded(KN_SlideArchive.self, targetSlide) {
+            // Drawables mode: the copies join the target slide, last in z order.
+            for d in copiedDrawables {
+                slide.ownedDrawables.append(TSP_Reference.with { $0.identifier = d })
+                slide.drawablesZOrder.append(TSP_Reference.with { $0.identifier = d })
+            }
+            try replacePayload(of: targetSlide, with: try slide.serializedData(partial: true))
+        } else {
+            show.slideTree.slides.insert(TSP_Reference.with { $0.identifier = newNode }, at: insertAt)
+            try replacePayload(of: showID, with: try show.serializedData(partial: true))
+        }
         metadata = packageMetadata ?? metadata
 
         // ComponentInfos: the slide's (external references and the data index are re-derived at
-        // save), the new single-object components', and UUID-map entries where copies joined.
-        info.identifier = newSlide
-        info.locator = newLocator
-        info.objectUuidMapEntries = newUUIDEntries[sourceLocator] ?? []
-        info.externalReferences = []
-        info.dataReferences = []
-        metadata.components.append(info)
+        // save) or, for drawables, the target slide's UUID-map entries; the new single-object
+        // components'; and UUID-map entries where copies joined.
+        if let targetComponent {
+            let targetLocator = String(targetComponent.dropFirst("Index/".count).dropLast(".iwa".count))
+            if let c = metadata.components.firstIndex(where: { locatorOf($0) == targetLocator }) {
+                metadata.components[c].objectUuidMapEntries += newUUIDEntries[sourceLocator] ?? []
+            }
+        } else {
+            info.identifier = newSlide
+            info.locator = newLocator
+            info.objectUuidMapEntries = newUUIDEntries[sourceLocator] ?? []
+            info.externalReferences = []
+            info.dataReferences = []
+            metadata.components.append(info)
+        }
         metadata.components += placements.compactMap(\.info) + newComponentInfos
         let nodeLocator = String(nodeComponent.dropFirst("Index/".count).dropLast(".iwa".count))
         for p in placements where p.info == nil {
@@ -313,7 +364,7 @@ extension KeynoteDocument {
         }
         // The node gets a UUID-map entry when this deck's nodes have them.
         let nodes = Set(show.slideTree.slides.map(\.identifier))
-        if let d = metadata.components.firstIndex(where: { locatorOf($0) == nodeLocator }),
+        if targetSlide == nil, let d = metadata.components.firstIndex(where: { locatorOf($0) == nodeLocator }),
            metadata.components[d].objectUuidMapEntries.contains(where: { nodes.contains($0.identifier) }) {
             metadata.components[d].objectUuidMapEntries.append(TSP_ObjectUUIDMapEntry.with {
                 $0.identifier = newNode
@@ -322,8 +373,9 @@ extension KeynoteDocument {
         }
         metadata.lastObjectIdentifier = max(metadata.lastObjectIdentifier, allocator.highWaterMark)
         _ = try commitData(newData, replacing: [], metadata: &metadata)
-        return SlideImportReport(source: entry.slide, slide: newSlide, node: newNode, component: newComponent,
-                                 copiedObjects: copied.count, mappedObjects: mapped, copiedData: newData.count, sharedData: sharedData)
+        return SlideImportReport(source: entry.slide, slide: newSlide, node: newNode, component: targetComponent ?? newComponent,
+                                 copiedObjects: copied.count, mappedObjects: mapped, copiedData: newData.count, sharedData: sharedData,
+                                 drawables: copiedDrawables)
     }
 }
 

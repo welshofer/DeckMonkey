@@ -1,0 +1,14 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Bare"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "title",
+   "title": "Just a title",
+   "body": null
+  }
+ ]
+}

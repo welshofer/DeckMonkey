@@ -22,6 +22,9 @@ extension KeynoteDocument {
 
     public struct Frame: Equatable, Sendable {
         public var x: Double, y: Double, width: Double, height: Double, angle: Double
+        public init(x: Double, y: Double, width: Double, height: Double, angle: Double = 0) {
+            self.x = x; self.y = y; self.width = width; self.height = height; self.angle = angle
+        }
     }
 
     static let shapeInfoType: UInt32 = 2011

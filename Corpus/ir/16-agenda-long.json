@@ -1,0 +1,23 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Agenda"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "agenda",
+   "title": "Agenda",
+   "body": {
+    "items": [
+     "Welcome",
+     "Market update",
+     "Product roadmap",
+     "Customer stories",
+     "Financials",
+     "Q&A"
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,26 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Punctuation"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "bullets",
+   "title": "Quotes “curly” and 'straight'",
+   "body": {
+    "bullets": [
+     {
+      "text": "Em — dash, en – dash"
+     },
+     {
+      "text": "Ellipsis… and ampersand & more"
+     },
+     {
+      "text": "<angle> {brace} [square]"
+     }
+    ]
+   }
+  }
+ ]
+}

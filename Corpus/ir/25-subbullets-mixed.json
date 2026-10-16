@@ -1,0 +1,41 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Nested"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "title",
+   "title": "Roadmap",
+   "body": {
+    "subtitle": "2027"
+   }
+  },
+  {
+   "id": "s2",
+   "layout": "bullets",
+   "title": "Priorities",
+   "body": {
+    "bullets": [
+     {
+      "text": "Customers",
+      "subBullets": [
+       "Retention"
+      ]
+     },
+     {
+      "text": "Platform"
+     },
+     {
+      "text": "People",
+      "subBullets": [
+       "Hiring",
+       "Growth"
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

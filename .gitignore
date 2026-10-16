@@ -23,3 +23,5 @@ DerivedData/
 /Sources/deckmonkey-cli/
 /Scripts/gate1/images.local.tsv
 __pycache__/
+# Hand-built Gate 4 reference decks (docs/hand-built-decks.md): decks never go to GitHub.
+Corpus/ir/*.golden.key

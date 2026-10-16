@@ -1,0 +1,39 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Charts"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "chart",
+   "title": "Signups",
+   "body": {
+    "chart": {
+     "kind": "line",
+     "categories": [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun"
+     ],
+     "series": [
+      {
+       "name": "Signups",
+       "values": [
+        120,
+        150,
+        170,
+        160,
+        210,
+        260
+       ]
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

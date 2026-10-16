@@ -2,6 +2,7 @@ import Foundation
 @_exported import IWAArchive
 @_exported import IWAContainer
 @_exported import IWASchema
+@_exported import LecternIR
 @_exported import KeynoteGraph
 
 /// DeckMonkey — read and write native Keynote files from Swift.

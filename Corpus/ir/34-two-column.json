@@ -1,0 +1,29 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Structures"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "twoColumn",
+   "title": "Before and after",
+   "body": {
+    "left": {
+     "heading": "Before",
+     "bullets": [
+      "Manual",
+      "Slow"
+     ]
+    },
+    "right": {
+     "heading": "After",
+     "bullets": [
+      "Automated",
+      "Fast"
+     ]
+    }
+   }
+  }
+ ]
+}

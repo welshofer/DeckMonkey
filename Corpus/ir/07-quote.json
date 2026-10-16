@@ -1,0 +1,16 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Quote"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "quote",
+   "body": {
+    "quote": "The best way to predict the future is to invent it.",
+    "attribution": "Alan Kay"
+   }
+  }
+ ]
+}
