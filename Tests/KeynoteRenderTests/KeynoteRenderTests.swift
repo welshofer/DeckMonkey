@@ -65,3 +65,19 @@ struct KeynoteRenderTests {
         #expect(slides > 0)
     }
 }
+
+@Suite("Keynote render bounds")
+struct KeynoteRenderBoundsTests {
+    @Test("attribute lookups are binary searches that agree with a linear scan")
+    func lookups() {
+        let positions: [UInt32] = [0, 3, 3, 9, 20]
+        for index in -1...25 {
+            let linear = positions.last { Int($0) <= index }
+            #expect(Canvas.entryAt(positions, index, { $0 }) == linear)
+        }
+        let starts = [0, 3, 9, 20]
+        #expect(Canvas.next(starts, after: 3) == 9)
+        #expect(Canvas.next(starts, after: 3, orEqual: true) == 3)
+        #expect(Canvas.next(starts, after: 20) == nil)
+    }
+}

@@ -79,6 +79,11 @@ struct Canvas {
     var body = ""
     var problems = Set<String>()
     var depth = 0
+    /// Drawables still allowed on this slide: groups may list a child many times over, so nesting
+    /// alone does not bound the work.
+    var budget = 10_000
+    /// Groups being drawn, so a group that contains itself stops.
+    var active = Set<UInt64>()
     /// What a slide-number field shows: the slide's page in the export.
     var slideNumber: Int?
 
@@ -145,8 +150,12 @@ struct Canvas {
 
     mutating func drawDrawable(_ id: UInt64) {
         guard depth < 16 else { problems.insert("nesting"); return }
+        guard budget > 0 else { problems.insert("drawables over budget"); return }
+        guard !active.contains(id) else { problems.insert("group cycle"); return }
+        budget -= 1
         depth += 1
-        defer { depth -= 1 }
+        active.insert(id)
+        defer { depth -= 1; active.remove(id) }
         switch type(of: id) {
         case Self.placeholderType:
             if let p = document.decoded(KN_PlaceholderArchive.self, id) { drawShapeInfo(p.super) }
@@ -248,6 +257,8 @@ struct Canvas {
         let g = d.geometry
         let w = Double(g.size.width), h = Double(g.size.height)
         let look = styles.mediaLook(image.hasStyle ? image.style.identifier : nil)
+        // The stroke follows what shows: the mask's outline, or the image's frame.
+        var edge = (transform: "", d: Outline(commands: Paths.rect(w, h, radius: 0), width: w, height: h).d())
         var element = "<image href=\"\(SVG.escape(imageHref(file.name, file.bytes)))\" width=\"\(SVG.n(w))\" height=\"\(SVG.n(h))\" preserveAspectRatio=\"none\""
         // A mask crops the image: its frame sits in the image's frame coordinates.
         if image.hasMask, let mask = document.decoded(TSD_MaskArchive.self, image.mask.identifier), mask.super.hasGeometry {
@@ -261,6 +272,7 @@ struct Canvas {
                 pathD = Outline(commands: Paths.rect(mw, mh, radius: 0), width: mw, height: mh).d()
             }
             let maskTransform = transform(mg)
+            edge = (maskTransform, pathD)
             let clip = defs.add { "<clipPath id=\"\($0)\"><path transform=\"\(maskTransform)\" d=\"\(pathD)\"/></clipPath>" }
             element += " clip-path=\"url(#\(clip))\""
         }
@@ -268,8 +280,17 @@ struct Canvas {
         var group = "<g transform=\"\(transform(g))\""
         if look.opacity < 0.9995 { group += " opacity=\"\(SVG.n(look.opacity))\"" }
         body += group + ">" + element
-        if let stroke = look.stroke, visible(stroke) {
-            body += stroked(stroke, d: Outline(commands: Paths.rect(w, h, radius: 0), width: w, height: h).d())
+        if let stroke = look.stroke {
+            let open = edge.transform.isEmpty ? "" : "<g transform=\"\(edge.transform)\">"
+            if stroke.hasFrame {
+                // A picture frame is artwork in Keynote's bundle, not in the file: a light mat
+                // of the frame's usual width stands in for it.
+                problems.insert("picture frame (approximated)")
+                let width = 24 * (stroke.frame.hasAssetScale ? Double(stroke.frame.assetScale) : 1)
+                body += open + "<path d=\"\(edge.d)\" fill=\"none\" stroke=\"#f7f5ef\" stroke-width=\"\(SVG.n(width))\"/>" + (open.isEmpty ? "" : "</g>")
+            } else if visible(stroke) {
+                body += open + stroked(stroke, d: edge.d) + (open.isEmpty ? "" : "</g>")
+            }
         }
         body += "</g>"
     }

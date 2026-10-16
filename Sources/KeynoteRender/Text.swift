@@ -152,17 +152,40 @@ extension Canvas {
         }
     }
 
+    /// The last entry at or before `index` in `entries`, sorted by position (binary search).
     static func entryAt<E>(_ entries: [E], _ index: Int, _ position: (E) -> UInt32) -> E? {
-        var found: E?
-        for e in entries where Int(position(e)) <= index { found = e }
-        return found
+        var lo = 0, hi = entries.count
+        while lo < hi {
+            let mid = (lo + hi) / 2
+            if Int(position(entries[mid])) <= index { lo = mid + 1 } else { hi = mid }
+        }
+        return lo > 0 ? entries[lo - 1] : nil
     }
+
+    /// The first position in sorted `positions` greater than (or, with `orEqual`, at least) `index`.
+    static func next(_ positions: [Int], after index: Int, orEqual: Bool = false) -> Int? {
+        var lo = 0, hi = positions.count
+        while lo < hi {
+            let mid = (lo + hi) / 2
+            if positions[mid] < index || (!orEqual && positions[mid] == index) { lo = mid + 1 } else { hi = mid }
+        }
+        return lo < positions.count ? positions[lo] : nil
+    }
+
+    /// Bounds on what one storage may cost: a hostile file can declare a megabyte of text or
+    /// millions of attribute entries; the renderer draws the first part and says so.
+    static let maximumTextUnits = 65_536
+    static let maximumEntries = 65_536
 
     /// The text of `storage` laid out in a `width × height` frame, as `<text>` elements.
     mutating func textMarkup(storage: UInt64, width: Double, height: Double, look shape: StyleResolver.ShapeLook) -> String {
         guard let archive = document.decoded(TSWP_StorageArchive.self, storage) else { problems.insert("text storage"); return "" }
-        let units = Array(archive.text.joined().utf16)
+        var units = Array(archive.text.joined().utf16)
         guard !units.isEmpty else { return "" }
+        if units.count > Self.maximumTextUnits {
+            units = Array(units.prefix(Self.maximumTextUnits))
+            problems.insert("text truncated")
+        }
 
         // Paragraph boundaries in UTF-16 offsets.
         var paragraphs: [Range<Int>] = []
@@ -173,17 +196,36 @@ extension Canvas {
         }
         paragraphs.append(start..<units.count)
 
-        let paraEntries = archive.tableParaStyle.entries.sorted { $0.characterIndex < $1.characterIndex }
-        let charEntries = archive.tableCharStyle.entries.sorted { $0.characterIndex < $1.characterIndex }
-        let listEntries = archive.tableListStyle.entries.sorted { $0.characterIndex < $1.characterIndex }
-        let levelEntries = archive.tableParaData.entries.sorted { $0.characterIndex < $1.characterIndex }
-        let attachments = Dictionary(archive.tableAttachment.entries.map { (Int($0.characterIndex), $0.hasObject ? $0.object.identifier : 0) }, uniquingKeysWith: { a, _ in a })
+        func sorted<E>(_ entries: [E], _ position: (E) -> UInt32) -> [E] {
+            if entries.count > Self.maximumEntries { problems.insert("text attributes truncated") }
+            return entries.prefix(Self.maximumEntries).sorted { position($0) < position($1) }
+        }
+        let paraEntries = sorted(archive.tableParaStyle.entries, \.characterIndex)
+        let charEntries = sorted(archive.tableCharStyle.entries, \.characterIndex)
+        let charStarts = charEntries.map { Int($0.characterIndex) }
+        let listEntries = sorted(archive.tableListStyle.entries, \.characterIndex)
+        let levelEntries = sorted(archive.tableParaData.entries, \.characterIndex)
+        let attachments = Dictionary(sorted(archive.tableAttachment.entries, \.characterIndex).map { (Int($0.characterIndex), $0.hasObject ? $0.object.identifier : 0) }, uniquingKeysWith: { a, _ in a })
+        let attachmentStarts = attachments.keys.sorted()
 
         // A null paragraph-style entry continues the style before it.
+        var resolvedParaStyles = [(index: UInt32, style: UInt64?)]()
+        var running = shape.paragraphStyle
+        for e in paraEntries {
+            if e.hasObject { running = e.object.identifier }
+            resolvedParaStyles.append((e.characterIndex, running))
+        }
         func paraStyle(at index: Int) -> UInt64? {
-            var style = shape.paragraphStyle
-            for e in paraEntries where Int(e.characterIndex) <= index && e.hasObject { style = e.object.identifier }
-            return style
+            Self.entryAt(resolvedParaStyles, index, \.index).map { $0.style } ?? shape.paragraphStyle
+        }
+
+        // Numbered paragraphs count up within their level, restarting under a shallower one.
+        var ordinals = [Int](), counters = [Int](repeating: 0, count: 10)
+        for range in paragraphs {
+            let level = min(Int(Self.entryAt(levelEntries, range.lowerBound, \.characterIndex)?.first ?? 0), 9)
+            counters[level] += 1
+            for deeper in (level + 1)..<10 { counters[deeper] = 0 }
+            ordinals.append(counters[level])
         }
 
         let available = max(1, width - shape.padding.left - shape.padding.right)
@@ -221,9 +263,9 @@ extension Canvas {
                         look = para.char
                     }
                     look.size *= scale
-                    let nextChar = charEntries.first { Int($0.characterIndex) > i }.map { Int($0.characterIndex) } ?? range.upperBound
+                    let nextChar = Self.next(charStarts, after: i) ?? range.upperBound
                     var end = min(nextChar, range.upperBound)
-                    if let a = attachments.keys.filter({ $0 >= i && $0 < end }).min() { end = a == i ? i + 1 : a }
+                    if let a = Self.next(attachmentStarts, after: i, orEqual: true), a < end { end = a == i ? i + 1 : a }
                     var text = String(decoding: units[i..<end], as: UTF16.self)
                     if end == i + 1, let object = attachments[i] {
                         text = attachmentText(object)
@@ -253,8 +295,7 @@ extension Canvas {
                     switch type {
                     case .kString: text = list.strings.indices.contains(l) ? list.strings[l] : "•"
                     case .kNumber:
-                        let ordinal = numberOf(paragraph: pi, level: level, listID: listID, paragraphs: paragraphs, levels: levelEntries, lists: listEntries)
-                        text = "\(ordinal)."
+                        text = "\(ordinals[pi])."
                     case .kImage: text = "•"; problems.insert("image bullet")
                     case .kNone: text = nil
                     }
@@ -331,12 +372,13 @@ extension Canvas {
                     }
                     if current.spans.isEmpty && trimmedWidth > current.available + 0.01 {
                         // A word wider than the line breaks between characters.
-                        var chunk = ""
+                        var chunk = "", chunkWidth = 0.0
                         for ch in text {
-                            if !chunk.isEmpty && measure(chunk + String(ch), look) > current.available {
-                                append(chunk, look); finishLine(justify: false); chunk = ""
+                            let w = measure(String(ch), look)
+                            if !chunk.isEmpty && chunkWidth + w > current.available {
+                                append(chunk, look); finishLine(justify: false); chunk = ""; chunkWidth = 0
                             }
-                            chunk.append(ch)
+                            chunk.append(ch); chunkWidth += w
                         }
                         if !chunk.isEmpty { append(chunk, look) }
                     } else {
@@ -449,21 +491,6 @@ extension Canvas {
         if type(of: object) == Self.slideNumberAttachmentType { return slideNumber.map(String.init) ?? "" }
         if object != 0 { problems.insert("attachment") }
         return ""
-    }
-
-    /// A numbered paragraph's ordinal: one more than the paragraphs before it at its level since
-    /// the last paragraph at a shallower level.
-    func numberOf(paragraph: Int, level: Int, listID: UInt64, paragraphs: [Range<Int>],
-                  levels: [TSWP_ParaDataAttributeTable.ParaDataAttribute], lists: [TSWP_ObjectAttributeTable.ObjectAttribute]) -> Int {
-        var n = 1
-        var p = paragraph - 1
-        while p >= 0 {
-            let l = Int(Self.entryAt(levels, paragraphs[p].lowerBound, \.characterIndex)?.first ?? 0)
-            if l < level { break }
-            if l == level { n += 1 }
-            p -= 1
-        }
-        return n
     }
 
     static let slideNumberAttachmentType: UInt32 = 22
