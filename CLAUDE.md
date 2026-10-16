@@ -193,18 +193,25 @@ keep cross-table formulas working (AppleScript cell edits: a cloned dependent re
 source; a cloned source is independent; deleting a referenced table gives `#REF!`, exactly as
 Keynote's own delete). The strength table now has 215 fields from 122 decks.
 
-Phase 4, first half (2026-10-15, branch `phase4`): `deckmonkey from-ir <deck.json> --template t.key`
-(DeckIRWriter) builds a `.key` from a `lectern.deck/1` Deck IR. The IR types come from LecternIR,
-extracted from LecternCore on rostrum branch `deckmonkey/lectern-ir` (Foundation only; LecternCore's
-346 tests pass); `phase4` builds against that checkout (`swift package edit rostrum --path
-../rostrum-lecternir`) and merges once a Rostrum release carries LecternIR. Each IR slide clones the
-template's sample slide for its master (title, sectionHeader, bullets, agenda, statement, bigNumber,
-quote, closing on the 20 modern Apple themes) and `setParagraphs` fills it (list levels in
-`table_para_data`; only tables the storage has are touched, else Keynote rewrites it on read).
-**Gate 4 (AT-24): 22/22 at 0 mismatched pixels** against Keynote building the same fixture through
-AppleScript (`Scripts/gate4/gate4.py`, fixtures in `Corpus/ir`); 23–25 have sub-bullets, which
-AppleScript cannot author, and wait for hand-built `<fixture>.golden.key` decks (Jay). Open: the
-other twelve layouts (new drawables), older themes' masters, images, tables and charts from the IR.
+Phase 4 (2026-10-15, branch `phase4`): `deckmonkey from-ir <deck.json> --template t.key
+[--parts deck.key]... [--plan-out plan.json]` (DeckIRWriter) builds a `.key` from a
+`lectern.deck/1` Deck IR. The IR types come from LecternIR, extracted from LecternCore in rostrum
+PR #74 (branch `deckmonkey/lectern-ir`, CI green); `phase4` builds against that checkout (`swift
+package edit rostrum --path ../rostrum-lecternir`) and merges once a Rostrum release carries
+LecternIR. The IR becomes a Codable `DeckPlan` (masters, text, new drawables with whole-point
+frames), then is applied: each slide clones the template's own sample slide for its master and
+`setParagraphs` fills it (Keynote's encoding: `\n`, null later para styles, level entries where the
+level changes; only tables the storage has are touched). New drawables are copies of Keynote-made
+parts, restyled to the theme's defaults: plain text item / shape (`Corpus/features/drawables.key`),
+charts by type (`charts.key`, style lists from the target preset), tables by size
+(`tables-parts.key`: every cell a unique "r<row>c<col>" text, so filling a table only rewrites its
+string list; `importDrawables` brings the table onto the theme's own Title Only slide,
+`setTableFrame` sizes it as Keynote does, `registerHeaderNames` registers its header words as
+Keynote does). Layouts: 18 of 20 (all but image-backed ones, which fall back to bullets).
+**Gate 4 (AT-24): 35/43 at 0 mismatched pixels** against Keynote building the same plan through
+AppleScript (`Scripts/gate4`); 7 cases need hand-built references (sub-bullets, exactly placed text
+boxes: `docs/hand-built-decks.md`), 1 was disturbed by input. Open: those decks (Jay), older
+themes' masters, numeric table cells, images, builds.
 
 Keynote on the M4 began refusing every oracle copy ("can't be opened right now | Operation not
 permitted") after several hundred opens in one session; only a Keynote restart clears it, and the

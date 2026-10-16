@@ -19,7 +19,7 @@ Pinned to Keynote 15.4 (7051.0.79). Every gate below is checked against Keynote 
 | 2 Media | replace images (PNG, JPEG, GIF, TIFF), movies and audio; no orphaned data | macOS 12/12 (the iPad oracle, AT-27, is not built) |
 | 3a Slides | move, delete and duplicate slides within a deck | Gate 3a passed: 30/30 |
 | 3b Import | copy a slide from another deck, restyled to this deck's theme (styles, masters and presets by reference; refuses on no match), tables and charts included | 14/14 oracle cases |
-| 4 Deck IR | `from-ir`: a lectern.deck/1 deck onto a theme's masters (8 layouts) | 22/22 at 0 px vs Keynote's own build (branch `phase4`) |
+| 4 Deck IR | `from-ir`: a lectern.deck/1 deck onto a theme: 18 of 20 layouts, charts and tables included | 35/43 at 0 px vs Keynote's own build; 7 await hand-built references (branch `phase4`) |
 | 5 | builds and transitions | not started |
 
 ## Command line
