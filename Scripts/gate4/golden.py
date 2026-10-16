@@ -52,6 +52,9 @@ def slide_lines(slide):
         for r, row in enumerate(cells, 1):
             for c, value in enumerate(row, 1):
                 v = value.replace("\\", "\\\\").replace('"', '\\"')
+                # IR cells are strings: the cell is made text first, so "42%" stays the text
+                # DeckMonkey writes instead of becoming a number.
+                out.append(f'set format of cell {c} of row {r} of t to text')
                 out.append(f'set value of cell {c} of row {r} of t to "{v}"')
     def strings(xs): return "{" + ", ".join('"' + x.replace("\\", "\\\\").replace('"', '\\"') + '"' for x in xs) + "}"
     for d in slide.get("drawables", []):

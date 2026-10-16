@@ -1,0 +1,39 @@
+{
+ "irVersion": "lectern.deck/1",
+ "meta": {
+  "title": "Numbers"
+ },
+ "slides": [
+  {
+   "id": "s1",
+   "layout": "table",
+   "title": "Quarter",
+   "body": {
+    "table": {
+     "headers": [
+      "Metric",
+      "Q1",
+      "Q2"
+     ],
+     "rows": [
+      [
+       "Revenue",
+       "$4.2M",
+       "$4.9M"
+      ],
+      [
+       "Growth",
+       "12%",
+       "17%"
+      ],
+      [
+       "Customers",
+       "1200",
+       "1450"
+      ]
+     ]
+    }
+   }
+  }
+ ]
+}
