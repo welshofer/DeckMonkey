@@ -1,5 +1,6 @@
 import DeckMonkey
 import Foundation
+import SwiftProtobuf
 
 // deckmonkey — the acceptance surface (docs/spec.md §13). Every gate is one of these subcommands
 // with a machine-readable exit code: 0 pass, 1 fail, 2 usage error, 3 refused by design (a
@@ -11,6 +12,13 @@ enum CLI {
 
       inspect <file>                 components, object counts, type histogram, versions
       dump <file> [component]        every record: identifier, types, versions, lengths, references
+      render <file> -o <dir> [--slide <index>] [--fonts <dir>]...
+                                     track R: each slide as SVG (<dir>/page-<n>.svg in PDF page
+                                     order, skipped slides as skipped-<index>.svg) and a JSON report
+                                     of what could not be drawn; --fonts indexes every .ttf, .otf
+                                     and .ttc under a directory for text measurement (default on
+                                     macOS: the system's font directories)
+      record <file> <id>...          each record's payloads decoded as protobuf text format
       roundtrip <file> [-o out.key]  open, save, re-open; prints CLEAN n/n or the first difference
       verify <file>                  validator (oracle harness wiring arrives with Scripts/oracle.sh)
       snappy-check <ref.json> [--emit <dir>]
@@ -137,6 +145,57 @@ func runDump(_ args: [String]) throws {
                 if !info.dataReferences.isEmpty { line += " data \(info.dataReferences)" }
                 print(line)
             }
+        }
+    }
+}
+
+func runRender(_ args: [String]) throws {
+    guard let path = args.first, let out = option("-o", in: args) else { fail(CLI.usage, code: 2) }
+    let document = try DeckMonkey.open(url(path))
+    var fontDirectories = [String]()
+    var i = 0
+    while i < args.count { if args[i] == "--fonts", i + 1 < args.count { fontDirectories.append(args[i + 1]); i += 1 }; i += 1 }
+    // Without --fonts on a Mac, the system's own fonts.
+    #if os(macOS)
+    let directories = fontDirectories.isEmpty ? RenderFonts.macOSFontDirectories : fontDirectories.map { url($0) }
+    #else
+    let directories = fontDirectories.map { url($0) }
+    #endif
+    let fonts = RenderFonts.library(directories: directories)
+    let renderer = KeynoteRenderer(document: document, fonts: fonts)
+    let directory = url(out)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    var slides = try renderer.renderAll().enumerated().map { ($0.offset, $0.element) }
+    if let only = option("--slide", in: args) {
+        guard let index = Int(only), slides.indices.contains(index) else { fail("error: no slide \(only)") }
+        slides = [slides[index]]
+    }
+    var report = [[String: Any]]()
+    for (index, entry) in slides {
+        let name = entry.page.map { "page-\($0).svg" } ?? "skipped-\(index).svg"
+        try Data(entry.rendered.svg.utf8).write(to: directory.appendingPathComponent(name))
+        report.append(["index": index, "slide": entry.slide, "page": entry.page as Any, "file": name, "problems": entry.rendered.problems])
+    }
+    let json = try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
+    try json.write(to: directory.appendingPathComponent("render.json"))
+    let problems = Set(slides.flatMap { $0.1.rendered.problems }).sorted()
+    print("rendered \(slides.count) slide(s) to \(directory.path)" + (problems.isEmpty ? "" : "; not drawn: " + problems.joined(separator: ", ")))
+}
+
+func runRecord(_ args: [String]) throws {
+    guard args.count >= 2 else { fail(CLI.usage, code: 2) }
+    let document = try DeckMonkey.open(url(args[0]))
+    for id in args.dropFirst() {
+        guard let identifier = UInt64(id), let record = document.store.record(for: identifier) else { fail("error: no record \(id)") }
+        print("# \(identifier) in \(document.store.entry(for: identifier)?.component ?? "?")")
+        for (info, payload) in zip(record.info.messageInfos, record.payloads) {
+            let name = document.registry?.name(for: info.type) ?? "type \(info.type)"
+            guard let type = Schema.messageType(for: info.type),
+                  let message = try? type.init(serializedBytes: payload, extensions: Schema.extensions, partial: true) else {
+                print("## \(name): \(payload.count) bytes, not decoded"); continue
+            }
+            print("## \(name)")
+            print(message.textFormatString())
         }
     }
 }
@@ -544,6 +603,8 @@ do {
     switch command {
     case "inspect": try runInspect(rest)
     case "dump": try runDump(rest)
+    case "record": try runRecord(rest)
+    case "render": try runRender(rest)
     case "roundtrip": try runRoundtrip(rest)
     case "verify": try runVerify(rest)
     case "snappy-check": try runSnappyCheck(rest)

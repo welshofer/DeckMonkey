@@ -8,7 +8,8 @@ import PackageDescription
 //   IWAArchive  → IWASnappy
 //   IWASchema   → SwiftProtobuf (generated per pinned Keynote version)
 //   KeynoteGraph → IWAArchive, IWASchema, IWAContainer
-//   DeckMonkey  → KeynoteGraph, Rostrum (Deck IR)
+//   KeynoteRender → KeynoteGraph, Rostrum (font metrics): track R, a slide as SVG (read-only)
+//   DeckMonkey  → KeynoteGraph, KeynoteRender, Rostrum (Deck IR)
 //   DeckMonkeyCLI → DeckMonkey (the `deckmonkey` executable, the acceptance surface). The target
 //                 and its directory avoid the name `deckmonkey`: on a case-insensitive macOS volume
 //                 it collides with the `DeckMonkey` library's source and build directories.
@@ -40,11 +41,16 @@ let package = Package(
             name: "KeynoteGraph",
             dependencies: ["IWAArchive", "IWASchema", "IWAContainer", .product(name: "SwiftProtobuf", package: "swift-protobuf")]),
         .target(
+            name: "KeynoteRender",
+            dependencies: ["KeynoteGraph", "IWASchema", .product(name: "Rostrum", package: "rostrum"),
+                           .product(name: "SwiftProtobuf", package: "swift-protobuf")]),
+        .target(
             name: "DeckMonkey",
-            dependencies: ["KeynoteGraph", "IWAArchive", "IWAContainer", "IWASchema", "IWASnappy", .product(name: "Rostrum", package: "rostrum"),
+            dependencies: ["KeynoteGraph", "KeynoteRender", "IWAArchive", "IWAContainer", "IWASchema", "IWASnappy", .product(name: "Rostrum", package: "rostrum"),
                            .product(name: "LecternIR", package: "rostrum"), .product(name: "RostrumLayout", package: "rostrum"),
                            .product(name: "SwiftProtobuf", package: "swift-protobuf")]),
-        .executableTarget(name: "DeckMonkeyCLI", dependencies: ["DeckMonkey"], path: "Sources/DeckMonkeyCLI"),
+        .executableTarget(name: "DeckMonkeyCLI", dependencies: ["DeckMonkey", .product(name: "SwiftProtobuf", package: "swift-protobuf")], path: "Sources/DeckMonkeyCLI"),
+        .testTarget(name: "KeynoteRenderTests", dependencies: ["KeynoteRender", "KeynoteGraph", "IWASchema"]),
         .testTarget(name: "IWASnappyTests", dependencies: ["IWASnappy"]),
         .testTarget(name: "IWAArchiveTests", dependencies: ["IWAArchive", "IWASnappy"]),
         .testTarget(

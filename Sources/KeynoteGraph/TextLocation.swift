@@ -32,7 +32,8 @@ extension KeynoteDocument {
     static let slideType: UInt32 = 5
     static let showType: UInt32 = 2
 
-    func decoded<M: SwiftProtobuf.Message>(_ type: M.Type, _ identifier: UInt64) -> M? {
+    /// The first payload of `identifier` decoded as `M`, or nil when it is absent or does not decode.
+    public func decoded<M: SwiftProtobuf.Message>(_ type: M.Type, _ identifier: UInt64) -> M? {
         guard let payload = store.record(for: identifier)?.payloads.first else { return nil }
         return try? M(serializedBytes: payload, extensions: Schema.extensions, partial: true)
     }
