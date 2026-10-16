@@ -208,10 +208,11 @@ charts by type (`charts.key`, style lists from the target preset), tables by siz
 string list; `importDrawables` brings the table onto the theme's own Title Only slide,
 `setTableFrame` sizes it as Keynote does, `registerHeaderNames` registers its header words as
 Keynote does). Layouts: 18 of 20 (all but image-backed ones, which fall back to bullets).
-**Gate 4 (AT-24): 35/43 at 0 mismatched pixels** against Keynote building the same plan through
+**Gate 4 (AT-24): 37/44 at 0 mismatched pixels** against Keynote building the same plan through
 AppleScript (`Scripts/gate4`); 7 cases need hand-built references (sub-bullets, exactly placed text
-boxes: `docs/hand-built-decks.md`), 1 was disturbed by input. Open: those decks (Jay), older
-themes' masters, numeric table cells, images, builds.
+boxes: `docs/hand-built-decks.md`). Decided (Jay, 2026-10-16): older themes without the Section,
+Agenda, Statement or Big Fact masters stay refused with a typed error; no nearest-master fallback.
+Open: those decks (Jay), images, builds. Table cells are text, as the IR's strings are.
 
 Keynote on the M4 began refusing every oracle copy ("can't be opened right now | Operation not
 permitted") after several hundred opens in one session; only a Keynote restart clears it, and the
