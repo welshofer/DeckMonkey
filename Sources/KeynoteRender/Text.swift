@@ -240,9 +240,9 @@ extension Canvas {
         var lookCache = [UInt64: CharLook]()
         var paraCache = [UInt64: ParaLook]()
 
-        func layout(scale: Double) -> (lines: [Line], height: Double) {
+        func layout(scale: Double) -> (lines: [Line], height: Double, fitHeight: Double) {
             var out = [Line]()
-            var y = 0.0
+            var y = 0.0, lastShortfall = 0.0
             for (pi, range) in paragraphs.enumerated() {
                 let paraID = paraStyle(at: range.lowerBound)
                 var para: ParaLook
@@ -417,20 +417,23 @@ extension Canvas {
                     let ascent = para.lineSpacingMode == .kRelativeLineSpacing ? line.ascent * min(para.lineSpacing, 1) + max(0, height - natural) : line.ascent - (natural - height) * (line.ascent / max(natural, 0.001))
                     line.baseline = y + ascent
                     y += height
+                    lastShortfall = max(0, natural - height)
                     out.append(line)
                 }
                 y += para.spaceAfter * scale
             }
-            return (out, y)
+            // Whether text fits is judged with the last line at its full natural height: a Big
+            // Fact at 0.8 spacing that would fit three lines that way shrinks to two, as Keynote's does.
+            return (out, y, y + lastShortfall)
         }
 
         var result = layout(scale: 1)
         let availableHeight = max(1, height - shape.padding.top - shape.padding.bottom)
-        if shape.shrinkToFit, result.height > availableHeight + 0.5 {
+        if shape.shrinkToFit, result.fitHeight > availableHeight + 0.5 {
             var lo = 0.2, hi = 1.0
             for _ in 0..<12 {
                 let mid = (lo + hi) / 2
-                if layout(scale: mid).height <= availableHeight + 0.5 { lo = mid } else { hi = mid }
+                if layout(scale: mid).fitHeight <= availableHeight + 0.5 { lo = mid } else { hi = mid }
             }
             scale = lo
             result = layout(scale: scale)

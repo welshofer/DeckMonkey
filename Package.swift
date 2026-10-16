@@ -50,7 +50,7 @@ let package = Package(
                            .product(name: "LecternIR", package: "rostrum"), .product(name: "RostrumLayout", package: "rostrum"),
                            .product(name: "SwiftProtobuf", package: "swift-protobuf")]),
         .executableTarget(name: "DeckMonkeyCLI", dependencies: ["DeckMonkey", .product(name: "SwiftProtobuf", package: "swift-protobuf")], path: "Sources/DeckMonkeyCLI"),
-        .testTarget(name: "KeynoteRenderTests", dependencies: ["KeynoteRender", "KeynoteGraph", "IWASchema"]),
+        .testTarget(name: "KeynoteRenderTests", dependencies: ["KeynoteRender", "KeynoteGraph", "IWASchema", "IWAContainer"]),
         .testTarget(name: "IWASnappyTests", dependencies: ["IWASnappy"]),
         .testTarget(name: "IWAArchiveTests", dependencies: ["IWAArchive", "IWASnappy"]),
         .testTarget(

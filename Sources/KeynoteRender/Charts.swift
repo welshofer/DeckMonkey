@@ -18,7 +18,9 @@ extension Canvas {
         // Series are the grid's rows unless the chart reads its columns as series.
         let grid = chart.grid
         let byColumn = chart.seriesDirection == .byColumn
-        let rows = grid.gridRow.prefix(256).map { Array($0.value.prefix(1_024).map { Double($0.numericValue) }) }
+        // Values far past any chart's range would overflow the axis arithmetic; they draw as zero.
+        let rows = grid.gridRow.prefix(256).map { Array($0.value.prefix(1_024).map { v -> Double in
+            let x = Double(v.numericValue); return x.isFinite && abs(x) < 1e100 ? x : 0 } ) }
         var names = grid.rowName.prefix(256).map { $0 }, categories = grid.columnName.prefix(1_024).map { $0 }
         var values = rows
         if byColumn {
@@ -28,6 +30,13 @@ extension Canvas {
         }
         let seriesCount = values.count, categoryCount = values.map(\.count).max() ?? 0
         guard seriesCount > 0, categoryCount > 0 else { return }
+        // Every mark is an element: past the budget the chart keeps its first categories.
+        if seriesCount * categoryCount > Self.maximumChartMarks {
+            let keep = max(1, Self.maximumChartMarks / seriesCount)
+            values = values.map { Array($0.prefix(keep)) }
+            categories = Array(categories.prefix(keep))
+            problems.insert("chart data truncated")
+        }
 
         // Styles: each series' theme style, then the chart's paragraph styles for labels.
         let seriesStyles = chart.seriesThemeStyles.map { document.decoded(TSCH_ChartSeriesStyleArchive.self, $0.identifier) }
@@ -85,6 +94,9 @@ extension Canvas {
 
     enum AxisKind { case bars, line, area }
 
+    /// Bars, points or wedges one chart may draw.
+    static let maximumChartMarks = 10_000
+
     /// The value axis: zero to the data's extreme rounded up at its leading digit (9 stays 9,
     /// 24 becomes 30), in four steps, as Keynote's automatic scale draws it.
     static func scale(_ low: Double, _ high: Double) -> (min: Double, max: Double, step: Double) {
@@ -94,7 +106,7 @@ extension Canvas {
             return ceil(x / magnitude * (1 - 1e-12)) * magnitude
         }
         let hi = round(max(0, high)), lo = -round(-min(0, low))
-        guard hi - lo > 0 else { return (0, 1, 0.25) }
+        guard hi - lo > 0, (hi - lo).isFinite else { return (0, 1, 0.25) }
         return (lo, hi, (hi - lo) / 4)
     }
 
@@ -129,7 +141,8 @@ extension Canvas {
         // Gridlines and value labels.
         let showGrid = valueAxis.map { $0.hasTschchartaxisvalueshowmajorgridlines ? $0.tschchartaxisvalueshowmajorgridlines : true } ?? true
         let gridStroke = valueAxis.flatMap { $0.hasTschchartaxisvaluemajorgridlinestroke ? $0.tschchartaxisvaluemajorgridlinestroke : nil }
-        let steps = Int(((axis.max - axis.min) / axis.step).rounded())
+        let ratio = ((axis.max - axis.min) / axis.step).rounded()
+        let steps = ratio.isFinite ? Int(min(max(ratio, 0), 100)) : 4
         for i in 0...max(0, min(steps, 100)) {
             let value = axis.min + Double(i) * axis.step
             let p = position(value)

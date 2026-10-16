@@ -242,7 +242,7 @@ Twenty-nine tests, each a `swift test` case or a `deckmonkey verify` run with a 
 | AT-25 | A file from a newer Keynote opens read-only through the raw store; any write raises `schemaNewerThanLibrary` | 0 |
 | AT-26 | Each file in `Corpus/hostile/` raises its named validator error and writes nothing | 0 |
 | AT-28 | Track R: every slide of every template and feature deck renders to well-formed SVG with no thrown error, and every drawable kind it cannot draw is reported by name, never silently dropped | R |
-| AT-29 | Track R: `Scripts/render/compare.swift` rasterizes each slide's SVG through WebKit and the golden PDF's page through CoreGraphics at 960 points wide and reports the share of pixels whose colour differs by more than 48/255 in any channel; the gate is a median at or below 3% and no slide above 15% over the templates and feature decks (provisional: set after R1's first measurement) | R |
+| AT-29 | Track R: `Scripts/render/compare.swift` rasterizes each slide's SVG through WebKit and the golden PDF's page through CoreGraphics at 960 points wide and reports the share of pixels whose colour differs by more than 48/255 in any channel; the gate is a median at or below 3% and no slide above 15% over the templates and feature decks. A slide that needs what its file does not hold (a built-in theme's photo or texture, which Keynote downloads from Apple and never stores in the deck; a font the machine lacks) cannot be judged from the file: it is drawn with a reported stand-in and counted, not barred (`Scripts/render/gate.py`) | R |
 | AT-27 | iOS oracle: every file that passes AT-10 also opens in Keynote for iPadOS with no alert and exports a PDF at 0 mismatched pixels against the macOS export | 2 |
 
 ## 15. Risks

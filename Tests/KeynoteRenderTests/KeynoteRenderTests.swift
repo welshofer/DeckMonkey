@@ -2,6 +2,7 @@ import Foundation
 #if canImport(FoundationXML)
 import FoundationXML
 #endif
+import IWAContainer
 import IWASchema
 import KeynoteGraph
 import Testing
@@ -106,5 +107,33 @@ struct KeynoteRenderTableTests {
         #expect(Canvas.formatDate(.infinity, nil) == "")
         f.formatType = 256; f.decimalPlaces = 2; f.showThousandsSeparator = true
         #expect(Canvas.formatNumber(-1234567.891, f) == "-1,234,567.89")
+    }
+}
+
+@Suite("Keynote render charts")
+struct KeynoteRenderChartTests {
+    @Test("the value axis rounds up at the leading digit in four steps, and never overflows")
+    func scale() {
+        #expect(Canvas.scale(0, 9) == (0, 9, 2.25))
+        #expect(Canvas.scale(0, 24) == (0, 30, 7.5))
+        #expect(Canvas.scale(-3, 0) == (-3, 0, 0.75))
+        let huge = Canvas.scale(0, 1e308)
+        #expect(huge.step.isFinite && huge.max.isFinite)
+        #expect(Canvas.scale(0, 0) == (0, 1, 0.25))
+    }
+}
+
+@Suite("Keynote render host API")
+struct KeynoteRenderHostTests {
+    static let deck = KeynoteRenderTests.root.appendingPathComponent("Corpus/templates/basic-white_wide.key")
+
+    @Test("a deck serializes to bytes that reopen to the same slides, and names its fonts", .enabled(if: FileManager.default.fileExists(atPath: deck.path), "no Corpus/templates"))
+    func host() throws {
+        let document = try KeynoteDocument.open(Self.deck)
+        let bytes = try document.serializedData()
+        let reopened = try KeynoteDocument.open(IWAPackage.openZip(bytes))
+        #expect(try reopened.slideList().map(\.slide) == document.slideList().map(\.slide))
+        let fonts = KeynoteRenderer(document: document).fontNames()
+        #expect(fonts.contains("HelveticaNeue") && fonts.contains("HelveticaNeue-Bold"))
     }
 }

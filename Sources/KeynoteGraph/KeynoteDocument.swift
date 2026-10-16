@@ -204,14 +204,31 @@ public struct KeynoteDocument: Sendable {
         try document.write(to: url, as: form)
     }
 
+    /// The document as the bytes of a single-file `.key` (a zip), with the same checks and derived
+    /// lists as `save`: for a host that keeps documents in memory or writes them itself.
+    public func serializedData() throws -> Data {
+        if let newer = writtenByNewerKeynote {
+            throw KeynoteError.schemaNewerThanLibrary(fileBuild: newer, pinned: "\(TypeRegistry.pinnedVersion) (\(TypeRegistry.pinnedBuild))")
+        }
+        var document = self
+        try document.refreshComponentDataIndex()
+        try document.refreshExternalReferences()
+        return try document.joinedPackage().zipData()
+    }
+
     private func write(to url: URL, as form: IWAPackage.Form?) throws {
+        try joinedPackage().write(to: url, as: form)
+    }
+
+    /// The package with every component re-joined from the store; refuses on a validation error.
+    private func joinedPackage() throws -> IWAPackage {
         let issues = validate().filter { $0.severity == .error }
         guard issues.isEmpty else { throw KeynoteError.validationFailed(issues) }
         var out = package
         for (name, decompressed) in store.joinedComponents() {
             out.set(name, try IWAChunking.compress(decompressed))
         }
-        try out.write(to: url, as: form)
+        return out
     }
 
     /// `PackageMetadata.components[].data_references` indexes, per component, which objects use

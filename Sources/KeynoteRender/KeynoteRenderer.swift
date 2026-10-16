@@ -42,6 +42,21 @@ public struct KeynoteRenderer {
         return try document.slideList().map { ($0.slide, pages[$0.slide], render(slide: $0.slide)) }
     }
 
+    /// The PostScript names of every face the deck's paragraph, character and list styles name,
+    /// so a host can load just those into `RenderFonts`.
+    public func fontNames() -> Set<String> {
+        var names = Set<String>()
+        for id in document.store.identifiers {
+            switch document.store.record(for: id)?.info.messageInfos.first?.type {
+            case 2021?: if let s = document.decoded(TSWP_CharacterStyleArchive.self, id), s.charProperties.hasFontName { names.insert(s.charProperties.fontName) }
+            case 2022?: if let s = document.decoded(TSWP_ParagraphStyleArchive.self, id), s.charProperties.hasFontName { names.insert(s.charProperties.fontName) }
+            case 2023?: if let s = document.decoded(TSWP_ListStyleArchive.self, id), s.hasFontName { names.insert(s.fontName) }
+            default: break
+            }
+        }
+        return names.filter { !$0.isEmpty }
+    }
+
     public func render(slide: UInt64) -> RenderedSlide {
         let size = slideSize
         var canvas = Canvas(document: document, fonts: fonts, imageHref: imageHref, size: size)
@@ -256,6 +271,7 @@ struct Canvas {
         var found: (name: String, bytes: Data)?
         for id in candidates.compactMap({ $0 }) where found == nil { found = dataFile(id) }
         guard let file = found else { problems.insert("image data"); return }
+        if image.hasData, dataFile(image.data.identifier) == nil { problems.insert("theme photo (small copy)") }
         let g = d.geometry
         let w = Double(g.size.width), h = Double(g.size.height)
         let look = styles.mediaLook(image.hasStyle ? image.style.identifier : nil)
