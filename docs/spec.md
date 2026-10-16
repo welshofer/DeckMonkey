@@ -18,7 +18,7 @@ Each of these is a scope trap Claude Code must refuse, even when it looks like a
 
 - No PPTX import or export bridge, and no AppleScript or Scripting Bridge as a write path. Keynote automation exists in this project only as the oracle (section 10).
 - No legacy Keynote '09 APXL/XML format. If a file has `index.apxl`, the library reports `unsupportedLegacyFormat` and stops.
-- No rendering, rasterizing, font layout, or formula evaluation. Cached table values are read as data; nothing is computed.
+- No rasterizing or formula evaluation. Cached table values are read as data; nothing is computed. Rendering was a non-goal until 2026-10-16 (OQ-9): the read-only preview renderer of track R draws slides as SVG for viewers such as Duo, and nothing it computes is ever written into a file.
 - No document synthesis from empty. Every write begins from a Keynote-authored template; the library never fabricates a theme, stylesheet, or master.
 - No new styles through Phase 4. New content points at stylesheet entries that already exist in the template.
 - No incremental or collaborative save. `should_merge` records are consumed on read and never emitted; every save is a full consolidation.
@@ -84,6 +84,7 @@ Seven modules plus a scripts directory, one per layer, with dependencies pointin
 | `IWASchema` | Generated SwiftProtobuf sources per pinned Keynote version, the type-ID registry, `decode(type:bytes:)` and `encode` dispatch with extension maps. Generated, never hand-edited | SwiftProtobuf |
 | `KeynoteGraph` | Typed graph (`Document`, `Show`, `Slide`, `Drawable`, `TextStorage`), lazy decode, identifier allocator, surgery ops, reference derivation, consolidation, validator | IWAArchive, IWASchema, IWAContainer |
 | `DeckMonkey` | Public API: Deck IR in and out, mirroring PresentationKit's surface | KeynoteGraph, Rostrum's Deck IR package |
+| `KeynoteRender` | Track R: a slide as SVG (backgrounds, master objects, shapes, images, text laid out with Rostrum's font metrics). Read-only, portable | KeynoteGraph, Rostrum's font layer |
 | `deckmonkey` | CLI: inspect, dump, roundtrip, verify, replace, image, slide, from-ir, schema, corpus | DeckMonkey |
 | `Scripts/` | `protodump`, registry dump, `schema-diff`, macOS oracle, iOS oracle runner, corpus generator | macOS tools, Xcode |
 
@@ -185,6 +186,8 @@ Phase 0 is the accent because it is the only phase whose output nobody else cons
 
 **Phase 5 — Builds, transitions, and the siblings.** Build and transition edits verified through movie export; Pages and Numbers readers on the shared modules; schema migration between Keynote versions; preview regeneration decision. Gate 5: build keyframes match in exported movie frames; AT-25 across every version in `Corpus/versions/`.
 
+**Track R — Preview renderer (read-only, parallel to the writer phases).** `KeynoteRender` turns a slide into SVG, the form Duo already draws through WebKit, so a viewer can show a `.key` without Keynote. It never writes a file, so it cannot break an invariant, and it runs beside the writer phases rather than after Gate 4 (OQ-9). Order: R1 slide size, backgrounds, master objects, images with masks, shapes with fills and strokes; R2 text (paragraph and character styles, lists, shrink-to-fit, vertical alignment) measured with Rostrum's `FontMetrics`; R3 groups, lines and connectors, tables, charts, movies' posters. Fonts come from the caller as a Rostrum `FontLibrary`; a face it lacks falls back to an estimate and is reported. Gate R: AT-28 and AT-29.
+
 ## 13. CLI: deckmonkey
 
 `deckmonkey` is the acceptance surface, the way `pptx-tool` is for Rostrum: every gate is a `deckmonkey` invocation with a machine-readable exit code and JSON report.
@@ -208,7 +211,7 @@ Every mutating subcommand runs the validator before writing and refuses on the f
 
 ## 14. Acceptance tests
 
-Twenty-seven tests, each a `swift test` case or a `deckmonkey verify` run with a fixed expected output. A test is passed only when it is green on the full corpus for its phase, not on a sample. There is no mismatch threshold anywhere: the goal is perfect fidelity, and every pixel comparison is against Keynote's own export (OQ-8).
+Twenty-nine tests, each a `swift test` case or a `deckmonkey verify` run with a fixed expected output. A test is passed only when it is green on the full corpus for its phase, not on a sample. There is no mismatch threshold anywhere except AT-29, the preview renderer's (OQ-9): the goal is perfect fidelity, and every pixel comparison is against Keynote's own export (OQ-8).
 
 | # | Test | Phase |
 | --- | --- | --- |
@@ -238,6 +241,8 @@ Twenty-seven tests, each a `swift test` case or a `deckmonkey verify` run with a
 | AT-24 | 25 Deck IR fixtures produce decks that open, pass both oracles, and match Keynote's own export of the hand-built reference deck at 0 mismatched pixels | 4 |
 | AT-25 | A file from a newer Keynote opens read-only through the raw store; any write raises `schemaNewerThanLibrary` | 0 |
 | AT-26 | Each file in `Corpus/hostile/` raises its named validator error and writes nothing | 0 |
+| AT-28 | Track R: every slide of every template and feature deck renders to well-formed SVG with no thrown error, and every drawable kind it cannot draw is reported by name, never silently dropped | R |
+| AT-29 | Track R: `Scripts/render/compare.swift` rasterizes each slide's SVG through WebKit and the golden PDF's page through CoreGraphics at 960 points wide and reports the share of pixels whose colour differs by more than 48/255 in any channel; the gate is a median at or below 3% and no slide above 15% over the templates and feature decks (provisional: set after R1's first measurement) | R |
 | AT-27 | iOS oracle: every file that passes AT-10 also opens in Keynote for iPadOS with no alert and exports a PDF at 0 mismatched pixels against the macOS export | 2 |
 
 ## 15. Risks
@@ -267,6 +272,7 @@ All eight open questions were answered on 2026-10-14 and are applied throughout 
 - [x] OQ-6 iOS Keynote oracle: in scope, online by Gate 2 (section 10, AT-27).
 - [x] OQ-7 Repo: new repo `DeckMonkey`; the Deck IR comes in as a dependency on Rostrum's IR package.
 - [x] OQ-8 Fidelity: perfect. AT-24 is 0 mismatched pixels against Keynote's own export of a reference deck; no threshold anywhere in the suite.
+- [x] OQ-9 Rendering (Jay, 2026-10-16): DeckMonkey gets a read-only preview renderer (track R) so Duo can show Keynote decks. Its gate, AT-29, measures similarity with a threshold: this is the one exception to OQ-8, because a preview is drawn by another engine and is never the file. Every writer gate keeps 0 mismatched pixels.
 
 ## 17. References
 
