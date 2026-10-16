@@ -133,14 +133,19 @@ extension Canvas {
         // Merged ranges, kept by the merge owner as range formulas (a colon tract of absolute
         // columns and rows): the origin cell spans the range; the others are not drawn.
         var span = [Int: (rows: Int, columns: Int)](), covered = Set<Int>(), mergeOf = [Int: Int]()
-        for pair in model.mergeOwner.formulaStore.formulas.prefix(10_000) {
+        // Every cell belongs to at most one merge, so the work is bounded by the table's cells,
+        // however many or however large the ranges a file declares.
+        var mergeBudget = rows * columns
+        merges: for pair in model.mergeOwner.formulaStore.formulas.prefix(10_000) {
             for node in pair.formula.astNodeArray.astNode where node.hasAstColonTract {
                 let tract = node.astColonTract
                 guard let cr = tract.absoluteColumn.first, let rr = tract.absoluteRow.first else { continue }
                 let c0 = Int(cr.rangeBegin), c1 = cr.hasRangeEnd ? Int(cr.rangeEnd) : c0
                 let r0 = Int(rr.rangeBegin), r1 = rr.hasRangeEnd ? Int(rr.rangeEnd) : r0
-                guard r0 >= 0, c0 >= 0, r0 < rows, c0 < columns, r1 >= r0, c1 >= c0 else { continue }
+                guard r0 >= 0, c0 >= 0, r0 < rows, c0 < columns, r1 >= r0, c1 >= c0, mergeOf[r0 * columns + c0] == nil else { continue }
                 let nr = min(r1, rows - 1) - r0 + 1, nc = min(c1, columns - 1) - c0 + 1
+                mergeBudget -= nr * nc
+                guard mergeBudget >= 0 else { problems.insert("table merges over budget"); break merges }
                 span[r0 * columns + c0] = (nr, nc)
                 for r in r0..<(r0 + nr) {
                     for c in c0..<(c0 + nc) {
@@ -164,8 +169,11 @@ extension Canvas {
         let g = d.geometry
         var out = "<g transform=\"\(transform(g))\">"
         var text = ""
+        var cellBudget = Self.maximumTableCells
         for r in 0..<rows where heights[r] > 0 {
             for c in 0..<columns where widths[c] > 0 && !covered.contains(r * columns + c) {
+                cellBudget -= 1
+                guard cellBudget >= 0 else { problems.insert("table cells over budget"); break }
                 let s = span[r * columns + c] ?? (1, 1)
                 let x = xs[c], y = ys[r], w = xs[c + s.columns] - x, h = ys[r + s.rows] - y
                 let cell = cells[r]?[c]
@@ -225,6 +233,9 @@ extension Canvas {
         body += out + "</g>"
     }
 
+    /// The cells one table may lay out: past it the rest is left blank and reported.
+    static let maximumTableCells = 20_000
+
     /// A cell's value as Keynote shows it, through the cell's format.
     func display(_ cell: StoredCell, strings: [UInt32: TST_TableDataList.ListEntry], formats: [UInt32: TST_TableDataList.ListEntry]) -> String {
         func format(_ flag: UInt32) -> TSK_FormatStructArchive? {
@@ -246,7 +257,7 @@ extension Canvas {
             let v = (cell.number ?? 0) != 0
             return v ? "TRUE" : "FALSE"
         case .duration:
-            guard let v = cell.number ?? cell.double else { return "" }
+            guard let v = cell.number ?? cell.double, v.isFinite, abs(v) < 1e15 else { return "" }
             let total = Int(v.rounded())
             return String(format: "%d:%02d:%02d", total / 3600, (total / 60) % 60, total % 60)
         case .error:
@@ -276,7 +287,7 @@ extension Canvas {
             let code = f?.currencyCode ?? "USD"
             prefix = ["USD": "$", "EUR": "€", "GBP": "£", "JPY": "¥", "CNY": "¥", "INR": "₹", "KRW": "₩", "AUD": "$", "CAD": "$"][code] ?? code + " "
         case 259:
-            let places = auto ? 2 : Int(f!.decimalPlaces)
+            let places = auto ? 2 : min(Int(f!.decimalPlaces), 20)
             return String(format: "%.\(places)E", v)
         default: break
         }
@@ -301,6 +312,7 @@ extension Canvas {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = TimeZone(identifier: "UTC")
+        guard seconds.isFinite, abs(seconds) < 1e12 else { return "" }
         formatter.dateFormat = f.flatMap { $0.hasDateTimeFormat && !$0.dateTimeFormat.isEmpty ? $0.dateTimeFormat : nil } ?? "M/d/yy"
         return formatter.string(from: Date(timeIntervalSinceReferenceDate: seconds))
     }
@@ -318,8 +330,11 @@ extension Canvas {
             StyleResolver.first(p, has, get) ?? true
         }
         var out = ""
+        var lineBudget = 2 * Self.maximumTableCells, overBudget = false
         func line(_ s: TSD_StrokeArchive?, _ x1: Double, _ y1: Double, _ x2: Double, _ y2: Double) {
             guard let s, visible(s) else { return }
+            lineBudget -= 1
+            guard lineBudget >= 0 else { overBudget = true; return }
             out += stroked(s, d: "M\(SVG.n(x1)) \(SVG.n(y1))L\(SVG.n(x2)) \(SVG.n(y2))")
         }
         let hVisible = flag(\.hasHStrokesVisible, \.hStrokesVisible), vVisible = flag(\.hasVStrokesVisible, \.vStrokesVisible)
@@ -391,6 +406,7 @@ extension Canvas {
             runs(sidecar.leftColumnStrokeLayers, horizontal: false, after: false)
             runs(sidecar.rightColumnStrokeLayers, horizontal: false, after: true)
         }
+        if overBudget { problems.insert("table strokes over budget") }
         return out
     }
 }

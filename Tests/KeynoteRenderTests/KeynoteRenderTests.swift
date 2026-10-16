@@ -81,3 +81,30 @@ struct KeynoteRenderBoundsTests {
         #expect(Canvas.next(starts, after: 20) == nil)
     }
 }
+
+@Suite("Keynote render tables")
+struct KeynoteRenderTableTests {
+    @Test("a version-5 cell decodes its decimal, string id and formats; a short buffer is refused")
+    func cell() {
+        // 12.5 with number format 1 and currency format 3, as Keynote 15.4 stores it.
+        var bytes: [UInt8] = [5, 2, 0, 0, 0, 0, 2, 0, 0x01, 0x70, 0, 0]
+        bytes += [0x7D] + [UInt8](repeating: 0, count: 13) + [0x3E, 0x30]
+        bytes += [1, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 0]
+        let cell = StoredCell(bytes, at: 0)
+        #expect(cell?.kind == .number && cell?.decimal == 12.5)
+        #expect(cell?.formats[StoredCell.numberFormat] == 1 && cell?.formats[StoredCell.currencyFormat] == 3)
+        #expect(StoredCell(Array(bytes.prefix(20)), at: 0) == nil)
+        #expect(StoredCell(bytes, at: bytes.count - 4) == nil)
+    }
+
+    @Test("formats bound what a file asks for")
+    func formats() {
+        var f = TSK_FormatStructArchive()
+        f.formatType = 259
+        f.decimalPlaces = 4_000_000_000
+        #expect(Canvas.formatNumber(1234.5, f).count < 40)
+        #expect(Canvas.formatDate(.infinity, nil) == "")
+        f.formatType = 256; f.decimalPlaces = 2; f.showThousandsSeparator = true
+        #expect(Canvas.formatNumber(-1234567.891, f) == "-1,234,567.89")
+    }
+}
