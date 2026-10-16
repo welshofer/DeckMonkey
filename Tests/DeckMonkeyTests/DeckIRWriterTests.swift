@@ -56,11 +56,17 @@ struct DeckIRWriterTests {
                 }
                 for s in ir.slides {
                     let b = s.body
-                    let strings = [b?.subtitle, b?.value, b?.label, b?.quote, b?.attribution, b?.claim, b?.contact, b?.callToAction, b?.kicker].compactMap { $0 }
-                        + (b?.items ?? []) + (b?.bullets ?? []).flatMap { [$0.text] + ($0.subBullets ?? []) } + (s.notes.map { [$0] } ?? [])
-                        + (b?.stats ?? []).flatMap { [$0.value, $0.label] } + (b?.milestones ?? []).flatMap { [$0.label, $0.detail] }
-                        + (b?.quadrants ?? []).flatMap { [$0.heading, $0.detail] } + (b?.diagram?.items ?? []).flatMap { $0.components(separatedBy: " — ") }
-                        + [b?.left, b?.right].compactMap { $0 }.flatMap { [$0.heading] + $0.bullets } + [b?.band].compactMap { $0 }
+                    // Built step by step: as one expression, Swift 6.1 cannot type-check it in time.
+                    let singles: [String?] = [b?.subtitle, b?.value, b?.label, b?.quote, b?.attribution, b?.claim, b?.contact, b?.callToAction, b?.kicker, b?.band]
+                    var strings: [String] = singles.compactMap { $0 }
+                    strings += b?.items ?? []
+                    for bullet in b?.bullets ?? [] { strings.append(bullet.text); strings += bullet.subBullets ?? [] }
+                    if let notes = s.notes { strings.append(notes) }
+                    for stat in b?.stats ?? [] { strings += [stat.value, stat.label] }
+                    for milestone in b?.milestones ?? [] { strings += [milestone.label, milestone.detail] }
+                    for quadrant in b?.quadrants ?? [] { strings += [quadrant.heading, quadrant.detail] }
+                    for item in b?.diagram?.items ?? [] { strings += item.components(separatedBy: " — ") }
+                    for column in [b?.left, b?.right].compactMap({ $0 }) { strings.append(column.heading); strings += column.bullets }
                     for string in strings where !string.isEmpty {
                         #expect(joined.contains(string), "\(fixture.lastPathComponent) \(s.id): “\(string)” missing on \(template.lastPathComponent)")
                     }

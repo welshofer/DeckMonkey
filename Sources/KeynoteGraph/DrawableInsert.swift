@@ -39,7 +39,7 @@ extension KeynoteDocument {
             throw DrawableInsertFailure.notADrawable(drawable)
         }
         guard var slideArchive = decoded(KN_SlideArchive.self, slide), let component = store.entry(for: slide)?.component,
-              var metadata = packageMetadata else { throw DrawableInsertFailure.noSlide(slide) }
+              let metadata = packageMetadata else { throw DrawableInsertFailure.noSlide(slide) }
         let sourceSlide = sourceType == Self.chartDrawableType
             ? source.decoded(TSCH_ChartDrawableArchive.self, drawable)?.super.parent.identifier ?? 0
             : source.decoded(TSWP_ShapeInfoArchive.self, drawable)?.super.super.parent.identifier ?? 0
