@@ -218,4 +218,17 @@ Keynote on the M4 began refusing every oracle copy ("can't be opened right now |
 permitted") after several hundred opens in one session; only a Keynote restart clears it, and the
 user's own documents are open in Keynote, so that restart is the user's call.
 
+Track R (2026-10-16, OQ-9, Jay): `KeynoteRender` draws a slide as SVG so Duo can show Keynote decks
+(`deckmonkey render`; `Scripts/render/compare.swift` draws it through WebKit as Duo does and diffs the
+golden page; `Scripts/render/gate.py` is AT-29). Read-only, portable, bounded against hostile input
+(drawable, text, table and chart budgets). Facts learned: a bezier outline maps its own bounds onto the
+frame (masks store 100×100); an image's stroke follows its mask; spacing below 1 comes off above the
+baseline, but fit is judged with the last line at full height; a list's text indent is in ems of the
+text size; table cells are version-5 packed buffers and merges live in the merge owner's colon-tract
+formulas; a number shows in its number format; a chart's frame is its plot area and its axis rounds up
+at the leading digit in four steps. A built-in theme's photos and textures are never in the file
+(Keynote downloads them): the small copy or the fill's reference colour stands in and the page is not
+judged. AT-29 over the corpus: 796 judged pages at a 0.76% median (all 1,876 at 1.82%). Duo uses it on
+branch `feat/keynote` (DuoCore `KeynoteDeck`), which needs DeckMonkey pinned to a published revision.
+
 Leave the machine alone while the oracle runs: input during a run fails the verdict ("rerun").

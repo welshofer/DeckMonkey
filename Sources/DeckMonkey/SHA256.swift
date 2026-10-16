@@ -3,7 +3,7 @@ import Foundation
 /// SHA-256 (FIPS 180-4), pure Swift so the portable core needs neither CryptoKit nor swift-crypto.
 /// Used only to compare our decoded bytes with hashes a reference decoder produced (AT-01) — a
 /// mismatch of any kind, including a bug in here, fails loud rather than passing quietly.
-public enum SHA256 {
+package enum SHA256 {
     private static let k: [UInt32] = [
         0x428a_2f98, 0x7137_4491, 0xb5c0_fbcf, 0xe9b5_dba5, 0x3956_c25b, 0x59f1_11f1, 0x923f_82a4, 0xab1c_5ed5,
         0xd807_aa98, 0x1283_5b01, 0x2431_85be, 0x550c_7dc3, 0x72be_5d74, 0x80de_b1fe, 0x9bdc_06a7, 0xc19b_f174,
@@ -16,22 +16,22 @@ public enum SHA256 {
     ]
 
     /// Incremental hasher: feed any number of buffers, then `finalize()`.
-    public struct Hasher: Sendable {
+    package struct Hasher: Sendable {
         private var h: [UInt32] = [
             0x6a09_e667, 0xbb67_ae85, 0x3c6e_f372, 0xa54f_f53a, 0x510e_527f, 0x9b05_688c, 0x1f83_d9ab, 0x5be0_cd19,
         ]
         private var buffer = [UInt8]()
         private var length: UInt64 = 0
 
-        public init() {}
+        package init() {}
 
-        public mutating func update(_ data: Data) {
+        package mutating func update(_ data: Data) {
             data.withUnsafeBytes { raw in
                 update(buffer: raw.bindMemory(to: UInt8.self))
             }
         }
 
-        public mutating func update(_ bytes: [UInt8]) {
+        package mutating func update(_ bytes: [UInt8]) {
             bytes.withUnsafeBufferPointer { update(buffer: $0) }
         }
 
@@ -58,7 +58,7 @@ public enum SHA256 {
             }
         }
 
-        public mutating func finalize() -> [UInt8] {
+        package mutating func finalize() -> [UInt8] {
             let bitLength = length &* 8
             var tail = buffer
             tail.append(0x80)
@@ -126,28 +126,28 @@ public enum SHA256 {
         }
     }
 
-    public static func digest(_ data: Data) -> [UInt8] {
+    package static func digest(_ data: Data) -> [UInt8] {
         var hasher = Hasher()
         hasher.update(data)
         return hasher.finalize()
     }
 
-    public static func digest(_ bytes: [UInt8]) -> [UInt8] {
+    package static func digest(_ bytes: [UInt8]) -> [UInt8] {
         var hasher = Hasher()
         hasher.update(bytes)
         return hasher.finalize()
     }
 
     /// Lowercase hex digest, the form the reference manifests use.
-    public static func hex(_ data: Data) -> String {
+    package static func hex(_ data: Data) -> String {
         hexString(digest(data))
     }
 
-    public static func hex(_ bytes: [UInt8]) -> String {
+    package static func hex(_ bytes: [UInt8]) -> String {
         hexString(digest(bytes))
     }
 
-    public static func hexString(_ digest: [UInt8]) -> String {
+    package static func hexString(_ digest: [UInt8]) -> String {
         let alphabet = Array("0123456789abcdef".utf8)
         var out = [UInt8]()
         out.reserveCapacity(digest.count * 2)
