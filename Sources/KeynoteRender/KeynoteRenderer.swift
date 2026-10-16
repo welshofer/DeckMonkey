@@ -173,7 +173,8 @@ struct Canvas {
             if let g = document.decoded(TSD_GroupArchive.self, id) { drawGroup(g) }
         case Self.tableType:
             if let t = document.decoded(TST_TableInfoArchive.self, id) { drawTable(t) } else { problems.insert("table") }
-        case Self.chartType: problems.insert("chart")
+        case Self.chartType:
+            if let c = document.decoded(TSCH_ChartDrawableArchive.self, id) { drawChart(c) } else { problems.insert("chart") }
         case Self.equationType: problems.insert("equation")
         case let t?: problems.insert("drawable type \(t)")
         case nil: problems.insert("missing drawable")
