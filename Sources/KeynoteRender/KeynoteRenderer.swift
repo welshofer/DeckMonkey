@@ -101,6 +101,8 @@ struct Canvas {
     var active = Set<UInt64>()
     /// What a slide-number field shows: the slide's page in the export.
     var slideNumber: Int?
+    /// The width and height the last laid-out text needed, padding included.
+    var lastTextExtent = (width: 0.0, height: 0.0)
 
     init(document: KeynoteDocument, fonts: RenderFonts?, imageHref: @escaping (String, Data) -> String, size: (width: Double, height: Double)) {
         self.document = document
@@ -217,12 +219,27 @@ struct Canvas {
     mutating func drawShape(_ shape: TSD_ShapeArchive, text storage: UInt64?) {
         let d = shape.super
         guard d.hasGeometry else { problems.insert("shape without geometry"); return }
-        let look = styles.shapeLook(shape.hasStyle ? shape.style.identifier : nil)
-        let g = d.geometry
+        var look = styles.shapeLook(shape.hasStyle ? shape.style.identifier : nil)
+        var g = d.geometry
+        // A text box that sizes itself to its text stores 0 × 0 at its left edge and vertical
+        // centre (Keynote's own export puts "Plain text item" there): lay the text out unwrapped
+        // to find its size.
+        if let storage, g.size.width == 0, g.size.height == 0 {
+            var probe = look
+            probe.wraps = false
+            probe.verticalAlignment = .kFrameAlignTop
+            _ = textMarkup(storage: storage, width: 100_000, height: 100_000, look: probe)
+            let extent = lastTextExtent
+            guard extent.width > 0, extent.height > 0 else { return }
+            g.position.y -= Float(extent.height / 2)
+            g.size = TSP_Size.with { $0.width = Float(extent.width); $0.height = Float(extent.height) }
+            look.wraps = false
+        }
         let w = Double(g.size.width), h = Double(g.size.height)
         let source = shape.hasPathsource ? shape.pathsource : nil
         var group = "<g transform=\"\(transform(g, flipH: source?.horizontalFlip ?? false, flipV: source?.verticalFlip ?? false))\""
         if look.opacity < 0.9995 { group += " opacity=\"\(SVG.n(look.opacity))\"" }
+        if let filter = shadowFilter(look.shadow, angle: Double(g.angle)) { group += " filter=\"url(#\(filter))\"" }
         group += ">"
         var inner = ""
         if let source {
@@ -297,6 +314,7 @@ struct Canvas {
         element += "/>"
         var group = "<g transform=\"\(transform(g))\""
         if look.opacity < 0.9995 { group += " opacity=\"\(SVG.n(look.opacity))\"" }
+        if let filter = shadowFilter(look.shadow, angle: Double(g.angle)) { group += " filter=\"url(#\(filter))\"" }
         body += group + ">" + element
         if let stroke = look.stroke {
             let open = edge.transform.isEmpty ? "" : "<g transform=\"\(edge.transform)\">"
@@ -324,6 +342,21 @@ struct Canvas {
     }
 
     // MARK: Paint
+
+    /// A drop shadow as an SVG filter: `offset` points along Keynote's angle (315° is down and to
+    /// the right), blurred by its radius. The drawable's own rotation turns the filter's space,
+    /// so the offset is turned back to stay fixed on the slide.
+    mutating func shadowFilter(_ shadow: TSD_ShadowArchive?, angle rotation: Double) -> String? {
+        guard let shadow, shadow.isEnabled, shadow.opacity > 0 else { return nil }
+        let a = (Double(shadow.angle) - rotation) * .pi / 180
+        let offset = Double(shadow.offset)
+        let dx = offset * cos(a), dy = -offset * sin(a)
+        let color = shadow.hasColor ? SVG.RGBA(shadow.color) : SVG.RGBA(r: 0, g: 0, b: 0, a: 1)
+        let opacity = max(0, min(1, Double(shadow.opacity) * color.a))
+        let blur = max(0, Double(shadow.radius)) / 2
+        if shadow.type != .tsddropShadow { problems.insert("shadow style (drawn as a drop shadow)") }
+        return defs.add { "<filter id=\"\($0)\" x=\"-50%\" y=\"-50%\" width=\"200%\" height=\"200%\"><feDropShadow dx=\"\(SVG.n(dx))\" dy=\"\(SVG.n(dy))\" stdDeviation=\"\(SVG.n(blur))\" flood-color=\"\(color.hex)\" flood-opacity=\"\(SVG.n(opacity))\"/></filter>" }
+    }
 
     func visible(_ stroke: TSD_StrokeArchive) -> Bool {
         if stroke.hasPattern, stroke.pattern.type == .tsdemptyPattern { return false }

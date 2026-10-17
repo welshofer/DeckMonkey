@@ -103,6 +103,8 @@ struct Line {
     var alignment: TSWP_ParagraphStylePropertiesArchive.TextAlignmentType = .tatvalue4
     var justify = false
     var label: (text: String, look: CharLook, x: Double)?
+    /// An image bullet in place of the label's text: its file's href and its side in points.
+    var labelImage: (href: String, size: Double)?
 }
 
 extension Canvas {
@@ -283,6 +285,7 @@ extension Canvas {
 
                 // The list label and the indents it brings.
                 var label: (String, CharLook, Double)?
+                var labelImage: (href: String, size: Double)?
                 var left = para.leftIndent * scale, first = para.firstLineIndent * scale
                 if let listID, let list = document.decoded(TSWP_ListStyleArchive.self, listID) {
                     let l = min(level, 8)
@@ -302,11 +305,21 @@ extension Canvas {
                     case .kString: text = list.strings.indices.contains(l) ? list.strings[l] : "•"
                     case .kNumber:
                         text = "\(ordinals[pi])."
-                    case .kImage: text = "•"; problems.insert("image bullet")
+                    case .kImage:
+                        // The image the level names, as large as the text times its scale; a
+                        // theme's bullet image the file does not carry becomes a bullet character.
+                        let image = list.images.indices.contains(l) && list.images[l].hasImage ? list.images[l].image.identifier : nil
+                        if let image, let file = dataFile(image) {
+                            let size = (runs.first?.1.size ?? para.char.size) * (list.geometries.indices.contains(l) && list.geometries[l].hasScale ? Double(list.geometries[l].scale) : 1)
+                            labelImage = (imageHref(file.name, file.bytes), size * 0.6)
+                            text = ""
+                        } else {
+                            text = "•"; problems.insert("image bullet (drawn as •)")
+                        }
                     case .kNone: text = nil
                     }
                     if let text, !runs.allSatisfy({ $0.0.isEmpty }) {
-                        let labelWidth = measure(text, labelLook)
+                        let labelWidth = labelImage?.size ?? measure(text, labelLook)
                         label = (text, labelLook, indent * scale)
                         // The text starts the list's text indent, in ems of the text's size, past
                         // the label's indent (Basic White: 1.0 at 48 pt puts it 48 pt in).
@@ -398,6 +411,7 @@ extension Canvas {
                 // The label sits on the paragraph's first line.
                 if let label, !paraLines.isEmpty {
                     paraLines[0].label = (label.0, label.1, shape.padding.left + para.leftIndent * scale + label.2)
+                    paraLines[0].labelImage = labelImage
                 }
 
                 // Vertical placement.
@@ -439,6 +453,7 @@ extension Canvas {
             result = layout(scale: scale)
         }
         lines = result.lines
+        lastTextExtent = ((lines.map { $0.width + $0.x }.max() ?? 0) + shape.padding.right, result.height + shape.padding.top + shape.padding.bottom)
 
         var top = shape.padding.top
         switch shape.verticalAlignment {
@@ -456,7 +471,10 @@ extension Canvas {
         var out = ""
         for line in lines {
             let baseline = top + line.baseline
-            if let label = line.label {
+            if let image = line.labelImage, let label = line.label {
+                let size = image.size
+                out += "<image href=\"\(SVG.escape(image.href))\" x=\"\(SVG.n(label.x))\" y=\"\(SVG.n(baseline - size * 0.9))\" width=\"\(SVG.n(size))\" height=\"\(SVG.n(size))\" preserveAspectRatio=\"xMidYMid meet\"/>"
+            } else if let label = line.label {
                 out += textElement([Span(text: label.text, look: label.look, width: 0)], x: label.x, baseline: baseline, anchor: nil, justifyWidth: nil)
             }
             guard !line.spans.isEmpty, line.spans.contains(where: { !$0.text.isEmpty }) else { continue }

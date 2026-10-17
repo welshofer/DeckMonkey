@@ -33,6 +33,7 @@ struct StyleResolver {
         var fill: TSD_FillArchive?
         var stroke: TSD_StrokeArchive?
         var opacity: Double = 1
+        var shadow: TSD_ShadowArchive?
         var headLineEnd: TSD_LineEndArchive?
         var tailLineEnd: TSD_LineEndArchive?
         var padding = (left: 0.0, top: 0.0, right: 0.0, bottom: 0.0)
@@ -75,16 +76,17 @@ struct StyleResolver {
         look.fill = Self.first(tsd, \.hasFill, \.fill)
         look.stroke = Self.first(tsd, \.hasStroke, \.stroke)
         look.opacity = Self.first(tsd, \.hasOpacity, { Double($0.opacity) }) ?? 1
+        look.shadow = Self.first(tsd, \.hasShadow, \.shadow)
         look.headLineEnd = Self.first(tsd, \.hasHeadLineEnd, \.headLineEnd)
         look.tailLineEnd = Self.first(tsd, \.hasTailLineEnd, \.tailLineEnd)
         return look
     }
 
     /// A media (image, movie) style's stroke and opacity.
-    func mediaLook(_ styleID: UInt64?) -> (stroke: TSD_StrokeArchive?, opacity: Double) {
-        guard let styleID else { return (nil, 1) }
+    func mediaLook(_ styleID: UInt64?) -> (stroke: TSD_StrokeArchive?, opacity: Double, shadow: TSD_ShadowArchive?) {
+        guard let styleID else { return (nil, 1, nil) }
         let p = chain(TSD_MediaStyleArchive.self, from: styleID) { $0.super }.map(\.mediaProperties)
-        return (Self.first(p, \.hasStroke, \.stroke), Self.first(p, \.hasOpacity, { Double($0.opacity) }) ?? 1)
+        return (Self.first(p, \.hasStroke, \.stroke), Self.first(p, \.hasOpacity, { Double($0.opacity) }) ?? 1, Self.first(p, \.hasShadow, \.shadow))
     }
 
     /// A slide style's background fill and placeholder visibility.
