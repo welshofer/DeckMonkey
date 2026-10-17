@@ -237,6 +237,14 @@ Geometry (2026-10-17): `setDrawableFrame`/`moveDrawable` (`deckmonkey object`) m
 unrotated shape, text box, placeholder, image or movie; a cropped image is placed by its mask's frame,
 as Keynote's AppleScript gives it. `Scripts/gate1/geometry.py` has Keynote make the same edit: 10/10
 pixel-identical, re-save unchanged. Run edits for hosts: `KeynoteRenderer.drawables(onSlide:)` gives
-each run's UTF-16 range for `replaceText`.
+each run's UTF-16 range for `replaceText`. `deleteDrawable` (`object --delete`) removes a shape, text
+box, image, movie, group or line with what only it used; placeholders, tables and charts are refused;
+the geometry gate's 4 delete cases match Keynote's own delete.
+
+New slides (2026-10-17): `addSlide(fromMaster:at:)` (`slide masters`, `slide new`) copies a master's
+title, body and slide-number placeholders and tagged objects with fresh identifiers and UUIDs (the
+slide and its node need UUIDs, or Keynote asserts); placeholders and notes start empty, tagged objects
+keep their words; node and notes come from a donor slide. `Scripts/gate1/newslide.py`: Basic White,
+Kyoto, Showcase, Academy 4:3, one slide per master, every page identical to Keynote's New Slide.
 
 Leave the machine alone while the oracle runs: input during a run fails the verdict ("rerun").
