@@ -61,6 +61,9 @@ enum CLI {
       slide move <file> --index <n> --to <m> -o <out.key>
       slide delete <file> --index <n> -o <out.key>
       slide clone <file> --index <n> [--to <m>] -o <out.key>
+      slide masters <file>           the deck's masters: index, identifier, name
+      slide new <file> --master <name>[|<name>...] [--to <m>] -o <out.key>
+                                     new slides on masters, as Keynote's New Slide makes them
       slide import <file> --from <source.key> --index <n> [--to <m>] -o <out.key>
       from-ir <deck.json> --template <t.key> [--parts <deck.key>]... [--plan-out <plan.json>] -o <out.key>
                                      build a .key from a lectern.deck/1 Deck IR on a template's masters
@@ -594,6 +597,23 @@ func runSlide(_ args: [String]) throws {
         for (i, s) in try document.slideList().enumerated() {
             print("\(i)\tnode \(s.node)\tslide \(s.slide)\t\(s.component)\(s.skipped ? "\tskipped" : "")")
         }
+        return
+    }
+    if verb == "masters" {
+        for (i, m) in document.masters().enumerated() { print("\(i)\t\(m.id)\t\(m.name)") }
+        return
+    }
+    if verb == "new" {
+        guard let out = option("-o", in: args), let wanted = option("--master", in: args) else { fail(CLI.usage, code: 2) }
+        // One or more master names, separated by "|", each added in turn at the end (or at --to).
+        var at = option("--to", in: args).flatMap(Int.init)
+        for name in wanted.split(separator: "|").map(String.init) {
+            guard let master = document.masters().first(where: { $0.name == name }) else { fail("error: no master named \(name)") }
+            let report = try document.addSlide(fromMaster: master.id, at: at)
+            if let a = at { at = a + 1 }
+            print("added slide \(report.slide) on \(name) in \(report.component)")
+        }
+        try document.save(to: url(out))
         return
     }
     guard let i = option("--index", in: args).flatMap(Int.init), let out = option("-o", in: args) else { fail(CLI.usage, code: 2) }
