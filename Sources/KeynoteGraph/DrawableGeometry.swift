@@ -57,7 +57,8 @@ extension KeynoteDocument {
         }
         // A text box that sizes itself to its text keeps 0 × 0 when it only moves; given a size,
         // it becomes a box of that size, as Keynote makes it when one is dragged wider.
-        let staysSelfSizing = old.width == 0 && old.height == 0 && frame.width == 0 && frame.height == 0
+        // (A box with only a width keeps its automatic height the same way.)
+        let staysSelfSizing = old.height == 0 && frame.height == 0 && frame.width == old.width
         guard staysSelfSizing || (frame.width >= 1 && frame.height >= 1) else { throw DrawableGeometryFailure.invalidFrame }
         let sx = old.width > 0 ? frame.width / old.width : 1, sy = old.height > 0 ? frame.height / old.height : 1
         func place(_ g: inout TSD_GeometryArchive) {

@@ -224,16 +224,18 @@ struct Canvas {
         // A text box that sizes itself to its text stores 0 × 0 at its left edge and vertical
         // centre (Keynote's own export puts "Plain text item" there): lay the text out unwrapped
         // to find its size.
-        if let storage, g.size.width == 0, g.size.height == 0 {
+        // A box with a width but height 0 grows to its text at that width, stored the same way.
+        if let storage, g.size.height == 0 {
+            let fixedWidth = g.size.width > 0
             var probe = look
-            probe.wraps = false
+            probe.wraps = fixedWidth
             probe.verticalAlignment = .kFrameAlignTop
-            _ = textMarkup(storage: storage, width: 100_000, height: 100_000, look: probe)
+            _ = textMarkup(storage: storage, width: fixedWidth ? Double(g.size.width) : 100_000, height: 100_000, look: probe)
             let extent = lastTextExtent
             guard extent.width > 0, extent.height > 0 else { return }
             g.position.y -= Float(extent.height / 2)
-            g.size = TSP_Size.with { $0.width = Float(extent.width); $0.height = Float(extent.height) }
-            look.wraps = false
+            g.size = TSP_Size.with { $0.width = fixedWidth ? g.size.width : Float(extent.width); $0.height = Float(extent.height) }
+            look.wraps = fixedWidth
         }
         let w = Double(g.size.width), h = Double(g.size.height)
         let source = shape.hasPathsource ? shape.pathsource : nil
