@@ -119,10 +119,15 @@ extension Canvas {
             if e.hasObject { running = e.object.identifier }
             resolved.append((e.characterIndex, running))
         }
+        var looks = [String: CharLook]()
         func look(at i: Int) -> CharLook {
             let para = Self.entryAt(resolved, i, \.index).map { $0.style } ?? fallback
             let char = Self.entryAt(charEntries, i, \.characterIndex).flatMap { $0.hasObject ? $0.object.identifier : nil }
-            return StyleResolver.charLook(styles.characterStyles(char).map(\.charProperties) + styles.paragraphStyles(para).map(\.charProperties))
+            let key = "\(para ?? 0):\(char ?? 0)"
+            if let cached = looks[key] { return cached }
+            let l = StyleResolver.charLook(styles.characterStyles(char).map(\.charProperties) + styles.paragraphStyles(para).map(\.charProperties))
+            looks[key] = l
+            return l
         }
         func run(_ p: Int, _ r: Int, _ range: Range<Int>) -> SlideTextRun {
             let l = look(at: range.lowerBound)
@@ -134,9 +139,16 @@ extension Canvas {
         var out = [SlideTextRun](), start = 0, paragraph = 0
         func flush(_ end: Int) {
             var r = 0, s = start
-            for boundary in charStarts where boundary > start && boundary < end {
+            // Binary search to the paragraph's first boundary, then walk only its own: linear
+            // overall, however many paragraphs and style changes a storage holds.
+            var lo = 0, hi = charStarts.count
+            while lo < hi { let mid = (lo + hi) / 2; if charStarts[mid] <= start { lo = mid + 1 } else { hi = mid } }
+            var k = lo
+            while k < charStarts.count, charStarts[k] < end {
+                let boundary = charStarts[k]
                 if boundary > s { out.append(run(paragraph, r, s..<boundary)); r += 1 }
                 s = boundary
+                k += 1
             }
             out.append(run(paragraph, r, s..<end))
             paragraph += 1
