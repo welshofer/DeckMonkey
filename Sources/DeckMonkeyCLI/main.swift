@@ -25,6 +25,13 @@ enum CLI {
       object <file> --object <id> --delete -o <out.key>
                                      delete a shape, text box, image, movie, group or line and
                                      everything only it used
+      insert <file> --slide <index> (--text <s> | --image <path>) --frame <x,y,w,h> -o <out.key>
+                                     a new text box (h 0: height follows the text; y is its
+                                     vertical centre) or picture, from the bundled parts, in the
+                                     deck's own default styles
+      parts <file> --object <id>... -o <out.keyparts>
+                                     a parts package: those drawables, what only they use, and
+                                     the styles they point at (no slides, theme or data)
       record <file> <id>...          each record's payloads decoded as protobuf text format
       roundtrip <file> [-o out.key]  open, save, re-open; prints CLEAN n/n or the first difference
       verify <file>                  validator (oracle harness wiring arrives with Scripts/oracle.sh)
@@ -220,6 +227,37 @@ func runObject(_ args: [String]) throws {
     try document.setDrawableFrame(id, .init(x: v[0], y: v[1], width: v[2], height: v[3]))
     try document.save(to: url(out))
     print("placed object \(id) at \(frameText)")
+}
+
+func runInsert(_ args: [String]) throws {
+    guard let path = args.first, let out = option("-o", in: args), let index = option("--slide", in: args).flatMap(Int.init),
+          let frameText = option("--frame", in: args) else { fail(CLI.usage, code: 2) }
+    var document = try DeckMonkey.open(url(path))
+    let order = document.slideOrder()
+    guard order.indices.contains(index) else { fail("error: no slide \(index)") }
+    let v = frameText.split(separator: ",").compactMap { Double($0) }
+    guard v.count == 4 else { fail("error: --frame takes x,y,width,height") }
+    let frame = KeynoteDocument.Frame(x: v[0], y: v[1], width: v[2], height: v[3])
+    let id: UInt64
+    if let text = option("--text", in: args) {
+        id = try document.insertTextBox(onto: order[index].slide, frame: frame, text: text)
+    } else if let image = option("--image", in: args) {
+        id = try document.insertImage(Data(contentsOf: url(image)), preferredFileName: (image as NSString).lastPathComponent, onto: order[index].slide, frame: frame)
+    } else { fail(CLI.usage, code: 2) }
+    try document.save(to: url(out))
+    print("inserted object \(id) on slide \(index)")
+}
+
+func runParts(_ args: [String]) throws {
+    guard let path = args.first, let out = option("-o", in: args) else { fail(CLI.usage, code: 2) }
+    var ids = [UInt64]()
+    var i = 0
+    while i < args.count { if args[i] == "--object", i + 1 < args.count, let id = UInt64(args[i + 1]) { ids.append(id); i += 1 }; i += 1 }
+    guard !ids.isEmpty else { fail(CLI.usage, code: 2) }
+    let package = try DeckMonkey.open(url(path)).partsPackage(drawables: ids)
+    let data = try package.zipData()
+    try data.write(to: url(out))
+    print("parts: \(ids.count) drawable(s), \(data.count) bytes")
 }
 
 func runRecord(_ args: [String]) throws {
@@ -661,6 +699,8 @@ do {
     case "inspect": try runInspect(rest)
     case "dump": try runDump(rest)
     case "record": try runRecord(rest)
+    case "parts": try runParts(rest)
+    case "insert": try runInsert(rest)
     case "object": try runObject(rest)
     case "render": try runRender(rest)
     case "roundtrip": try runRoundtrip(rest)

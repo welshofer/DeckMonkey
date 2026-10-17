@@ -35,13 +35,15 @@ extension KeynoteDocument {
     public mutating func insertDrawable(_ drawable: UInt64, from source: KeynoteDocument, onto slide: UInt64, frame: Frame,
                                         paragraphs: [TextParagraphs.Paragraph]? = nil) throws -> UInt64 {
         let sourceType = source.store.record(for: drawable)?.info.messageInfos.first?.type
-        guard sourceType == Self.shapeInfoType || sourceType == Self.chartDrawableType else {
+        guard sourceType == Self.shapeInfoType || sourceType == Self.chartDrawableType || sourceType == Self.imageType else {
             throw DrawableInsertFailure.notADrawable(drawable)
         }
         guard var slideArchive = decoded(KN_SlideArchive.self, slide), let component = store.entry(for: slide)?.component,
               let metadata = packageMetadata else { throw DrawableInsertFailure.noSlide(slide) }
         let sourceSlide = sourceType == Self.chartDrawableType
             ? source.decoded(TSCH_ChartDrawableArchive.self, drawable)?.super.parent.identifier ?? 0
+            : sourceType == Self.imageType
+            ? source.decoded(TSD_ImageArchive.self, drawable)?.super.parent.identifier ?? 0
             : source.decoded(TSWP_ShapeInfoArchive.self, drawable)?.super.super.parent.identifier ?? 0
         var keep: Set<UInt64> = [sourceSlide]
         if let show = source.showIdentifier { keep.insert(show) }
@@ -123,6 +125,19 @@ extension KeynoteDocument {
                 chart.super.geometry.flags = 3
             }
             try replacePayload(of: new, with: try chart.serializedData(partial: true))
+            try finishInsert(new, onto: slide, slideArchive: &slideArchive, component: component, entries: entries, allocator: allocator)
+            return new
+        }
+        if sourceType == Self.imageType {
+            // A picture: fixed at the frame (flags 3), as `make new image` and a resize store it.
+            guard var image = decoded(TSD_ImageArchive.self, new) else { throw DrawableInsertFailure.notADrawable(drawable) }
+            image.super.geometry.position = .with { $0.x = Float(frame.x); $0.y = Float(frame.y) }
+            if frame.width > 0, frame.height > 0 {
+                image.super.geometry.size = .with { $0.width = Float(frame.width); $0.height = Float(frame.height) }
+                image.super.geometry.flags = 3
+                image.originalSize = .with { $0.width = Float(frame.width); $0.height = Float(frame.height) }
+            }
+            try replacePayload(of: new, with: try image.serializedData(partial: true))
             try finishInsert(new, onto: slide, slideArchive: &slideArchive, component: component, entries: entries, allocator: allocator)
             return new
         }

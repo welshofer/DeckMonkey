@@ -404,7 +404,10 @@ struct ForeignResolver {
         for id in target.store.identifiers {
             guard let record = target.store.record(for: id), let type = record.info.messageInfos.first?.type,
                   let component = target.store.entry(for: id)?.component else { continue }
-            if type == Self.stylesheetType, component == "Index/DocumentStylesheet.iwa" { stylesheet = id }
+            // The document's stylesheet: "Index/DocumentStylesheet.iwa", or with a locator suffix
+            // ("DocumentStylesheet-32098.iwa") in themes such as Chalkboard and Craft.
+            if type == Self.stylesheetType, component == "Index/DocumentStylesheet.iwa"
+                || (component.hasPrefix("Index/DocumentStylesheet-") && stylesheet == nil) { stylesheet = id }
             if type == Self.slideType, component.hasPrefix("Index/TemplateSlide"),
                let slide = target.decoded(KN_SlideArchive.self, id), slide.hasName {
                 masters[slide.name, default: []].append(id)
