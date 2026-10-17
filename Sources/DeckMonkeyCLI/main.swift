@@ -18,6 +18,10 @@ enum CLI {
                                      of what could not be drawn; --fonts indexes every .ttf, .otf
                                      and .ttc under a directory for text measurement (default on
                                      macOS: the system's font directories)
+      object <file> --slide <index>  the slide's drawables: id, kind, frame, text runs (JSON)
+      object <file> --object <id> --frame <x,y,w,h> -o <out.key>
+                                     move or resize a shape, text box, placeholder, image or movie
+                                     (unrotated, on a slide); paths and masks scale with it
       record <file> <id>...          each record's payloads decoded as protobuf text format
       roundtrip <file> [-o out.key]  open, save, re-open; prints CLEAN n/n or the first difference
       verify <file>                  validator (oracle harness wiring arrives with Scripts/oracle.sh)
@@ -83,7 +87,8 @@ func url(_ path: String) -> URL {
 /// never a silent default: a gate script with an empty `$OUT` must not pass on a temp file.
 func option(_ flag: String, in args: [String]) -> String? {
     guard let i = args.firstIndex(of: flag) else { return nil }
-    guard i + 1 < args.count, !args[i + 1].hasPrefix("-") else {
+    // A value may be a negative number ("-91,-102,1053,630"), never another flag.
+    guard i + 1 < args.count, !args[i + 1].hasPrefix("-") || args[i + 1].dropFirst().first?.isNumber == true else {
         fail("error: \(flag) needs a value\n\n\(CLI.usage)", code: 2)
     }
     return args[i + 1]
@@ -180,6 +185,29 @@ func runRender(_ args: [String]) throws {
     try json.write(to: directory.appendingPathComponent("render.json"))
     let problems = Set(slides.flatMap { $0.1.rendered.problems }).sorted()
     print("rendered \(slides.count) slide(s) to \(directory.path)" + (problems.isEmpty ? "" : "; not drawn: " + problems.joined(separator: ", ")))
+}
+
+func runObject(_ args: [String]) throws {
+    guard let path = args.first else { fail(CLI.usage, code: 2) }
+    var document = try DeckMonkey.open(url(path))
+    if let index = option("--slide", in: args) {
+        let order = document.slideOrder()
+        guard let i = Int(index), order.indices.contains(i) else { fail("error: no slide \(index)") }
+        let items: [[String: Any]] = KeynoteRenderer(document: document).drawables(onSlide: order[i].slide).map { d in
+            ["id": d.id, "kind": d.kind.rawValue, "name": d.name, "frame": [d.x, d.y, d.width, d.height], "angle": d.angle,
+             "runs": d.runs.map { ["paragraph": $0.paragraph, "run": $0.run, "text": $0.text, "range": [$0.range.lowerBound, $0.range.upperBound]] }]
+        }
+        let json = try JSONSerialization.data(withJSONObject: items, options: [.prettyPrinted, .sortedKeys])
+        print(String(decoding: json, as: UTF8.self))
+        return
+    }
+    guard let idText = option("--object", in: args), let id = UInt64(idText), let frameText = option("--frame", in: args),
+          let out = option("-o", in: args) else { fail(CLI.usage, code: 2) }
+    let v = frameText.split(separator: ",").compactMap { Double($0) }
+    guard v.count == 4 else { fail("error: --frame takes x,y,width,height") }
+    try document.setDrawableFrame(id, .init(x: v[0], y: v[1], width: v[2], height: v[3]))
+    try document.save(to: url(out))
+    print("placed object \(id) at \(frameText)")
 }
 
 func runRecord(_ args: [String]) throws {
@@ -604,6 +632,7 @@ do {
     case "inspect": try runInspect(rest)
     case "dump": try runDump(rest)
     case "record": try runRecord(rest)
+    case "object": try runObject(rest)
     case "render": try runRender(rest)
     case "roundtrip": try runRoundtrip(rest)
     case "verify": try runVerify(rest)

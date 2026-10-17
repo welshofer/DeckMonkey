@@ -1,0 +1,11 @@
+# deck	slide (0-based)	AppleScript class	current frame	new frame
+Corpus/features/images.key	0	image	400,600,256,256	520,640,256,256
+Corpus/features/images.key	0	image	800,420,320,240	600,300,480,360
+Corpus/features/images.key	1	image	240,0,1440,1080	300,60,1200,900
+Corpus/features/shapes-lines.key	1	shape	150,120,100,100	150,120,300,150
+Corpus/features/shapes-lines.key	1	shape	300,240,100,100	320,262,100,100
+Corpus/features/drawables.key	1	shape	910,490,100,100	800,400,320,200
+Corpus/templates/basic-white_wide.key	3	title	95,85,1730,112.85	195,85,1200,112.85
+Corpus/templates/basic-white_wide.key	3	body	95,334.53,1730,650.08	95,400,1200,500
+Corpus/templates/basic-white_wide.key	1	image	0,0,1920,1080	0,0,960,540
+Corpus/templates/basic-white_wide.key	1	image	0,0,1920,1080	200,100,1920,1080
