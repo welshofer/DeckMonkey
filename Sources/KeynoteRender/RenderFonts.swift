@@ -52,7 +52,9 @@ public final class RenderFonts: @unchecked Sendable {
 
     /// Indexes one font file; a file that does not parse is skipped.
     public func index(file: URL) {
-        guard let handle = try? FileHandle(forReadingFrom: file), let data = try? handle.readToEnd() else { return }
+        // Mapped, not read: indexing a Mac's fonts touches a few kilobytes of each file instead of
+        // holding gigabytes of font data in memory.
+        guard let data = try? Data(contentsOf: file, options: .alwaysMapped) else { return }
         for (i, face) in SFNTNames.faces(in: data).enumerated() { add(Source(url: file, data: nil, index: i, face: face)) }
     }
 
@@ -101,7 +103,10 @@ public final class RenderFonts: @unchecked Sendable {
 /// `OS/2` tables, without parsing anything else.
 enum SFNTNames {
     static func faces(in data: Data) -> [RenderFonts.Face] {
-        let bytes = [UInt8](data)
+        data.withUnsafeBytes { faces(in: $0.bindMemory(to: UInt8.self)) }
+    }
+
+    static func faces(in bytes: UnsafeBufferPointer<UInt8>) -> [RenderFonts.Face] {
         func u16(_ o: Int) -> Int? { o >= 0 && o + 2 <= bytes.count ? Int(bytes[o]) << 8 | Int(bytes[o + 1]) : nil }
         func u32(_ o: Int) -> Int? {
             guard o >= 0, o + 4 <= bytes.count else { return nil }
@@ -117,7 +122,7 @@ enum SFNTNames {
         return offsets.compactMap { face(at: $0, bytes: bytes, u16: u16, u32: u32) }
     }
 
-    private static func face(at start: Int, bytes: [UInt8], u16: (Int) -> Int?, u32: (Int) -> Int?) -> RenderFonts.Face? {
+    private static func face(at start: Int, bytes: UnsafeBufferPointer<UInt8>, u16: (Int) -> Int?, u32: (Int) -> Int?) -> RenderFonts.Face? {
         guard let tables = u16(start + 4), tables < 512 else { return nil }
         var name: Int?, os2: Int?
         for t in 0..<tables {

@@ -71,6 +71,26 @@ extension KeynoteDocument {
         }
     }
 
+    /// Every slide in show order, for reading: any tree Keynote wrote (a flat list, Keynote 6.5's
+    /// root node, nested slides), depth first, each node once. `slideList()` is the edit view.
+    public func slideOrder() -> [SlideEntry] {
+        guard let showID = showIdentifier, let show = decoded(KN_ShowArchive.self, showID) else { return [] }
+        var out = [SlideEntry](), visited = Set<UInt64>()
+        func visit(_ node: UInt64, depth: Int) {
+            guard depth < 64, visited.insert(node).inserted, let n = decoded(KN_SlideNodeArchive.self, node) else { return }
+            if n.hasSlide, let component = store.entry(for: n.slide.identifier)?.component {
+                out.append(SlideEntry(node: node, slide: n.slide.identifier, skipped: n.isSkipped, component: component))
+            }
+            n.children.forEach { visit($0.identifier, depth: depth + 1) }
+        }
+        if show.slideTree.slides.isEmpty, show.slideTree.hasRootSlideNode {
+            visit(show.slideTree.rootSlideNode.identifier, depth: 0)
+        } else {
+            show.slideTree.slides.forEach { visit($0.identifier, depth: 0) }
+        }
+        return out
+    }
+
     /// Moves the slide at `from` so that it ends up at `to` (0-based, in show order).
     public mutating func moveSlide(from: Int, to: Int) throws {
         let list = try slideList()

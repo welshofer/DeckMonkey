@@ -39,7 +39,7 @@ public struct KeynoteRenderer {
     /// Every slide in show order with its PDF page (nil when skipped), drawn.
     public func renderAll() throws -> [(slide: UInt64, page: Int?, rendered: RenderedSlide)] {
         let pages = document.pageOfSlide
-        return try document.slideList().map { ($0.slide, pages[$0.slide], render(slide: $0.slide)) }
+        return document.slideOrder().map { ($0.slide, pages[$0.slide], render(slide: $0.slide)) }
     }
 
     /// The PostScript names of every face the deck's paragraph, character and list styles name,

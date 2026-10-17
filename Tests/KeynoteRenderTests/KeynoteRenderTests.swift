@@ -137,3 +137,40 @@ struct KeynoteRenderHostTests {
         #expect(fonts.contains("HelveticaNeue") && fonts.contains("HelveticaNeue-Bold"))
     }
 }
+
+/// AT-28 over the private corpus (`DECKMONKEY_CORPUS` or the git-ignored `.deckmonkey-corpus`):
+/// decks from Keynote 6.5 to 15.4, iOS and iCloud, whose slide trees can be Keynote 6.5's root node
+/// or nested. Keynote '09 files are refused by design; everything else must render.
+@Suite("Keynote render private corpus")
+struct KeynoteRenderPrivateCorpusTests {
+    static let decks: [URL] = {
+        let root = KeynoteRenderTests.root
+        var dir: String? = ProcessInfo.processInfo.environment["DECKMONKEY_CORPUS"]
+        if dir?.isEmpty ?? true, let pointer = try? String(contentsOf: root.appendingPathComponent(".deckmonkey-corpus"), encoding: .utf8) {
+            dir = pointer.split(whereSeparator: \.isNewline).first.map { ($0.trimmingCharacters(in: .whitespaces) as NSString).expandingTildeInPath }
+        }
+        guard let dir, !dir.isEmpty, let walker = FileManager.default.enumerator(at: URL(fileURLWithPath: dir), includingPropertiesForKeys: nil) else { return [] }
+        var out = [URL]()
+        for case let url as URL in walker where url.pathExtension.lowercased() == "key" {
+            out.append(url); walker.skipDescendants()
+        }
+        return out.sorted { $0.path < $1.path }
+    }()
+
+    @Test("AT-28: every private deck a modern Keynote saved renders every slide", .enabled(if: !decks.isEmpty, "no private corpus configured"))
+    func privateCorpus() throws {
+        var rendered = 0, slides = 0
+        for deck in Self.decks {
+            guard let document = try? KeynoteDocument.open(deck) else { continue }   // Keynote '09: refused by design
+            var renderer = KeynoteRenderer(document: document)
+            renderer.imageHref = { name, _ in "data/" + name }
+            let all = try renderer.renderAll()
+            #expect(!all.isEmpty, "\(deck.lastPathComponent): no slides")
+            #expect(all.count == document.slideOrder().count)
+            for entry in all { #expect(XMLParser(data: Data(entry.rendered.svg.utf8)).parse(), "\(deck.lastPathComponent) slide \(entry.slide)") }
+            rendered += 1; slides += all.count
+        }
+        print("AT-28 private: \(rendered) decks, \(slides) slides")
+        #expect(rendered > 0)
+    }
+}
