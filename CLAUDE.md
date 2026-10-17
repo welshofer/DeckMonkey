@@ -228,7 +228,15 @@ text size; table cells are version-5 packed buffers and merges live in the merge
 formulas; a number shows in its number format; a chart's frame is its plot area and its axis rounds up
 at the leading digit in four steps. A built-in theme's photos and textures are never in the file
 (Keynote downloads them): the small copy or the fill's reference colour stands in and the page is not
-judged. AT-29 over the corpus: 796 judged pages at a 0.76% median (all 1,876 at 1.82%). Duo uses it on
-branch `feat/keynote` (DuoCore `KeynoteDeck`), which needs DeckMonkey pinned to a published revision.
+judged. AT-29 over the corpus: 796 judged pages at a 0.76% median (all 1,876 at 1.84%); AT-28 also over
+the private corpus (28 decks, 335 slides: reading uses `slideOrder()`, which walks Keynote 6.5's root
+node and nested slides; `slideList()` stays the flat edit view). A self-sizing text box stores 0 × 0 at
+its left edge and vertical centre. Duo uses it on PR #28 (DuoCore `KeynoteDeck`, pinned by revision).
+
+Geometry (2026-10-17): `setDrawableFrame`/`moveDrawable` (`deckmonkey object`) move and resize an
+unrotated shape, text box, placeholder, image or movie; a cropped image is placed by its mask's frame,
+as Keynote's AppleScript gives it. `Scripts/gate1/geometry.py` has Keynote make the same edit: 10/10
+pixel-identical, re-save unchanged. Run edits for hosts: `KeynoteRenderer.drawables(onSlide:)` gives
+each run's UTF-16 range for `replaceText`.
 
 Leave the machine alone while the oracle runs: input during a run fails the verdict ("rerun").
