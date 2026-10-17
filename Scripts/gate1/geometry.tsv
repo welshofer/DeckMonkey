@@ -9,3 +9,7 @@ Corpus/templates/basic-white_wide.key	3	title	95,85,1730,112.85	195,85,1200,112.
 Corpus/templates/basic-white_wide.key	3	body	95,334.53,1730,650.08	95,400,1200,500
 Corpus/templates/basic-white_wide.key	1	image	0,0,1920,1080	0,0,960,540
 Corpus/templates/basic-white_wide.key	1	image	0,0,1920,1080	200,100,1920,1080
+Corpus/features/images.key	0	image	400,600,256,256	delete
+Corpus/features/shapes-lines.key	1	shape	450,360,100,100	delete
+Corpus/features/drawables.key	1	shape	910,490,100,100	delete
+Corpus/templates/basic-white_wide.key	1	image	0,0,1920,1080	delete

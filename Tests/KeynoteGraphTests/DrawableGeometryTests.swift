@@ -54,3 +54,25 @@ struct DrawableGeometryTests {
 enum IWAPackageRoundTrip {
     static func bytes(_ document: KeynoteDocument) throws -> IWAPackage { try IWAPackage.openZip(document.serializedData()) }
 }
+
+@Suite("Drawable delete")
+struct DrawableDeleteTests {
+    @Test("an image goes with what only it used, its data included; placeholders are refused", .enabled(if: FileManager.default.fileExists(atPath: DrawableGeometryTests.images.path), "no Corpus/features"))
+    func image() throws {
+        var document = try KeynoteDocument.open(DrawableGeometryTests.images)
+        let slide = document.slideOrder()[0].slide
+        let id = try #require(document.slideDrawables(slide).first { document.store.record(for: $0)?.info.messageInfos.first?.type == 3005 })
+        let dataBefore = document.packageMetadata?.datas.count ?? 0
+        let report = try document.deleteDrawable(id)
+        #expect(report.removedObjects >= 1 && document.store.record(for: id) == nil)
+        #expect(!document.slideDrawables(slide).contains(id))
+        let reopened = try KeynoteDocument.open(IWAPackageRoundTrip.bytes(document))
+        #expect(reopened.validate().filter { $0.severity == .error }.isEmpty)
+        #expect((reopened.packageMetadata?.datas.count ?? 0) == dataBefore - report.removedData.count)
+
+        var template = try KeynoteDocument.open(DrawableGeometryTests.template)
+        let title = try #require(template.slideText(template.slideOrder()[1].slide)?.title)
+        let placeholder = try #require(template.location(of: title)?.shape)
+        #expect(throws: KeynoteDocument.DrawableDeleteFailure.self) { try template.deleteDrawable(placeholder) }
+    }
+}

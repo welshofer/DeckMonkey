@@ -22,6 +22,9 @@ enum CLI {
       object <file> --object <id> --frame <x,y,w,h> -o <out.key>
                                      move or resize a shape, text box, placeholder, image or movie
                                      (unrotated, on a slide); paths and masks scale with it
+      object <file> --object <id> --delete -o <out.key>
+                                     delete a shape, text box, image, movie, group or line and
+                                     everything only it used
       record <file> <id>...          each record's payloads decoded as protobuf text format
       roundtrip <file> [-o out.key]  open, save, re-open; prints CLEAN n/n or the first difference
       verify <file>                  validator (oracle harness wiring arrives with Scripts/oracle.sh)
@@ -202,6 +205,12 @@ func runObject(_ args: [String]) throws {
         }
         let json = try JSONSerialization.data(withJSONObject: items, options: [.prettyPrinted, .sortedKeys])
         print(String(decoding: json, as: UTF8.self))
+        return
+    }
+    if args.contains("--delete"), let idText = option("--object", in: args), let id = UInt64(idText), let out = option("-o", in: args) {
+        let report = try document.deleteDrawable(id)
+        try document.save(to: url(out))
+        print("deleted object \(id): \(report.removedObjects) objects, \(report.removedData.count) data")
         return
     }
     guard let idText = option("--object", in: args), let id = UInt64(idText), let frameText = option("--frame", in: args),

@@ -4,7 +4,8 @@
 usage: Scripts/gate1/geometry.py [cases.tsv] [--work DIR]   (default: Scripts/gate1/geometry.tsv)
 
 Each case: deck, slide (0-based), AppleScript class (image, shape, text item, or "title"/"body" for
-the slide's placeholders), the object's current frame, and the new frame (points, x,y,w,h). DeckMonkey
+the slide's placeholders), the object's current frame, and the new frame (points, x,y,w,h) or
+"delete". DeckMonkey
 places the object with `deckmonkey object --frame`; Keynote does the same to a copy through its own
 AppleScript (the element whose position and size match the current frame), saving the golden. The
 case passes when the validator passes, Keynote opens DeckMonkey's file with no sheet and no
@@ -59,9 +60,13 @@ GOLDEN = '''on run argv
           end repeat
           if n is missing value then error "no " & wanted & " at the given frame"
         end if
-        set width of n to nw
-        set height of n to nh
-        set position of n to {nx, ny}
+        if (item 14 of argv) is "delete" then
+          delete n
+        else
+          set width of n to nw
+          set height of n to nh
+          set position of n to {nx, ny}
+        end if
         save d in out
       on error message
         close (every document whose name contains token) saving no
@@ -84,7 +89,8 @@ def golden(deck, slide, kind, old, new, out):
     copy = os.path.join(work, f"{token}-deck.key")
     shutil.copytree(deck, copy) if os.path.isdir(deck) else shutil.copy(deck, copy)
     saved = os.path.join(work, f"{token}-golden.key")
-    args = ["osascript", "-", copy, token, saved, str(slide + 1), kind] + [str(v) for v in old + new]
+    action = "delete" if new is None else "place"
+    args = ["osascript", "-", copy, token, saved, str(slide + 1), kind] + [str(v) for v in old + (new or [0, 0, 0, 0])] + [action]
     r = subprocess.run(args, input=GOLDEN, capture_output=True, text=True)
     if r.stdout.strip() != "saved" or not os.path.exists(saved):
         raise RuntimeError(f"Keynote did not build the golden: {r.stderr.strip() or r.stdout.strip()}")
@@ -103,7 +109,7 @@ def main():
     dm, passed = ".build/debug/deckmonkey", 0
     for n, (deck, slide, kind, old, new) in enumerate(cases, 1):
         old_f = [float(v) for v in old.split(",")]
-        new_f = [float(v) for v in new.split(",")]
+        new_f = None if new == "delete" else [float(v) for v in new.split(",")]
         label = f"{n:2} {os.path.basename(deck)} slide {slide} {kind} {old} -> {new}"
         try:
             items = json.loads(run(dm, "object", deck, "--slide", slide).stdout)
@@ -114,7 +120,10 @@ def main():
                 match = [d for d in items if d["kind"] == wanted and all(abs(a - b) < 1.5 for a, b in zip(d["frame"], old_f))]
             if len(match) != 1: raise RuntimeError(f"{len(match)} objects match")
             out = os.path.join(work, f"case{n}.key")
-            run(dm, "object", deck, "--object", str(match[0]["id"]), "--frame", new, "-o", out)
+            if new_f is None:
+                run(dm, "object", deck, "--object", str(match[0]["id"]), "--delete", "-o", out)
+            else:
+                run(dm, "object", deck, "--object", str(match[0]["id"]), "--frame", new, "-o", out)
             if "FAIL" in run(dm, "verify", out, check=False).stdout: raise RuntimeError("validator fails on the output")
             golden_deck = os.path.join(work, f"golden{n}.key")
             golden(deck, int(slide), kind, old_f, new_f, golden_deck)
