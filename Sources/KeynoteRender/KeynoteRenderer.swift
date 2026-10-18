@@ -21,7 +21,7 @@ public struct RenderedSlide: Sendable, Equatable {
 public struct KeynoteRenderer {
     /// Changes whenever the SVG drawn for the same file changes, so hosts that cache rendered
     /// slides (Duo's thumbnails) can key on it. AT-28 checks it against the corpus's output.
-    public static let revision = 2
+    public static let revision = 3
 
     public let document: KeynoteDocument
     public let fonts: RenderFonts?
@@ -227,7 +227,7 @@ struct Canvas {
         guard d.hasGeometry else { problems.insert("shape without geometry"); return }
         var look = styles.shapeLook(shape.hasStyle ? shape.style.identifier : nil)
         var g = d.geometry
-        if let storage, let sized = selfSizedFrame(g, storage: storage, look: look) {
+        if let storage, let sized = selfSizedFrame(g, storage: storage, look: look, path: shape.hasPathsource ? shape.pathsource : nil) {
             guard sized.width > 0, sized.height > 0 else { return }
             g.position = TSP_Point.with { $0.x = Float(sized.x); $0.y = Float(sized.y) }
             g.size = TSP_Size.with { $0.width = Float(sized.width); $0.height = Float(sized.height) }
@@ -264,13 +264,17 @@ struct Canvas {
 
     /// The frame a text box that sizes itself to its text takes, or nil for a fixed-size box.
     /// Without the geometry's width-valid flag (bit 1) the box grows to its unwrapped text, and its
-    /// position is the point it grows from: its left edge, centre or right edge, by the first
-    /// line's alignment, at its vertical centre (Keynote's own export puts "Plain text item" there;
-    /// the size stored beside the cleared flag is only a cache). A box with a width but height 0
-    /// grows to its text at that width, stored at its left edge and vertical centre.
-    mutating func selfSizedFrame(_ g: TSD_GeometryArchive, storage: UInt64, look: StyleResolver.ShapeLook) -> (x: Double, y: Double, width: Double, height: Double, wraps: Bool)? {
+    /// position is the point it grows from: its left edge, centre or right edge by the first
+    /// line's alignment, and its top, centre or bottom by its vertical alignment (Keynote's own
+    /// export puts a middle-aligned "Plain text item" at its vertical centre; the size stored
+    /// beside the cleared flag is only a cache). A box with a fixed width but no height-valid flag
+    /// (bit 2), or a stored height of 0, grows to its text at that width from its left edge.
+    /// A line (an open path) that can hold text is never a text box: it stays where it is stored.
+    mutating func selfSizedFrame(_ g: TSD_GeometryArchive, storage: UInt64, look: StyleResolver.ShapeLook, path: TSD_PathSourceArchive?) -> (x: Double, y: Double, width: Double, height: Double, wraps: Bool)? {
         let fixedWidth = g.flags & 1 != 0 && g.size.width > 0
-        guard !fixedWidth || g.size.height == 0 else { return nil }
+        let fixedHeight = g.flags & 2 != 0 && g.size.height > 0
+        guard !(fixedWidth && fixedHeight) else { return nil }
+        if let path, let outline = Paths.outline(path), !outline.closed { return nil }
         var probe = look
         probe.wraps = fixedWidth
         probe.verticalAlignment = .kFrameAlignTop
@@ -285,7 +289,14 @@ struct Canvas {
             default: break
             }
         }
-        return (x, Double(g.position.y) - extent.height / 2, width, extent.height, fixedWidth)
+        // Vertically it keeps the edge its text is aligned to: the top, the centre or the bottom.
+        var y = Double(g.position.y)
+        switch look.verticalAlignment {
+        case .kFrameAlignTop: break
+        case .kFrameAlignBottom: y -= extent.height
+        default: y -= extent.height / 2
+        }
+        return (x, y, width, extent.height, fixedWidth)
     }
 
     mutating func drawGroup(_ group: TSD_GroupArchive) {
@@ -308,11 +319,16 @@ struct Canvas {
         guard d.hasGeometry else { problems.insert("image without geometry"); return }
         // A deck made from a built-in theme carries only the small copy of a theme photo; Keynote
         // takes the full one from its own bundle. The small copy stands in for it.
-        let candidates = [image.hasData ? image.data.identifier : nil, image.hasThumbnailData ? image.thumbnailData.identifier : nil]
+        // A picture with Keynote's adjustments (exposure, saturation, a theme's recolouring) shows
+        // the adjusted copy Keynote saved beside the original.
+        let candidates = [image.hasAdjustedImageData ? image.adjustedImageData.identifier : nil,
+                          image.hasData ? image.data.identifier : nil, image.hasThumbnailData ? image.thumbnailData.identifier : nil]
         var found: (name: String, bytes: Data)?
         for id in candidates.compactMap({ $0 }) where found == nil { found = dataFile(id) }
         guard let file = found else { problems.insert("image data"); return }
-        if image.hasData, dataFile(image.data.identifier) == nil { problems.insert("theme photo (small copy)") }
+        if image.hasData, dataFile(image.data.identifier) == nil, !(image.hasAdjustedImageData && dataFile(image.adjustedImageData.identifier) != nil) {
+            problems.insert("theme photo (small copy)")
+        }
         let g = d.geometry
         let w = Double(g.size.width), h = Double(g.size.height)
         let look = styles.mediaLook(image.hasStyle ? image.style.identifier : nil)
@@ -336,7 +352,19 @@ struct Canvas {
             element += " clip-path=\"url(#\(clip))\""
         }
         element += "/>"
-        var group = "<g transform=\"\(transform(g))\""
+        // Instant Alpha keeps what its path encloses, in the picture's natural size; the file
+        // holds the untouched picture.
+        if image.hasInstantAlphaPath, image.hasNaturalSize, image.naturalSize.width > 0, image.naturalSize.height > 0 {
+            let commands = Paths.commands(image.instantAlphaPath)
+            if !commands.isEmpty, commands.count <= 200_000 {
+                let sx = w / Double(image.naturalSize.width), sy = h / Double(image.naturalSize.height)
+                let pathD = Outline(commands: commands, width: w, height: h).d(sx: sx, sy: sy)
+                let clip = defs.add { "<clipPath id=\"\($0)\"><path clip-rule=\"evenodd\" d=\"\(pathD)\"/></clipPath>" }
+                element = "<g clip-path=\"url(#\(clip))\">" + element + "</g>"
+            }
+        }
+        // Geometry flag bit 4 mirrors a picture left to right (Flip Horizontally).
+        var group = "<g transform=\"\(transform(g, flipH: g.flags & 4 != 0))\""
         if look.opacity < 0.9995 { group += " opacity=\"\(SVG.n(look.opacity))\"" }
         if let filter = shadowFilter(look.shadow, angle: Double(g.angle)) { group += " filter=\"url(#\(filter))\"" }
         body += group + ">" + element

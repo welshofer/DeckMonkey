@@ -227,12 +227,25 @@ extension Canvas {
             Self.entryAt(resolvedParaStyles, index, \.index).map { $0.style } ?? shape.paragraphStyle
         }
 
-        // Numbered paragraphs count up within their level, restarting under a shallower one.
+        // Numbered paragraphs count up within their level, restarting under a shallower one; a
+        // paragraph that is not numbered at its level ends the run there.
         var ordinals = [Int](), counters = [Int](repeating: 0, count: 10)
+        var numbered = [UInt64: Bool]()
         for range in paragraphs {
             let level = min(Int(Self.entryAt(levelEntries, range.lowerBound, \.characterIndex)?.first ?? 0), 9)
-            counters[level] += 1
             for deeper in (level + 1)..<10 { counters[deeper] = 0 }
+            let listID = Self.entryAt(listEntries, range.lowerBound, \.characterIndex).flatMap { $0.hasObject ? $0.object.identifier : nil }
+                ?? styles.paraLook(paraStyle(at: range.lowerBound)).listStyle
+            var isNumber = false
+            if let listID {
+                let key = listID &* 16 &+ UInt64(level)
+                if let known = numbered[key] { isNumber = known } else {
+                    let types = document.decoded(TSWP_ListStyleArchive.self, listID)?.labelTypes ?? []
+                    isNumber = types.indices.contains(min(level, 8)) && types[min(level, 8)] == .kNumber
+                    numbered[key] = isNumber
+                }
+            }
+            if isNumber { counters[level] += 1 } else { counters[level] = 0 }
             ordinals.append(counters[level])
         }
 

@@ -51,11 +51,12 @@ extension Canvas {
         for ref in order(slide).prefix(2_000) where !hidden.contains(ref) {
             guard let t = type(of: ref) else { continue }
             var drawable: TSD_DrawableArchive?
-            var kind = SlideDrawable.Kind.other, name = "Object", storage: UInt64?
+            var kind = SlideDrawable.Kind.other, name = "Object", storage: UInt64?, path: TSD_PathSourceArchive?
             switch t {
             case Self.placeholderType:
                 guard let p = document.decoded(KN_PlaceholderArchive.self, ref) else { continue }
                 drawable = p.super.super.super
+                path = p.super.super.hasPathsource ? p.super.super.pathsource : nil
                 kind = .placeholder
                 switch p.kind {
                 case .kKindTitlePlaceholder: name = "Title"
@@ -67,6 +68,7 @@ extension Canvas {
             case Self.shapeInfoType:
                 guard let s = document.decoded(TSWP_ShapeInfoArchive.self, ref) else { continue }
                 drawable = s.super.super
+                path = s.super.hasPathsource ? s.super.pathsource : nil
                 storage = s.hasOwnedStorage ? s.ownedStorage.identifier : nil
                 kind = s.isTextBox ? .text : .shape
                 name = s.isTextBox ? "Text" : "Shape"
@@ -84,7 +86,7 @@ extension Canvas {
             // A cropped image is shown, moved and resized by what shows: its mask's frame.
             var f = document.movableFrame(ref) ?? KeynoteDocument.Frame(x: Double(g.position.x), y: Double(g.position.y), width: Double(g.size.width), height: Double(g.size.height))
             // A self-sizing text box reports the frame its text takes, as drawn.
-            if let storage, let sized = selfSizedFrame(g, storage: storage, look: styles.shapeLook(shapeStyle(ref))) {
+            if let storage, let sized = selfSizedFrame(g, storage: storage, look: styles.shapeLook(shapeStyle(ref)), path: path) {
                 f = KeynoteDocument.Frame(x: sized.x, y: sized.y, width: sized.width, height: sized.height)
             }
             out.append(SlideDrawable(id: ref, kind: kind, name: name, x: f.x, y: f.y,

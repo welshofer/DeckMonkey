@@ -38,11 +38,39 @@ extension Canvas {
             problems.insert("chart data truncated")
         }
 
-        // Styles: each series' theme style, then the chart's paragraph styles for labels.
+        // Styles: each series' theme style with the series' own variation over it (what the
+        // Format sidebar set for that series), then the chart's paragraph styles for labels.
         let seriesStyles = chart.seriesThemeStyles.map { document.decoded(TSCH_ChartSeriesStyleArchive.self, $0.identifier) }
+        var privateStyles = [Int: TSCH_Generated_ChartSeriesStyleArchive]()
+        for entry in chart.seriesPrivateStyles.entries.prefix(Self.maximumChartMarks) where entry.hasReference {
+            if let s = document.decoded(TSCH_ChartSeriesStyleArchive.self, entry.reference.identifier), s.hasTSCH_Generated_ChartSeriesStyleArchive_current {
+                privateStyles[Int(entry.index)] = s.TSCH_Generated_ChartSeriesStyleArchive_current
+            }
+        }
+        // Each series' settings that are not style (whether its value labels show).
+        var nonStyles = [Int: TSCH_Generated_ChartSeriesNonStyleArchive]()
+        for entry in chart.seriesNonStyles.entries.prefix(Self.maximumChartMarks) where entry.hasReference {
+            if let s = document.decoded(TSCH_ChartSeriesNonStyleArchive.self, entry.reference.identifier), s.hasTSCH_Generated_ChartSeriesNonStyleArchive_current {
+                nonStyles[Int(entry.index)] = s.TSCH_Generated_ChartSeriesNonStyleArchive_current
+            }
+        }
+        func nonStyle(_ i: Int) -> TSCH_Generated_ChartSeriesNonStyleArchive? { nonStyles[i] }
+        var resolved = [Int: TSCH_Generated_ChartSeriesStyleArchive?]()
         func series(_ i: Int) -> TSCH_Generated_ChartSeriesStyleArchive? {
-            guard !seriesStyles.isEmpty, let s = seriesStyles[i % seriesStyles.count], s.hasTSCH_Generated_ChartSeriesStyleArchive_current else { return nil }
-            return s.TSCH_Generated_ChartSeriesStyleArchive_current
+            if let known = resolved[i] { return known }
+            var theme: TSCH_Generated_ChartSeriesStyleArchive?
+            if !seriesStyles.isEmpty, let s = seriesStyles[i % seriesStyles.count], s.hasTSCH_Generated_ChartSeriesStyleArchive_current {
+                theme = s.TSCH_Generated_ChartSeriesStyleArchive_current
+            }
+            var out = theme
+            if let own = privateStyles[i] {
+                var merged = theme ?? TSCH_Generated_ChartSeriesStyleArchive()
+                if let bytes = try? own.serializedData(partial: true) { try? merged.merge(serializedBytes: bytes, partial: true) }
+                Self.overlayFills(own, on: &merged)
+                out = merged
+            }
+            resolved[i] = out
+            return out
         }
         func paragraph(_ index: Int32?) -> CharLook {
             guard let index, index >= 0, Int(index) < chart.paragraphStyles.count else { return CharLook(size: 24) }
@@ -61,7 +89,8 @@ extension Canvas {
         case .pieChartType2D, .pieChartType3D, .donutChartType2D, .donutChartType3D:
             if type == .pieChartType3D || type == .donutChartType3D { problems.insert("3d chart (drawn flat)") }
             out += pie(values: values.map { $0.first ?? 0 }, w: w, h: h, donut: type == .donutChartType2D || type == .donutChartType3D,
-                       fill: { series($0)?.tschchartseriespiefill }, label: paragraph(series(0).map { $0.tschchartseriespielabelparagraphstyleindex }))
+                       fill: { series($0)?.tschchartseriespiefill }, label: paragraph(series(0).map { $0.tschchartseriespielabelparagraphstyleindex }),
+                       showsValue: { nonStyle($0).map { !$0.hasTschchartseriespieshowvaluelabels || $0.tschchartseriespieshowvaluelabels } ?? true })
         case .columnChartType2D, .barChartType2D, .stackedColumnChartType2D, .stackedBarChartType2D,
              .columnChartType3D, .barChartType3D, .stackedColumnChartType3D, .stackedBarChartType3D,
              .lineChartType2D, .lineChartType3D, .areaChartType2D, .areaChartType3D, .stackedAreaChartType2D, .stackedAreaChartType3D,
@@ -95,6 +124,26 @@ extension Canvas {
     enum AxisKind { case bars, line, area }
 
     /// Bars, points or wedges one chart may draw.
+    /// A fill is one paint: a series variation's fill replaces its theme style's rather than
+    /// merging into it.
+    static func overlayFills(_ own: TSCH_Generated_ChartSeriesStyleArchive, on merged: inout TSCH_Generated_ChartSeriesStyleArchive) {
+        if own.hasTschchartseriesareafill { merged.tschchartseriesareafill = own.tschchartseriesareafill }
+        if own.hasTschchartseriesareasymbolfill { merged.tschchartseriesareasymbolfill = own.tschchartseriesareasymbolfill }
+        if own.hasTschchartseriesbarfill { merged.tschchartseriesbarfill = own.tschchartseriesbarfill }
+        if own.hasTschchartseriesbubblesymbolfill { merged.tschchartseriesbubblesymbolfill = own.tschchartseriesbubblesymbolfill }
+        if own.hasTschchartseriescolumnfill { merged.tschchartseriescolumnfill = own.tschchartseriescolumnfill }
+        if own.hasTschchartseriesdefaultfill { merged.tschchartseriesdefaultfill = own.tschchartseriesdefaultfill }
+        if own.hasTschchartserieslinesymbolfill { merged.tschchartserieslinesymbolfill = own.tschchartserieslinesymbolfill }
+        if own.hasTschchartseriesmixedareafill { merged.tschchartseriesmixedareafill = own.tschchartseriesmixedareafill }
+        if own.hasTschchartseriesmixedareasymbolfill { merged.tschchartseriesmixedareasymbolfill = own.tschchartseriesmixedareasymbolfill }
+        if own.hasTschchartseriesmixedcolumnfill { merged.tschchartseriesmixedcolumnfill = own.tschchartseriesmixedcolumnfill }
+        if own.hasTschchartseriesmixedlinesymbolfill { merged.tschchartseriesmixedlinesymbolfill = own.tschchartseriesmixedlinesymbolfill }
+        if own.hasTschchartseriespiefill { merged.tschchartseriespiefill = own.tschchartseriespiefill }
+        if own.hasTschchartseriesradarareafill { merged.tschchartseriesradarareafill = own.tschchartseriesradarareafill }
+        if own.hasTschchartseriesradarareasymbolfill { merged.tschchartseriesradarareasymbolfill = own.tschchartseriesradarareasymbolfill }
+        if own.hasTschchartseriesscattersymbolfill { merged.tschchartseriesscattersymbolfill = own.tschchartseriesscattersymbolfill }
+    }
+
     static let maximumChartMarks = 10_000
 
     /// The value axis: zero to the data's extreme rounded up at its leading digit (9 stays 9,
@@ -269,7 +318,8 @@ extension Canvas {
     }
 
     /// Wedges clockwise from twelve o'clock, one per series, each labelled with its percentage.
-    mutating func pie(values: [Double], w: Double, h: Double, donut: Bool, fill: (Int) -> TSD_FillArchive?, label: CharLook) -> String {
+    mutating func pie(values: [Double], w: Double, h: Double, donut: Bool, fill: (Int) -> TSD_FillArchive?, label: CharLook,
+                      showsValue: (Int) -> Bool = { _ in true }) -> String {
         let parts = values.map { $0.isFinite ? max(0, $0) : 0 }
         let total = parts.reduce(0, +)
         guard total > 0 else { return "" }
@@ -279,7 +329,23 @@ extension Canvas {
         for (i, part) in parts.enumerated() where part > 0 {
             let sweep = part / total * 2 * .pi
             let end = angle + sweep
-            func p(_ a: Double, _ radius: Double) -> String { "\(SVG.n(cx + cos(a) * radius)) \(SVG.n(cy + sin(a) * radius))" }
+            // A wedge's picture fills the wedge's own bounds, so its path is drawn from there.
+            var ox = 0.0, oy = 0.0, bw = w, bh = h
+            let f = fill(i)
+            if let f, f.hasImage, sweep < 2 * .pi - 1e-9 {
+                var xs = [cx + cos(angle) * r, cx + cos(end) * r], ys = [cy + sin(angle) * r, cy + sin(end) * r]
+                if donut {
+                    xs += [cx + cos(angle) * inner, cx + cos(end) * inner]; ys += [cy + sin(angle) * inner, cy + sin(end) * inner]
+                } else {
+                    xs.append(cx); ys.append(cy)
+                }
+                var k = (angle / (.pi / 2)).rounded(.up)
+                while k * .pi / 2 < end { xs.append(cx + cos(k * .pi / 2) * r); ys.append(cy + sin(k * .pi / 2) * r); k += 1 }
+                if let x0 = xs.min(), let x1 = xs.max(), let y0 = ys.min(), let y1 = ys.max(), x1 - x0 > 0.5, y1 - y0 > 0.5 {
+                    ox = x0; oy = y0; bw = x1 - x0; bh = y1 - y0
+                }
+            }
+            func p(_ a: Double, _ radius: Double) -> String { "\(SVG.n(cx - ox + cos(a) * radius)) \(SVG.n(cy - oy + sin(a) * radius))" }
             let large = sweep > .pi ? 1 : 0
             var d: String
             if sweep >= 2 * .pi - 1e-9 {
@@ -288,13 +354,18 @@ extension Canvas {
             } else if donut {
                 d = "M\(p(angle, r))A\(SVG.n(r)) \(SVG.n(r)) 0 \(large) 1 \(p(end, r))L\(p(end, inner))A\(SVG.n(inner)) \(SVG.n(inner)) 0 \(large) 0 \(p(angle, inner))Z"
             } else {
-                d = "M\(SVG.n(cx)) \(SVG.n(cy))L\(p(angle, r))A\(SVG.n(r)) \(SVG.n(r)) 0 \(large) 1 \(p(end, r))Z"
+                d = "M\(SVG.n(cx - ox)) \(SVG.n(cy - oy))L\(p(angle, r))A\(SVG.n(r)) \(SVG.n(r)) 0 \(large) 1 \(p(end, r))Z"
             }
-            if let f = fill(i) { out += paintedPath(f, d: d, w: w, h: h) }
+            if let f {
+                let painted = paintedPath(f, d: d, w: bw, h: bh)
+                out += ox == 0 && oy == 0 ? painted : "<g transform=\"translate(\(SVG.n(ox)) \(SVG.n(oy)))\">" + painted + "</g>"
+            }
             let mid = angle + sweep / 2, at = donut ? (r + inner) / 2 : r * 0.66
             let text = "\(Int((part / total * 100).rounded()))%"
-            labels += textElement([Span(text: text, look: label, width: 0)], x: cx + cos(mid) * at,
-                                  baseline: cy + sin(mid) * at + effectiveSize(label) * 0.35, anchor: "middle", justifyWidth: nil)
+            if showsValue(i) {
+                labels += textElement([Span(text: text, look: label, width: 0)], x: cx + cos(mid) * at,
+                                      baseline: cy + sin(mid) * at + effectiveSize(label) * 0.35, anchor: "middle", justifyWidth: nil)
+            }
             angle = end
         }
         return out + labels

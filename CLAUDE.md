@@ -230,9 +230,14 @@ at the leading digit in four steps. A built-in theme's photos and textures are n
 (Keynote downloads them): the small copy or the fill's reference colour stands in and the page is not
 judged. AT-29 over the corpus: 796 judged pages at a 0.76% median (all 1,876 at 1.84%); AT-28 also over
 the private corpus (28 decks, 335 slides: reading uses `slideOrder()`, which walks Keynote 6.5's root
-node and nested slides; `slideList()` stays the flat edit view). A text box without the width-valid
-geometry flag sizes itself to its text (its stored size, often 0 × 0, is only a cache): its position
-is the left edge, centre or right edge by its alignment, at its vertical centre. Duo uses it on PR #28 (DuoCore `KeynoteDeck`, pinned by revision). Any change to rendered output bumps
+node and nested slides; `slideList()` stays the flat edit view). Geometry flags: 1 width valid, 2 height
+valid, 4 flipped horizontally (pictures). A text shape without a valid width or height grows to its
+text (the stored size, often 0 × 0, is only a cache), and its position is the edge it grows from: left,
+centre or right by its text alignment, top, centre or bottom by its vertical alignment. A line (open
+path) holding text is not a text box. A picture with Keynote adjustments draws `adjustedImageData`;
+Instant Alpha clips it to `instantAlphaPath` (natural-size coordinates). A chart series' private
+style is a variation over its theme style (fills replace, not merge); value labels follow the series
+non-style. Numbered lists count only numbered paragraphs. Duo uses it on PR #28 (DuoCore `KeynoteDeck`, pinned by revision). Any change to rendered output bumps
 `KeynoteRenderer.revision` (Duo keys cached thumbnails on it); AT-28 fails when the corpus's SVG digest
 changes under the same revision (the digest is kept in the git-ignored `Corpus/.render-revision.json`).
 
