@@ -19,6 +19,10 @@ public struct RenderedSlide: Sendable, Equatable {
 /// Fonts come from the caller as `RenderFonts` (faces by PostScript name, measured with Rostrum's
 /// `FontMetrics`); text in a face it lacks is laid out with estimated metrics and reported.
 public struct KeynoteRenderer {
+    /// Changes whenever the SVG drawn for the same file changes, so hosts that cache rendered
+    /// slides (Duo's thumbnails) can key on it. AT-28 checks it against the corpus's output.
+    public static let revision = 2
+
     public let document: KeynoteDocument
     public let fonts: RenderFonts?
     /// How an image file becomes an `href`: by default a `data:` URI of the file's bytes.

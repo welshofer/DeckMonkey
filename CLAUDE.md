@@ -232,7 +232,9 @@ judged. AT-29 over the corpus: 796 judged pages at a 0.76% median (all 1,876 at 
 the private corpus (28 decks, 335 slides: reading uses `slideOrder()`, which walks Keynote 6.5's root
 node and nested slides; `slideList()` stays the flat edit view). A text box without the width-valid
 geometry flag sizes itself to its text (its stored size, often 0 × 0, is only a cache): its position
-is the left edge, centre or right edge by its alignment, at its vertical centre. Duo uses it on PR #28 (DuoCore `KeynoteDeck`, pinned by revision).
+is the left edge, centre or right edge by its alignment, at its vertical centre. Duo uses it on PR #28 (DuoCore `KeynoteDeck`, pinned by revision). Any change to rendered output bumps
+`KeynoteRenderer.revision` (Duo keys cached thumbnails on it); AT-28 fails when the corpus's SVG digest
+changes under the same revision (the digest is kept in the git-ignored `Corpus/.render-revision.json`).
 
 Geometry (2026-10-17): `setDrawableFrame`/`moveDrawable` (`deckmonkey object`) move and resize an
 unrotated shape, text box, placeholder, image or movie; a cropped image is placed by its mask's frame,

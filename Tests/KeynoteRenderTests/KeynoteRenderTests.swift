@@ -50,12 +50,14 @@ struct KeynoteRenderTests {
     @Test("AT-28: every corpus slide renders to well-formed SVG", .enabled(if: !decks.isEmpty, "no Corpus/templates or Corpus/features"))
     func corpus() throws {
         var slides = 0, kinds = [String: Int]()
+        var digest: UInt64 = 0xcbf2_9ce4_8422_2325   // FNV-1a over every SVG, in deck order
         for deck in Self.decks {
             let document = try KeynoteDocument.open(deck)
             var renderer = KeynoteRenderer(document: document)
             renderer.imageHref = { name, _ in "data/" + name }
             for entry in try renderer.renderAll() {
                 slides += 1
+                for byte in entry.rendered.svg.utf8 { digest = (digest ^ UInt64(byte)) &* 0x100_0000_01b3 }
                 let parser = XMLParser(data: Data(entry.rendered.svg.utf8))
                 #expect(parser.parse(), "\(deck.lastPathComponent) slide \(entry.slide): \(parser.parserError.map { "\($0)" } ?? "")")
                 #expect(renderer.render(slide: entry.slide) == entry.rendered, "\(deck.lastPathComponent) slide \(entry.slide) is not deterministic")
@@ -64,6 +66,21 @@ struct KeynoteRenderTests {
         }
         print("AT-28: \(slides) slides from \(Self.decks.count) decks; not drawn: \(kinds.sorted { $0.key < $1.key }.map { "\($0.key) ×\($0.value)" }.joined(separator: ", "))")
         #expect(slides > 0)
+        try checkRevision(digest: String(digest, radix: 16))
+    }
+
+    /// Hosts key cached renders on `KeynoteRenderer.revision`, so output that changes must change
+    /// it. The corpus is built on this machine, so its digest lives beside it (git-ignored): a new
+    /// revision records the digest; the same revision with a different digest fails.
+    func checkRevision(digest: String) throws {
+        let file = Self.root.appendingPathComponent("Corpus/.render-revision.json")
+        let current = ["revision": "\(KeynoteRenderer.revision)", "digest": digest]
+        if let data = try? Data(contentsOf: file), let stored = try? JSONDecoder().decode([String: String].self, from: data),
+           stored["revision"] == current["revision"] {
+            #expect(stored["digest"] == digest, "rendered output changed: bump KeynoteRenderer.revision (now \(KeynoteRenderer.revision))")
+            return
+        }
+        try JSONEncoder().encode(current).write(to: file)
     }
 }
 

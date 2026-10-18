@@ -17,6 +17,7 @@ DerivedData/
 /Corpus/hostile/
 /Corpus/manifest.json
 /Corpus/.snappy-reference.json
+/Corpus/.render-revision.json
 /Corpus/**/*.golden.pdf
 /Scripts/gate1/cases.local.tsv
 # Stale pre-rename copy of the CLI (the real one is Sources/DeckMonkeyCLI); delete when convenient.
