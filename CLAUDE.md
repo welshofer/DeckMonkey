@@ -266,3 +266,10 @@ keep their words; node and notes come from a donor slide. `Scripts/gate1/newslid
 Kyoto, Showcase, Academy 4:3, one slide per master, every page identical to Keynote's New Slide.
 
 Leave the machine alone while the oracle runs: input during a run fails the verdict ("rerun").
+
+Memory (2026-10-18): `IWAPackage.open` maps the file, and a zip's stored entries (Keynote stores
+pictures and movies uncompressed) are CRC-checked views into it, not copies; compressed entries still
+decode through Rostrum. Opening Octopus (135 MB) went from a 418 MB to a 12 MB peak footprint, a full
+render from 500 MB to 82 MB, with identical output. Hosts should pass mapped data to `openZip`.
+Private goldens: `<deck>.golden.pdf` beside 25 of the 27 modern private decks (oracle exports, never
+in the repo); `Scripts/render/gate.py <decks>` judges them.

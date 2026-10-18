@@ -53,22 +53,50 @@ public struct IWAPackage: Sendable {
         if isDirectory.boolValue {
             return try openDirectory(url)
         }
-        return try openZip(Data(contentsOf: url), name: url.lastPathComponent)
+        // Mapped, not read: a deck's pictures are most of its bytes, and they stay in the file
+        // until something draws them.
+        return try openZip(Data(contentsOf: url, options: .mappedIfSafe), name: url.lastPathComponent)
     }
 
+    /// Opens a zip held in `data`. Stored entries (Keynote stores pictures and movies
+    /// uncompressed) are views into `data`, checked against their CRC, not copies: pass mapped
+    /// data and a large deck costs little more memory than its archives.
     public static func openZip(_ data: Data, name: String = "<memory>") throws -> IWAPackage {
         let reader = try ZipReader(data: data)
+        let backing = data as NSData
         var entries = [String: Data]()
-        for entryName in reader.entryNames where !entryName.hasSuffix("/") {
+        for entry in reader.allEntries where !entry.name.hasSuffix("/") && entries[entry.name] == nil {
+            if let stored = storedEntry(entry, in: backing) {
+                entries[entry.name] = stored
+                continue
+            }
             do {
-                entries[entryName] = try reader.data(forEntry: entryName)
+                entries[entry.name] = try reader.data(forEntry: entry.name)
             } catch {
-                throw IWAPackageError.zipEntryUnreadable(entryName)
+                throw IWAPackageError.zipEntryUnreadable(entry.name)
             }
         }
         let nestedIndex = try flattenNestedIndex(&entries)
         try validate(entries, name: name)
         return IWAPackage(form: .zip, entries: entries, nestedIndex: nestedIndex)
+    }
+
+    /// A stored entry's bytes as a view into `backing` (kept alive by the view), or nil when the
+    /// entry is compressed, encrypted or does not check out: the reader then decodes it, and
+    /// reports what is wrong with it.
+    private static func storedEntry(_ entry: ZipReader.Entry, in backing: NSData) -> Data? {
+        guard entry.method == 0, entry.compressedSize == entry.uncompressedSize, entry.compressedSize > 0 else { return nil }
+        let base = backing.bytes.assumingMemoryBound(to: UInt8.self), count = backing.length
+        func u16(_ at: Int) -> Int { Int(base[at]) | Int(base[at + 1]) << 8 }
+        func u32(_ at: Int) -> UInt32 { UInt32(u16(at)) | UInt32(u16(at + 2)) << 16 }
+        let local = entry.localHeaderOffset
+        guard local >= 0, local + 30 <= count, u32(local) == 0x0403_4B50, u16(local + 6) & 0x0001 == 0 else { return nil }
+        let start = local + 30 + u16(local + 26) + u16(local + 28)
+        guard start + entry.compressedSize <= count else { return nil }
+        let view = Data(bytesNoCopy: UnsafeMutableRawPointer(mutating: base + start), count: entry.compressedSize,
+                        deallocator: .custom { _, _ in withExtendedLifetime(backing) {} })
+        guard CRC32.checksum(view) == entry.crc32 else { return nil }
+        return view
     }
 
     /// Expands an `Index.zip` entry into `Index/*` entries. Returns whether one was present.
@@ -101,7 +129,7 @@ public struct IWAPackage: Sendable {
             }
             var isDir: ObjCBool = false
             guard fm.fileExists(atPath: fileURL.path, isDirectory: &isDir), !isDir.boolValue else { continue }
-            entries[sub] = try Data(contentsOf: fileURL)
+            entries[sub] = try Data(contentsOf: fileURL, options: .mappedIfSafe)
         }
         let nestedIndex = try flattenNestedIndex(&entries)
         try validate(entries, name: url.lastPathComponent)
