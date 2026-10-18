@@ -454,6 +454,7 @@ extension Canvas {
         }
         lines = result.lines
         lastTextExtent = ((lines.map { $0.width + $0.x }.max() ?? 0) + shape.padding.right, result.height + shape.padding.top + shape.padding.bottom)
+        lastTextAlignment = lines.first(where: { !$0.spans.isEmpty })?.alignment ?? .tatvalue0
 
         var top = shape.padding.top
         switch shape.verticalAlignment {

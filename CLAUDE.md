@@ -230,8 +230,9 @@ at the leading digit in four steps. A built-in theme's photos and textures are n
 (Keynote downloads them): the small copy or the fill's reference colour stands in and the page is not
 judged. AT-29 over the corpus: 796 judged pages at a 0.76% median (all 1,876 at 1.84%); AT-28 also over
 the private corpus (28 decks, 335 slides: reading uses `slideOrder()`, which walks Keynote 6.5's root
-node and nested slides; `slideList()` stays the flat edit view). A self-sizing text box stores 0 × 0 at
-its left edge and vertical centre. Duo uses it on PR #28 (DuoCore `KeynoteDeck`, pinned by revision).
+node and nested slides; `slideList()` stays the flat edit view). A text box without the width-valid
+geometry flag sizes itself to its text (its stored size, often 0 × 0, is only a cache): its position
+is the left edge, centre or right edge by its alignment, at its vertical centre. Duo uses it on PR #28 (DuoCore `KeynoteDeck`, pinned by revision).
 
 Geometry (2026-10-17): `setDrawableFrame`/`moveDrawable` (`deckmonkey object`) move and resize an
 unrotated shape, text box, placeholder, image or movie; a cropped image is placed by its mask's frame,

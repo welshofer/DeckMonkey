@@ -103,6 +103,8 @@ struct Canvas {
     var slideNumber: Int?
     /// The width and height the last laid-out text needed, padding included.
     var lastTextExtent = (width: 0.0, height: 0.0)
+    /// The alignment of the last laid-out text's first line.
+    var lastTextAlignment = TSWP_ParagraphStylePropertiesArchive.TextAlignmentType.tatvalue0
 
     init(document: KeynoteDocument, fonts: RenderFonts?, imageHref: @escaping (String, Data) -> String, size: (width: Double, height: Double)) {
         self.document = document
@@ -221,21 +223,11 @@ struct Canvas {
         guard d.hasGeometry else { problems.insert("shape without geometry"); return }
         var look = styles.shapeLook(shape.hasStyle ? shape.style.identifier : nil)
         var g = d.geometry
-        // A text box that sizes itself to its text stores 0 × 0 at its left edge and vertical
-        // centre (Keynote's own export puts "Plain text item" there): lay the text out unwrapped
-        // to find its size.
-        // A box with a width but height 0 grows to its text at that width, stored the same way.
-        if let storage, g.size.height == 0 {
-            let fixedWidth = g.size.width > 0
-            var probe = look
-            probe.wraps = fixedWidth
-            probe.verticalAlignment = .kFrameAlignTop
-            _ = textMarkup(storage: storage, width: fixedWidth ? Double(g.size.width) : 100_000, height: 100_000, look: probe)
-            let extent = lastTextExtent
-            guard extent.width > 0, extent.height > 0 else { return }
-            g.position.y -= Float(extent.height / 2)
-            g.size = TSP_Size.with { $0.width = fixedWidth ? g.size.width : Float(extent.width); $0.height = Float(extent.height) }
-            look.wraps = fixedWidth
+        if let storage, let sized = selfSizedFrame(g, storage: storage, look: look) {
+            guard sized.width > 0, sized.height > 0 else { return }
+            g.position = TSP_Point.with { $0.x = Float(sized.x); $0.y = Float(sized.y) }
+            g.size = TSP_Size.with { $0.width = Float(sized.width); $0.height = Float(sized.height) }
+            look.wraps = sized.wraps
         }
         let w = Double(g.size.width), h = Double(g.size.height)
         let source = shape.hasPathsource ? shape.pathsource : nil
@@ -264,6 +256,32 @@ struct Canvas {
         }
         guard !inner.isEmpty else { return }
         body += group + inner + "</g>"
+    }
+
+    /// The frame a text box that sizes itself to its text takes, or nil for a fixed-size box.
+    /// Without the geometry's width-valid flag (bit 1) the box grows to its unwrapped text, and its
+    /// position is the point it grows from: its left edge, centre or right edge, by the first
+    /// line's alignment, at its vertical centre (Keynote's own export puts "Plain text item" there;
+    /// the size stored beside the cleared flag is only a cache). A box with a width but height 0
+    /// grows to its text at that width, stored at its left edge and vertical centre.
+    mutating func selfSizedFrame(_ g: TSD_GeometryArchive, storage: UInt64, look: StyleResolver.ShapeLook) -> (x: Double, y: Double, width: Double, height: Double, wraps: Bool)? {
+        let fixedWidth = g.flags & 1 != 0 && g.size.width > 0
+        guard !fixedWidth || g.size.height == 0 else { return nil }
+        var probe = look
+        probe.wraps = fixedWidth
+        probe.verticalAlignment = .kFrameAlignTop
+        _ = textMarkup(storage: storage, width: fixedWidth ? Double(g.size.width) : 100_000, height: 100_000, look: probe)
+        let extent = lastTextExtent
+        let width = fixedWidth ? Double(g.size.width) : extent.width
+        var x = Double(g.position.x)
+        if !fixedWidth {
+            switch lastTextAlignment {
+            case .tatvalue1: x -= width
+            case .tatvalue2: x -= width / 2
+            default: break
+            }
+        }
+        return (x, Double(g.position.y) - extent.height / 2, width, extent.height, fixedWidth)
     }
 
     mutating func drawGroup(_ group: TSD_GroupArchive) {
