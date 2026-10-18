@@ -88,9 +88,37 @@ extension Canvas {
         switch type {
         case .pieChartType2D, .pieChartType3D, .donutChartType2D, .donutChartType3D:
             if type == .pieChartType3D || type == .donutChartType3D { problems.insert("3d chart (drawn flat)") }
-            out += pie(values: values.map { $0.first ?? 0 }, w: w, h: h, donut: type == .donutChartType2D || type == .donutChartType3D,
-                       fill: { series($0)?.tschchartseriespiefill }, label: paragraph(series(0).map { $0.tschchartseriespielabelparagraphstyleindex }),
-                       showsValue: { nonStyle($0).map { !$0.hasTschchartseriespieshowvaluelabels || $0.tschchartseriespieshowvaluelabels } ?? true })
+            let info = document.decoded(TSCH_ChartNonStyleArchive.self, chart.chartNonStyle.identifier)
+                .flatMap { $0.hasTSCH_Generated_ChartNonStyleArchive_current ? $0.TSCH_Generated_ChartNonStyleArchive_current : nil }
+            let donut = type == .donutChartType2D || type == .donutChartType3D
+            var layout = PieLayout()
+            layout.startAngle = Double(info?.tschchartinfodefaultpiestartangle ?? 0)
+            if let info, info.hasTschchartinfodefaultinnerradius, info.tschchartinfodefaultinnerradius > 0, info.tschchartinfodefaultinnerradius < 1 {
+                layout.innerFraction = Double(info.tschchartinfodefaultinnerradius)
+            }
+            if donut, let info, info.tschchartinfodefaultshowtitle, info.tschchartinfodefaultdonutplacetitleatcenter, !info.tschchartinfodefaulttitle.isEmpty {
+                let index = chartStyle?.tschchartinfodefaulttitleparagraphstyleindex ?? -1
+                if index >= 0, Int(index) < chart.paragraphStyles.count {
+                    layout.title = (info.tschchartinfodefaulttitle, chart.paragraphStyles[Int(index)].identifier)
+                }
+            }
+            // Series labels (the wedges' names) sit at the label distance: past the wedge they move
+            // out to a column on their side with a callout line back to the wedge.
+            layout.name = { i in
+                guard let n = nonStyle(i), n.tschchartseriespieshowserieslabels, i < names.count, !names[i].isEmpty else { return nil }
+                return names[i]
+            }
+            layout.labelDistance = { i in Double(nonStyle(i)?.tschchartseriespielabelexplosion ?? 0) / 100 }
+            // A donut has label styles of its own, inside and outside the ring.
+            layout.outsideLabel = paragraph(series(0).map { donut ? $0.tschchartseriesdonutoutsidelabelparagraphstyleindex : $0.tschchartseriespieoutsidelabelparagraphstyleindex })
+            layout.callout = { i in
+                guard (info?.tschchartinfopiecalloutlinetype ?? 0) != 0, let s = series(i) else { return nil }
+                return s.hasTschchartseriesdefaultcalloutlinestrokestyle ? s.tschchartseriesdefaultcalloutlinestrokestyle : nil
+            }
+            out += pie(values: values.map { $0.first ?? 0 }, w: w, h: h, donut: donut,
+                       fill: { series($0)?.tschchartseriespiefill }, label: paragraph(series(0).map { donut ? $0.tschchartseriesdonutlabelparagraphstyleindex : $0.tschchartseriespielabelparagraphstyleindex }),
+                       showsValue: { nonStyle($0).map { !$0.hasTschchartseriespieshowvaluelabels || $0.tschchartseriespieshowvaluelabels } ?? true },
+                       layout: layout)
         case .columnChartType2D, .barChartType2D, .stackedColumnChartType2D, .stackedBarChartType2D,
              .columnChartType3D, .barChartType3D, .stackedColumnChartType3D, .stackedBarChartType3D,
              .lineChartType2D, .lineChartType3D, .areaChartType2D, .areaChartType3D, .stackedAreaChartType2D, .stackedAreaChartType3D,
@@ -318,13 +346,34 @@ extension Canvas {
     }
 
     /// Wedges clockwise from twelve o'clock, one per series, each labelled with its percentage.
+    /// What a pie or donut takes from the chart beyond its data.
+    struct PieLayout {
+        /// Where the first wedge starts, in degrees counter-clockwise from twelve o'clock; the
+        /// wedges follow clockwise.
+        var startAngle = 0.0
+        /// A donut's hole as a fraction of its radius.
+        var innerFraction = 0.5
+        /// The chart's title and its paragraph style, drawn in a donut's hole.
+        var title: (text: String, style: UInt64)?
+        var name: (Int) -> String? = { _ in nil }
+        /// A label's distance past the wedge, as a fraction of the ring's width.
+        var labelDistance: (Int) -> Double = { _ in 0 }
+        var outsideLabel = CharLook()
+        var callout: (Int) -> TSD_StrokeArchive? = { _ in nil }
+    }
+
     mutating func pie(values: [Double], w: Double, h: Double, donut: Bool, fill: (Int) -> TSD_FillArchive?, label: CharLook,
-                      showsValue: (Int) -> Bool = { _ in true }) -> String {
+                      showsValue: (Int) -> Bool = { _ in true }, layout: PieLayout = PieLayout()) -> String {
         let parts = values.map { $0.isFinite ? max(0, $0) : 0 }
         let total = parts.reduce(0, +)
         guard total > 0 else { return "" }
-        let r = min(w, h) / 2, cx = w / 2, cy = h / 2, inner = donut ? r * 0.5 : 0
-        var out = "", angle = -Double.pi / 2
+        let frameRadius = min(w, h) / 2, cx = w / 2, cy = h / 2
+        // Names outside the wedges take room from the pie: fitted to Keynote's export of a donut
+        // whose labels sit 53% of the ring's width out (the ring shrinks by a tenth).
+        let outside = parts.indices.contains { parts[$0] > 0 && layout.name($0) != nil && layout.labelDistance($0) > 0 }
+        let r = outside ? frameRadius / (1 + 0.2 * (layout.labelDistance(parts.indices.first { layout.name($0) != nil } ?? 0))) : frameRadius
+        let inner = donut ? r * layout.innerFraction : 0
+        var out = "", angle = -Double.pi / 2 - layout.startAngle * .pi / 180
         var labels = ""
         for (i, part) in parts.enumerated() where part > 0 {
             let sweep = part / total * 2 * .pi
@@ -366,7 +415,37 @@ extension Canvas {
                 labels += textElement([Span(text: text, look: label, width: 0)], x: cx + cos(mid) * at,
                                       baseline: cy + sin(mid) * at + effectiveSize(label) * 0.35, anchor: "middle", justifyWidth: nil)
             }
+            if let name = layout.name(i) {
+                let distance = r + layout.labelDistance(i) * (r - inner)
+                let ax = cx + cos(mid) * distance, ay = cy + sin(mid) * distance
+                if distance <= r {
+                    labels += textElement([Span(text: name, look: label, width: 0)], x: ax, baseline: ay + effectiveSize(label) * 0.35, anchor: "middle", justifyWidth: nil)
+                } else {
+                    // A column each side of the frame's centre (a wedge within a few degrees of
+                    // straight down still labels on the right); the callout runs level from the
+                    // label's point to just short of it.
+                    let right = cos(mid) > -0.1
+                    let column = cx + (right ? 1 : -1) * frameRadius * 1.13
+                    let gap = 12.0, lineEnd = column + (right ? -gap : gap)
+                    if let stroke = layout.callout(i), (right ? lineEnd > ax : lineEnd < ax) {
+                        labels += stroked(stroke, d: "M\(SVG.n(ax)) \(SVG.n(ay))L\(SVG.n(lineEnd)) \(SVG.n(ay))")
+                    }
+                    labels += textElement([Span(text: name, look: layout.outsideLabel, width: 0)], x: column,
+                                          baseline: ay + effectiveSize(layout.outsideLabel) * 0.35, anchor: right ? nil : "end", justifyWidth: nil)
+                }
+            }
             angle = end
+        }
+        if let title = layout.title, inner > 0 {
+            var storage = TSWP_StorageArchive()
+            storage.text = [title.text]
+            var look = StyleResolver.ShapeLook()
+            look.paragraphStyle = title.style
+            look.verticalAlignment = .kFrameAlignMiddle
+            look.naturalAlignment = .tatvalue2
+            let side = inner * 2
+            labels += "<g transform=\"translate(\(SVG.n(cx - side / 2)) \(SVG.n(cy - side / 2)))\">"
+                + textMarkup(archive: storage, width: side, height: side, look: look) + "</g>"
         }
         return out + labels
     }

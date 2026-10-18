@@ -21,7 +21,7 @@ public struct RenderedSlide: Sendable, Equatable {
 public struct KeynoteRenderer {
     /// Changes whenever the SVG drawn for the same file changes, so hosts that cache rendered
     /// slides (Duo's thumbnails) can key on it. AT-28 checks it against the corpus's output.
-    public static let revision = 3
+    public static let revision = 4
 
     public let document: KeynoteDocument
     public let fonts: RenderFonts?
@@ -240,12 +240,16 @@ struct Canvas {
         if let filter = shadowFilter(look.shadow, angle: Double(g.angle)) { group += " filter=\"url(#\(filter))\"" }
         group += ">"
         var inner = ""
+        var textSpan: (x0: Double, x1: Double)?
         if let source {
             if let outline = Paths.outline(source) {
                 let sx = outline.width > 0 ? w / outline.width : 1, sy = outline.height > 0 ? h / outline.height : 1
                 let pathD = outline.d(sx: sx, sy: sy)
+                if storage != nil, let span = outline.textSpan, span.x1 - span.x0 < outline.width - 0.5 {
+                    textSpan = (span.x0 * sx, span.x1 * sx)
+                }
                 if outline.closed, let fill = look.fill {
-                    inner += paintedPath(fill, d: pathD, w: w, h: h)
+                    inner += paintedPath(fill, d: pathD, w: w, h: h, rotation: Double(g.angle))
                 }
                 inner += stroked(look.stroke, d: pathD)
                 if let stroke = look.stroke, visible(stroke), let ends = outline.ends {
@@ -256,7 +260,12 @@ struct Canvas {
             }
         }
         if let storage {
-            inner += textMarkup(storage: storage, width: w, height: h, look: look)
+            // Text sits in the room inside the outline (a callout's body, not its tail).
+            if let span = textSpan {
+                inner += "<g transform=\"translate(\(SVG.n(span.x0)) 0)\">" + textMarkup(storage: storage, width: span.x1 - span.x0, height: h, look: look) + "</g>"
+            } else {
+                inner += textMarkup(storage: storage, width: w, height: h, look: look)
+            }
         }
         guard !inner.isEmpty else { return }
         body += group + inner + "</g>"
@@ -300,8 +309,14 @@ struct Canvas {
     }
 
     mutating func drawGroup(_ group: TSD_GroupArchive) {
+        // A group flips (flag 4) as a picture does; its children are placed from its position at
+        // their own size (a freehand drawing stores a size well under a point).
         let g = group.super.geometry
-        body += "<g transform=\"\(transform(g))\">"
+        var open = "<g transform=\"\(transform(g, flipH: g.flags & 4 != 0))\""
+        // A freehand drawing (Keynote's pencil) keeps its own opacity on the group.
+        let drawing = group.TSD_FreehandDrawingArchive_freehandDrawingArchive
+        if drawing.hasOpacity, drawing.opacity < 0.9995 { open += " opacity=\"\(SVG.n(max(0, drawing.opacity)))\"" }
+        body += open + ">"
         for child in group.children { drawDrawable(child.identifier) }
         body += "</g>"
     }
@@ -399,7 +414,9 @@ struct Canvas {
     /// the right), blurred by its radius. The drawable's own rotation turns the filter's space,
     /// so the offset is turned back to stay fixed on the slide.
     mutating func shadowFilter(_ shadow: TSD_ShadowArchive?, angle rotation: Double) -> String? {
-        guard let shadow, shadow.isEnabled, shadow.opacity > 0 else { return nil }
+        // An empty `shadow {}` in a style (every field at its default: on, black, opacity 1)
+        // draws nothing in Keynote; a real shadow always stores its colour.
+        guard let shadow, shadow.hasColor, shadow.isEnabled, shadow.opacity > 0 else { return nil }
         let a = (Double(shadow.angle) - rotation) * .pi / 180
         let offset = Double(shadow.offset)
         let dx = offset * cos(a), dy = -offset * sin(a)
@@ -466,7 +483,7 @@ struct Canvas {
     }
 
     /// A gradient as a `<linearGradient>`/`<radialGradient>` over the box, or nil for none.
-    mutating func gradient(_ g: TSD_GradientArchive, w: Double, h: Double) -> String? {
+    mutating func gradient(_ g: TSD_GradientArchive, w: Double, h: Double, origin: (x: Double, y: Double) = (0, 0), rotation: Double = 0) -> String? {
         let stops = g.stops.map { stop -> String in
             let c = SVG.RGBA(stop.color)
             var s = "<stop offset=\"\(SVG.n(stop.fraction))\" stop-color=\"\(c.hex)\""
@@ -477,7 +494,7 @@ struct Canvas {
         guard !g.stops.isEmpty else { return nil }
         if g.type == .radial {
             let r = sqrt(w * w + h * h) / 2
-            return defs.add { "<radialGradient id=\"\($0)\" gradientUnits=\"userSpaceOnUse\" cx=\"\(SVG.n(w / 2))\" cy=\"\(SVG.n(h / 2))\" r=\"\(SVG.n(r))\">\(stops)</radialGradient>" }
+            return defs.add { "<radialGradient id=\"\($0)\" gradientUnits=\"userSpaceOnUse\" cx=\"\(SVG.n(origin.x + w / 2))\" cy=\"\(SVG.n(origin.y + h / 2))\" r=\"\(SVG.n(r))\">\(stops)</radialGradient>" }
         }
         var start = (0.0, h / 2), end = (w, h / 2)
         if g.hasTransformgradient {
@@ -487,12 +504,15 @@ struct Canvas {
             start = (Double(t.start.x) * w / bw, Double(t.start.y) * h / bh)
             end = (Double(t.end.x) * w / bw, Double(t.end.y) * h / bh)
         } else {
-            let a = Double(g.hasAnglegradient ? g.anglegradient.gradientangle : 0) * .pi / 180
+            // The angle is in radians, counterclockwise from +x (5.50, 315°, runs top left to
+            // bottom right).
+            let a = Double(g.hasAnglegradient ? g.anglegradient.gradientangle : 0) - rotation * .pi / 180
             let dx = cos(a), dy = -sin(a)
             let half = abs(w * dx) / 2 + abs(h * dy) / 2
             start = (w / 2 - dx * half, h / 2 - dy * half)
             end = (w / 2 + dx * half, h / 2 + dy * half)
         }
+        start = (start.0 + origin.x, start.1 + origin.y); end = (end.0 + origin.x, end.1 + origin.y)
         return defs.add { "<linearGradient id=\"\($0)\" gradientUnits=\"userSpaceOnUse\" x1=\"\(SVG.n(start.0))\" y1=\"\(SVG.n(start.1))\" x2=\"\(SVG.n(end.0))\" y2=\"\(SVG.n(end.1))\">\(stops)</linearGradient>" }
     }
 
@@ -502,11 +522,13 @@ struct Canvas {
     }
 
     /// A closed outline filled with `fill`: a colour, a gradient, or an image clipped to it.
-    mutating func paintedPath(_ fill: TSD_FillArchive, d: String, w: Double, h: Double) -> String {
+    /// `rotation` is the shape's own angle in degrees: a gradient's angle is the page's, so it
+    /// turns back by it inside the shape (a 180° shape with a 180° gradient runs left to right).
+    mutating func paintedPath(_ fill: TSD_FillArchive, d: String, w: Double, h: Double, rotation: Double = 0) -> String {
         if fill.hasColor {
             return "<path d=\"\(d)\"" + SVG.paint("fill", SVG.RGBA(fill.color)) + "/>"
         }
-        if fill.hasGradient, let id = gradient(fill.gradient, w: w, h: h) {
+        if fill.hasGradient, let id = gradient(fill.gradient, w: w, h: h, rotation: rotation) {
             return "<path d=\"\(d)\" fill=\"url(#\(id))\"/>"
         }
         if fill.hasImage {

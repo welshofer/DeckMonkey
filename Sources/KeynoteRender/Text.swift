@@ -18,6 +18,8 @@ struct CharLook: Equatable {
     var superscript: TSWP_CharacterStylePropertiesArchive.SuperscriptType = .kNoScript
     var capitalization: TSWP_CharacterStylePropertiesArchive.CapitalizationType = .kNoCaps
     var underline = false, strikethrough = false
+    /// A gradient text fill, spread over the whole text block; `color` is its first stop.
+    var gradient: TSD_GradientArchive?
 }
 
 /// A paragraph's resolved properties.
@@ -57,6 +59,10 @@ extension StyleResolver {
             return p.hasFontColor ? p.fontColor : nil
         }
         if let fill, let fill { c.color = SVG.RGBA(fill) }
+        if let p = props.first(where: { $0.hasTsdFill || $0.hasTsdFillNull || $0.hasFontColor || $0.hasFontColorNull }),
+           p.hasTsdFill, p.tsdFill.hasGradient, p.tsdFill.gradient.stops.count > 1 {
+            c.gradient = p.tsdFill.gradient
+        }
         if let v = first(props, \.hasTracking, \.tracking) { c.tracking = Double(v) }
         if let v = first(props, \.hasBaselineShift, \.baselineShift) { c.baselineShift = Double(v) }
         if let v = first(props, \.hasSuperscript, \.superscript) { c.superscript = v }
@@ -240,7 +246,7 @@ extension Canvas {
             if let listID {
                 let key = listID &* 16 &+ UInt64(level)
                 if let known = numbered[key] { isNumber = known } else {
-                    let types = document.decoded(TSWP_ListStyleArchive.self, listID)?.labelTypes ?? []
+                    let types = styles.listStyle(listID)?.labelTypes ?? []
                     isNumber = types.indices.contains(min(level, 8)) && types[min(level, 8)] == .kNumber
                     numbered[key] = isNumber
                 }
@@ -300,7 +306,7 @@ extension Canvas {
                 var label: (String, CharLook, Double)?
                 var labelImage: (href: String, size: Double)?
                 var left = para.leftIndent * scale, first = para.firstLineIndent * scale
-                if let listID, let list = document.decoded(TSWP_ListStyleArchive.self, listID) {
+                if let listID, let list = styles.listStyle(listID) {
                     let l = min(level, 8)
                     let type = list.labelTypes.indices.contains(l) ? list.labelTypes[l] : .kNone
                     let indent = list.indents.indices.contains(l) ? Double(list.indents[l]) : 0
@@ -466,22 +472,43 @@ extension Canvas {
             result = layout(scale: scale)
         }
         lines = result.lines
-        lastTextExtent = ((lines.map { $0.width + $0.x }.max() ?? 0) + shape.padding.right, result.height + shape.padding.top + shape.padding.bottom)
+        // The first line never starts above the frame's inset: Keynote moves the text down rather
+        // than cut its ascent off (a title with spacing below 1), and counts what it moved in the
+        // text's height, so a centred number at 0.7 spacing stays centred in its circle.
+        let raised = lines.first.map { max(0, $0.ascent - $0.baseline) } ?? 0
+        let textHeight = result.height + raised
+        lastTextExtent = ((lines.map { $0.width + $0.x }.max() ?? 0) + shape.padding.right, textHeight + shape.padding.top + shape.padding.bottom)
         lastTextAlignment = lines.first(where: { !$0.spans.isEmpty })?.alignment ?? .tatvalue0
 
-        var top = shape.padding.top
+        var top = shape.padding.top + raised
         switch shape.verticalAlignment {
-        case .kFrameAlignMiddle: top += (availableHeight - result.height) / 2
-        case .kFrameAlignBottom: top += availableHeight - result.height
+        case .kFrameAlignMiddle: top += (availableHeight - textHeight) / 2
+        case .kFrameAlignBottom: top += availableHeight - textHeight
         default: break
         }
-
-        // The first line never starts above the frame's inset: Keynote moves the text down rather
-        // than cut its ascent off (a top-aligned title with spacing below 1).
         if let first = lines.first, top + first.baseline - first.ascent < shape.padding.top {
             top = shape.padding.top + first.ascent - first.baseline
         }
 
+        // A gradient fill spans the text's own bounds, every line of it (a title's second line
+        // starts further along the gradient than its first).
+        var gradientBox: (x: Double, y: Double, w: Double, h: Double)?
+        if lines.contains(where: { $0.spans.contains { $0.look.gradient != nil } }) {
+            var minX = Double.infinity, maxX = -Double.infinity
+            for line in lines where !line.spans.isEmpty {
+                var x = line.x
+                if line.alignment == .tatvalue1 { x += line.available - line.width }
+                if line.alignment == .tatvalue2 { x += (line.available - line.width) / 2 }
+                minX = min(minX, x); maxX = max(maxX, x + line.width)
+            }
+            // Vertically it spans the glyphs: the first line's cap height (about 0.72 em) to the
+            // last line's baseline.
+            func size(_ line: Line) -> Double { line.spans.map { effectiveSize($0.look) }.max() ?? 0 }
+            if let first = lines.first, let last = lines.last, minX < maxX {
+                let y0 = top + first.baseline - 0.72 * size(first), y1 = top + last.baseline
+                gradientBox = (minX, y0, maxX - minX, max(1, y1 - y0))
+            }
+        }
         var out = ""
         for line in lines {
             let baseline = top + line.baseline
@@ -489,7 +516,7 @@ extension Canvas {
                 let size = image.size
                 out += "<image href=\"\(SVG.escape(image.href))\" x=\"\(SVG.n(label.x))\" y=\"\(SVG.n(baseline - size * 0.9))\" width=\"\(SVG.n(size))\" height=\"\(SVG.n(size))\" preserveAspectRatio=\"xMidYMid meet\"/>"
             } else if let label = line.label {
-                out += textElement([Span(text: label.text, look: label.look, width: 0)], x: label.x, baseline: baseline, anchor: nil, justifyWidth: nil)
+                out += textElement([Span(text: label.text, look: label.look, width: 0)], x: label.x, baseline: baseline, anchor: nil, justifyWidth: nil, gradientBox: gradientBox)
             }
             guard !line.spans.isEmpty, line.spans.contains(where: { !$0.text.isEmpty }) else { continue }
             var x = line.x, anchor: String?
@@ -498,12 +525,13 @@ extension Canvas {
             case .tatvalue2: x = line.x + line.available / 2; anchor = "middle"
             default: break
             }
-            out += textElement(line.spans, x: x, baseline: baseline, anchor: anchor, justifyWidth: line.justify ? line.available : nil)
+            out += textElement(line.spans, x: x, baseline: baseline, anchor: anchor, justifyWidth: line.justify ? line.available : nil, gradientBox: gradientBox)
         }
         return out
     }
 
-    mutating func textElement(_ spans: [Span], x: Double, baseline: Double, anchor: String?, justifyWidth: Double?) -> String {
+    mutating func textElement(_ spans: [Span], x: Double, baseline: Double, anchor: String?, justifyWidth: Double?,
+                              gradientBox: (x: Double, y: Double, w: Double, h: Double)? = nil) -> String {
         var s = "<text x=\"\(SVG.n(x))\" y=\"\(SVG.n(baseline))\" xml:space=\"preserve\""
         if let anchor { s += " text-anchor=\"\(anchor)\"" }
         if let justifyWidth { s += " textLength=\"\(SVG.n(justifyWidth))\" lengthAdjust=\"spacing\"" }
@@ -514,7 +542,11 @@ extension Canvas {
             s += "<tspan font-family=\"\(SVG.escape(f.family)), sans-serif\" font-size=\"\(SVG.n(effectiveSize(look)))\""
             if f.synthetic.bold { s += " font-weight=\"bold\"" }
             if f.synthetic.italic { s += " font-style=\"italic\"" }
-            s += SVG.paint("fill", look.color)
+            if let g = look.gradient, let box = gradientBox, let id = gradient(g, w: box.w, h: box.h, origin: (box.x, box.y)) {
+                s += " fill=\"url(#\(id))\""
+            } else {
+                s += SVG.paint("fill", look.color)
+            }
             if look.tracking != 0 { s += " letter-spacing=\"\(SVG.n(look.tracking * effectiveSize(look)))\"" }
             var shift = look.baselineShift
             if look.superscript == .kSuperscript { shift += look.size * 0.33 }

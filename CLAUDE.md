@@ -237,7 +237,17 @@ centre or right by its text alignment, top, centre or bottom by its vertical ali
 path) holding text is not a text box. A picture with Keynote adjustments draws `adjustedImageData`;
 Instant Alpha clips it to `instantAlphaPath` (natural-size coordinates). A chart series' private
 style is a variation over its theme style (fills replace, not merge); value labels follow the series
-non-style. Numbered lists count only numbered paragraphs. Duo uses it on PR #28 (DuoCore `KeynoteDeck`, pinned by revision). Any change to rendered output bumps
+non-style. Numbered lists count only numbered paragraphs. A list style variation inherits the per-level
+arrays it leaves empty (label types) from its parent. Gradient angles are radians in the page's frame
+(a shape turns them back by its own rotation); a text gradient spans the whole text block, cap height
+to last baseline. An empty `shadow {}` (no colour) draws nothing. A group flips by flag 4; a freehand
+drawing group keeps its children at their own size and its opacity in the freehand extension. Text
+pushed down to keep the first line's ascent counts in its height before vertical alignment. Shape
+text lays out in the outline's span through its middle half (a callout's body, not its tail); a
+callout's tail stands on the edge facing its tip, `tail_size` either side. A donut's start angle is
+degrees counter-clockwise from twelve with wedges clockwise; its hole, centred title and outside
+name labels (donut label styles, callout lines) come from the chart non-style; the outside-label
+geometry is fitted to one Keynote export (Octopus). Duo uses it on PR #28 (DuoCore `KeynoteDeck`, pinned by revision). Any change to rendered output bumps
 `KeynoteRenderer.revision` (Duo keys cached thumbnails on it); AT-28 fails when the corpus's SVG digest
 changes under the same revision (the digest is kept in the git-ignored `Corpus/.render-revision.json`).
 

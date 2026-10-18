@@ -89,6 +89,25 @@ struct StyleResolver {
         return (Self.first(p, \.hasStroke, \.stroke), Self.first(p, \.hasOpacity, { Double($0.opacity) }) ?? 1, Self.first(p, \.hasShadow, \.shadow))
     }
 
+    /// A list style with what its variations leave out taken from its parents: a variation stores
+    /// only the per-level arrays it overrides (indents, say) and inherits its label types.
+    func listStyle(_ id: UInt64) -> TSWP_ListStyleArchive? {
+        let c = chain(TSWP_ListStyleArchive.self, from: id) { $0.super }
+        guard var list = c.first else { return nil }
+        for parent in c.dropFirst() {
+            if list.labelTypes.isEmpty { list.labelTypes = parent.labelTypes }
+            if list.textIndents.isEmpty { list.textIndents = parent.textIndents }
+            if list.indents.isEmpty { list.indents = parent.indents }
+            if list.geometries.isEmpty { list.geometries = parent.geometries }
+            if list.numberTypes.isEmpty { list.numberTypes = parent.numberTypes }
+            if list.strings.isEmpty { list.strings = parent.strings }
+            if list.images.isEmpty { list.images = parent.images }
+            if !list.hasFontColor && !list.hasFontColorNull && parent.hasFontColor { list.fontColor = parent.fontColor }
+            if !list.hasFontName && !list.hasFontNameNull && parent.hasFontName { list.fontName = parent.fontName }
+        }
+        return list
+    }
+
     /// A slide style's background fill and placeholder visibility.
     struct SlideLook {
         var fill: TSD_FillArchive?

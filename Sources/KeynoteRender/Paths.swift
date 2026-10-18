@@ -32,6 +32,58 @@ struct Outline {
         return out
     }
 
+    /// The horizontal room inside a closed outline for text, in natural coordinates: the span
+    /// inside it at every height through its middle half. A callout's tail beside its body adds
+    /// nothing (Keynote centres the words in the body); a rectangle gives its whole width.
+    var textSpan: (x0: Double, x1: Double)? {
+        guard closed, width > 0, height > 0 else { return nil }
+        // Flatten to segments; curves in eight steps.
+        var segments = [((Double, Double), (Double, Double))]()
+        var start = (0.0, 0.0), current = (0.0, 0.0)
+        for c in commands.prefix(4_096) {
+            switch c {
+            case let .move(x, y): start = (x, y); current = start
+            case let .line(x, y): segments.append((current, (x, y))); current = (x, y)
+            case let .quad(a, b, x, y):
+                for k in 1...8 {
+                    let t = Double(k) / 8, u = 1 - t
+                    let q = (u * u * current.0 + 2 * u * t * a + t * t * x, u * u * current.1 + 2 * u * t * b + t * t * y)
+                    segments.append((k == 1 ? current : segments[segments.count - 1].1, q))
+                }
+                current = (x, y)
+            case let .cubic(a, b, c2, d, x, y):
+                let p0 = current
+                for k in 1...8 {
+                    let t = Double(k) / 8, u = 1 - t
+                    let q = (u * u * u * p0.0 + 3 * u * u * t * a + 3 * u * t * t * c2 + t * t * t * x,
+                             u * u * u * p0.1 + 3 * u * u * t * b + 3 * u * t * t * d + t * t * t * y)
+                    segments.append((k == 1 ? p0 : segments[segments.count - 1].1, q))
+                }
+                current = (x, y)
+            case .close: segments.append((current, start)); current = start
+            }
+        }
+        let ys = segments.flatMap { [$0.0.1, $0.1.1] }
+        guard let minY = ys.min(), let maxY = ys.max(), maxY > minY else { return nil }
+        var lo = -Double.infinity, hi = Double.infinity
+        for k in 0...8 {
+            let y = minY + (maxY - minY) * (0.25 + 0.5 * Double(k) / 8)
+            var crossings = [Double]()
+            for (a, b) in segments where (a.1 <= y) != (b.1 <= y) {
+                crossings.append(a.0 + (y - a.1) / (b.1 - a.1) * (b.0 - a.0))
+            }
+            // The outer span at this height: a tail drawn as its own subpath over the body
+            // would split the body under even-odd filling.
+            guard let first = crossings.min(), let last = crossings.max(), crossings.count >= 2 else { return nil }
+            lo = max(lo, first); hi = min(hi, last)
+        }
+        // In the outline's own coordinates, as it is drawn (a callout's tail may lie outside
+        // its natural size).
+        lo = max(lo, 0); hi = min(hi, width)
+        guard hi > lo else { return nil }
+        return (lo, hi)
+    }
+
     /// The outline's two end points and the directions it leaves and arrives in, for line ends.
     var ends: (start: (Double, Double), startToward: (Double, Double), end: (Double, Double), endFrom: (Double, Double))? {
         var points = [(Double, Double)]()
@@ -197,9 +249,26 @@ enum Paths {
     static func callout(_ c: TSD_CalloutPathSourceArchive) -> Outline? {
         let (w, h) = size(c.naturalSize)
         let tip = (Double(c.tailPosition.x), Double(c.tailPosition.y))
-        let half = max(1, Double(c.tailSize) / 2)
-        let base = c.centerTail ? (w / 2, h / 2) : (min(max(tip.0, half), w - half), h / 2)
-        return Outline(commands: rect(w, h, radius: Double(c.cornerRadius)) + polygon([(base.0 - half, base.1), tip, (base.0 + half, base.1)]),
-                       width: w, height: h)
+        // The tail stands on the edge facing its tip, `tail_size` either side of the point
+        // nearest the tip (or of the edge's middle, centred), half a point inside the body so
+        // the two fill as one. It winds as the body does, or nonzero filling would cut it out.
+        let half = max(1, Double(c.tailSize)), r = Double(c.cornerRadius)
+        func along(_ v: Double, _ length: Double) -> Double {
+            let lo = min(r + half, length / 2), hi = max(length - r - half, length / 2)
+            return c.centerTail ? length / 2 : min(max(v, lo), hi)
+        }
+        var triangle: [(Double, Double)]
+        if tip.1 > h {
+            let x = along(tip.0, w); triangle = [(x - half, h - 0.5), tip, (x + half, h - 0.5)]
+        } else if tip.1 < 0 {
+            let x = along(tip.0, w); triangle = [(x - half, 0.5), tip, (x + half, 0.5)]
+        } else if tip.0 < 0 {
+            let y = along(tip.1, h); triangle = [(0.5, y - half), tip, (0.5, y + half)]
+        } else {
+            let y = along(tip.1, h); triangle = [(w - 0.5, y - half), tip, (w - 0.5, y + half)]
+        }
+        let area = (0..<3).reduce(0.0) { $0 + triangle[$1].0 * triangle[($1 + 1) % 3].1 - triangle[($1 + 1) % 3].0 * triangle[$1].1 }
+        if area < 0 { triangle.reverse() }
+        return Outline(commands: rect(w, h, radius: r) + polygon(triangle), width: w, height: h)
     }
 }
