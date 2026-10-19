@@ -221,10 +221,13 @@ user's own documents are open in Keynote, so that restart is the user's call.
 Track R (2026-10-16, OQ-9, Jay): `KeynoteRender` draws a slide as SVG so Duo can show Keynote decks
 (`deckmonkey render`; `Scripts/render/compare.swift` draws it through WebKit as Duo does and diffs the
 golden page; `Scripts/render/gate.py` is AT-29). Read-only, portable, bounded against hostile input
-(drawable, text, table and chart budgets). Facts learned: a bezier outline maps its own bounds onto the
-frame (masks store 100×100); an image's stroke follows its mask; spacing below 1 comes off above the
+(drawable, text, table and chart budgets). Facts learned: a bezier outline maps its own bounds (of the curves, not
+their control points: a circle drawn from its 45° points) onto the frame (masks store 100×100); an image's stroke follows its mask; spacing below 1 comes off above the
 baseline, but fit is judged with the last line at full height; a list's text indent is in ems of the
-text size; table cells are version-5 packed buffers and merges live in the merge owner's colon-tract
+text size; table cells are version-5 packed buffers (Keynote 6–7 wrote
+version 4 in the `_pre_bnc` fields: a 12-byte header, then 4-byte fields 0x400 conditional set, 0x800
+matched rule (15 none), 0x4, 0x8, 0x10 string, then the 0x20 double; a matched rule's cell and text
+styles apply over the cell's) and merges live in the merge owner's colon-tract
 formulas; a number shows in its number format; a chart's frame is its plot area and its axis rounds up
 at the leading digit in four steps. A built-in theme's photos and textures are never in the file
 (Keynote downloads them): the small copy or the fill's reference colour stands in and the page is not

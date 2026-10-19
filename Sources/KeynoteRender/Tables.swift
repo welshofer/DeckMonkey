@@ -19,8 +19,14 @@ struct StoredCell: Equatable {
     var textStyleID: UInt32?
     var formats: [UInt32: UInt32] = [:]  // flag bit → format id
     var formatHint: UInt16 = 0
+    /// A conditional style set (a key in the conditional style list) and the rule of it that
+    /// matched, when one did.
+    var conditionalStyleID: UInt32?
+    var appliedRule: UInt32?
 
     var number: Double? { decimal ?? double }
+
+    init() {}
 
     /// Field flags in storage order, with each field's size in bytes. Learned from Keynote 15.4
     /// tables (version 5 storage): a 12-byte header (version, kind, two bytes, a 16-bit format hint
@@ -39,7 +45,13 @@ struct StoredCell: Equatable {
             guard o >= 0, o + 4 <= buffer.count else { return nil }
             return UInt32(buffer[o]) | UInt32(buffer[o + 1]) << 8 | UInt32(buffer[o + 2]) << 16 | UInt32(buffer[o + 3]) << 24
         }
-        guard offset >= 0, offset + 12 <= buffer.count, buffer[offset] == 5, let flags = u32(offset + 8) else { return nil }
+        guard offset >= 0, offset + 12 <= buffer.count else { return nil }
+        if buffer[offset] == 4 {
+            guard let v4 = Self.version4(buffer, at: offset) else { return nil }
+            self = v4
+            return
+        }
+        guard buffer[offset] == 5, let flags = u32(offset + 8) else { return nil }
         kind = Kind(rawValue: buffer[offset + 1]) ?? .empty
         formatHint = UInt16(buffer[offset + 6]) | UInt16(buffer[offset + 7]) << 8
         var o = offset + 12
@@ -59,6 +71,37 @@ struct StoredCell: Equatable {
             }
             o += size
         }
+    }
+
+    /// Version 4 ("pre-BNC", Keynote 6 and 7) storage, learned from a Keynote 7.2 table: a
+    /// 12-byte header (version, kind, two bytes, the 32-bit flags at 4, a second flag word at
+    /// 8), then the 4-byte fields in the order 0x400 (conditional style set), 0x800 (the rule
+    /// that matched; 15 for none), 0x4 and 0x8 (style indexes), 0x10 (the string), and the 8-byte
+    /// double (0x20) after them. A cell with any other flag is not decoded rather than misread.
+    static func version4(_ buffer: [UInt8], at offset: Int) -> StoredCell? {
+        func u32(_ o: Int) -> UInt32? {
+            guard o >= 0, o + 4 <= buffer.count else { return nil }
+            return UInt32(buffer[o]) | UInt32(buffer[o + 1]) << 8 | UInt32(buffer[o + 2]) << 16 | UInt32(buffer[o + 3]) << 24
+        }
+        guard let flags = u32(offset + 4), flags & ~UInt32(0x4 | 0x8 | 0x10 | 0x20 | 0x400 | 0x800) == 0 else { return nil }
+        var cell = StoredCell()
+        cell.kind = Kind(rawValue: buffer[offset + 1]) ?? .empty
+        var o = offset + 12
+        for flag: UInt32 in [0x400, 0x800, 0x4, 0x8, 0x10] where flags & flag != 0 {
+            guard let v = u32(o) else { return nil }
+            switch flag {
+            case 0x10: cell.stringID = v
+            case 0x400: cell.conditionalStyleID = v
+            case 0x800: cell.appliedRule = v
+            default: break
+            }
+            o += 4
+        }
+        if flags & 0x20 != 0 {
+            guard let lo = u32(o), let hi = u32(o + 4) else { return nil }
+            cell.double = Double(bitPattern: UInt64(lo) | UInt64(hi) << 32)
+        }
+        return cell
     }
 
     /// An IEEE 754-2008 decimal128 in Apple's binary-integer encoding: a 113-bit little-endian
@@ -110,6 +153,25 @@ extension Canvas {
         let strings = list(store.stringTable, store.hasStringTable)
         let styleList = list(store.styleTable, store.hasStyleTable)
         let formatList = list(store.formatTable, store.hasFormatTable)
+        let conditionalList = list(store.conditionalstyletable, store.hasConditionalstyletable)
+        var conditionalSets = [UInt32: TST_ConditionalStyleSetArchive]()
+        /// The cell and text styles of the conditional rule that matched a cell (0 for none).
+        func conditionalRule(_ cell: StoredCell) -> (cell: UInt64, text: UInt64)? {
+            guard let key = cell.conditionalStyleID, let index = cell.appliedRule, index < 15,
+                  let entry = conditionalList[key], entry.hasReference else { return nil }
+            if conditionalSets[key] == nil { conditionalSets[key] = document.decoded(TST_ConditionalStyleSetArchive.self, entry.reference.identifier) }
+            guard let set = conditionalSets[key] else { return nil }
+            let i = Int(index)
+            if i < set.rulesPrepivot.count {
+                let rule = set.rulesPrepivot[i]
+                return (rule.hasCellStyle ? rule.cellStyle.identifier : 0, rule.hasTextStyle ? rule.textStyle.identifier : 0)
+            }
+            if i < set.rules.rule.count {
+                let rule = set.rules.rule[i]
+                return (rule.hasCellStyle ? rule.cellStyle.identifier : 0, rule.hasTextStyle ? rule.textStyle.identifier : 0)
+            }
+            return nil
+        }
         let richText = list(store.richTextTable, store.hasRichTextTable)
 
         // Cells: each tile holds rows; the row tile tree gives a tile's first row.
@@ -120,11 +182,16 @@ extension Canvas {
             let first = tileStart[Int(t.tileid)] ?? 0
             for row in tile.rowInfos {
                 let r = first + Int(row.tileRowIndex)
-                guard r < rows, row.storageVersion == 5 else { continue }
-                let buffer = [UInt8](row.cellStorageBuffer), offsets = [UInt8](row.cellOffsets)
+                // Version 5 keeps its buffer in `cell_storage_buffer` (offsets in words when rows
+                // are wide); version 4 in the pre-BNC fields, offsets in bytes.
+                let preBNC = row.storageVersion == 4
+                guard r < rows, row.storageVersion == 5 || preBNC else { continue }
+                let buffer = [UInt8](preBNC ? row.cellStorageBufferPreBnc : row.cellStorageBuffer)
+                let offsets = [UInt8](preBNC ? row.cellOffsetsPreBnc : row.cellOffsets)
+                let wide = !preBNC && (tile.shouldUseWideRows || store.tiles.shouldUseWideRows)
                 for c in 0..<min(columns, offsets.count / 2) {
                     let o = Int(offsets[2 * c]) | Int(offsets[2 * c + 1]) << 8
-                    guard o != 0xFFFF, let cell = StoredCell(buffer, at: tile.shouldUseWideRows || store.tiles.shouldUseWideRows ? o * 4 : o) else { continue }
+                    guard o != 0xFFFF, let cell = StoredCell(buffer, at: wide ? o * 4 : o) else { continue }
                     cells[r, default: [:]][c] = cell
                 }
             }
@@ -179,6 +246,12 @@ extension Canvas {
                 let cell = cells[r]?[c]
                 let base = region(r, c)
                 var cellStyles = [TST_CellStylePropertiesArchive]()
+                // A conditional rule that matched styles the cell over its own styles.
+                var ruleText: UInt64?
+                if let rule = cell.flatMap(conditionalRule) {
+                    if rule.cell != 0 { cellStyles += styles.chain(TST_CellStyleArchive.self, from: rule.cell) { $0.super }.map(\.cellProperties) }
+                    if rule.text != 0 { ruleText = rule.text }
+                }
                 if let id = cell?.cellStyleID, let ref = styleList[id], ref.hasReference {
                     cellStyles += styles.chain(TST_CellStyleArchive.self, from: ref.reference.identifier) { $0.super }.map(\.cellProperties)
                 }
@@ -203,6 +276,7 @@ extension Canvas {
                 }
                 var textStyle = base.text?.identifier
                 if let id = cell.textStyleID, let ref = styleList[id], ref.hasReference { textStyle = ref.reference.identifier }
+                if let ruleText { textStyle = ruleText }
                 look.paragraphStyle = textStyle
                 let numeric = [.number, .currency, .date, .duration].contains(cell.kind)
                 look.naturalAlignment = numeric ? .tatvalue1 : .tatvalue0

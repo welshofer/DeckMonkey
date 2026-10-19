@@ -146,12 +146,37 @@ enum Paths {
     /// `commands` moved so their bounds start at the origin, with those bounds as the size; an
     /// axis with no extent (a straight line) keeps its coordinates and the fallback size.
     static func fitted(_ commands: [Outline.Command], fallback: (Double, Double)) -> Outline {
+        // The bounds of the curves themselves, not of their control points: a circle drawn from
+        // its 45° points has control points outside it, and Keynote fits the circle to the frame.
         var xs = [Double](), ys = [Double]()
+        var current = (0.0, 0.0)
+        func extrema(_ p0: Double, _ p1: Double, _ p2: Double, _ p3: Double) -> [Double] {
+            // Where a cubic's derivative is zero on (0, 1), as values.
+            let a = -p0 + 3 * p1 - 3 * p2 + p3, b = 2 * (p0 - 2 * p1 + p2), c = p1 - p0
+            var ts = [Double]()
+            if abs(a) < 1e-12 {
+                if abs(b) > 1e-12 { ts.append(-c / b) }
+            } else {
+                let disc = b * b - 4 * a * c
+                if disc >= 0 { ts += [(-b + disc.squareRoot()) / (2 * a), (-b - disc.squareRoot()) / (2 * a)] }
+            }
+            return ts.filter { $0 > 0 && $0 < 1 }.map { t in
+                let u = 1 - t
+                return u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3
+            }
+        }
         for c in commands {
             switch c {
-            case let .move(x, y), let .line(x, y): xs.append(x); ys.append(y)
-            case let .quad(a, b, x, y): xs += [a, x]; ys += [b, y]
-            case let .cubic(a, b, c, d, x, y): xs += [a, c, x]; ys += [b, d, y]
+            case let .move(x, y), let .line(x, y): xs.append(x); ys.append(y); current = (x, y)
+            case let .quad(a, b, x, y):
+                // As the cubic it equals.
+                xs += [x] + extrema(current.0, current.0 + 2 * (a - current.0) / 3, x + 2 * (a - x) / 3, x)
+                ys += [y] + extrema(current.1, current.1 + 2 * (b - current.1) / 3, y + 2 * (b - y) / 3, y)
+                current = (x, y)
+            case let .cubic(a, b, c, d, x, y):
+                xs += [x] + extrema(current.0, a, c, x)
+                ys += [y] + extrema(current.1, b, d, y)
+                current = (x, y)
             case .close: break
             }
         }
