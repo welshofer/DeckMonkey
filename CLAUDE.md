@@ -247,7 +247,14 @@ text lays out in the outline's span through its middle half (a callout's body, n
 callout's tail stands on the edge facing its tip, `tail_size` either side. A donut's start angle is
 degrees counter-clockwise from twelve with wedges clockwise; its hole, centred title and outside
 name labels (donut label styles, callout lines) come from the chart non-style; the outside-label
-geometry is fitted to one Keynote export (Octopus). Duo uses it on PR #28 (DuoCore `KeynoteDeck`, pinned by revision). Any change to rendered output bumps
+geometry is fitted to one Keynote export (Octopus). A value axis over data bunched far from zero (spread
+under a sixth of the maximum) starts at the minimum less half the spread, rounded down at the spread's
+leading digit, in the axis's `numberofmajorgridlines` intervals; bars show only their part on the axis.
+A PDF picture draws its Art/Trim/Crop box (whichever matches its natural size), not its page. A
+character's `background_color` is a highlight behind the run. A font without an OS/2 table (Courier)
+is set with a fifth of its size, rounded up, of leading above each line. An `.icns` picture draws its
+largest PNG rendition. A 3D chart's series colours live in textures Keynote supplies; drawn flat, the
+2D fills stand in. Duo uses it on PR #28 (DuoCore `KeynoteDeck`, pinned by revision). Any change to rendered output bumps
 `KeynoteRenderer.revision` (Duo keys cached thumbnails on it); AT-28 fails when the corpus's SVG digest
 changes under the same revision (the digest is kept in the git-ignored `Corpus/.render-revision.json`).
 

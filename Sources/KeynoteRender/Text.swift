@@ -20,6 +20,8 @@ struct CharLook: Equatable {
     var underline = false, strikethrough = false
     /// A gradient text fill, spread over the whole text block; `color` is its first stop.
     var gradient: TSD_GradientArchive?
+    /// A highlight behind the characters (Format › Text Background).
+    var background: SVG.RGBA?
 }
 
 /// A paragraph's resolved properties.
@@ -62,6 +64,9 @@ extension StyleResolver {
         if let p = props.first(where: { $0.hasTsdFill || $0.hasTsdFillNull || $0.hasFontColor || $0.hasFontColorNull }),
            p.hasTsdFill, p.tsdFill.hasGradient, p.tsdFill.gradient.stops.count > 1 {
             c.gradient = p.tsdFill.gradient
+        }
+        if let v = first(props, { $0.hasBackgroundColor || $0.hasBackgroundColorNull }, { $0.hasBackgroundColor ? $0.backgroundColor : nil }), let v, v.a > 0 {
+            c.background = SVG.RGBA(v)
         }
         if let v = first(props, \.hasTracking, \.tracking) { c.tracking = Double(v) }
         if let v = first(props, \.hasBaselineShift, \.baselineShift) { c.baselineShift = Double(v) }
@@ -116,16 +121,16 @@ struct Line {
 extension Canvas {
     /// The face to measure and draw a look in: Keynote's named face, or its family's face with the
     /// requested traits when a bold or italic flag asks for one the name lacks.
-    func face(_ look: CharLook) -> (family: String, metrics: FontMetrics?, synthetic: (bold: Bool, italic: Bool)) {
+    func face(_ look: CharLook) -> (family: String, metrics: FontMetrics?, synthetic: (bold: Bool, italic: Bool), classic: Bool) {
         guard let fonts, let named = fonts.face(postScriptName: look.fontName) else {
-            return ("'\(look.fontName)'", nil, (look.bold, look.italic))
+            return ("'\(look.fontName)'", nil, (look.bold, look.italic), false)
         }
         var face = named
         if (look.bold && !named.bold) || (look.italic && !named.italic) {
             if let other = fonts.face(family: named.family, bold: look.bold || named.bold, italic: look.italic || named.italic) { face = other }
         }
         let synthetic = (look.bold && !face.bold, look.italic && !face.italic)
-        return ("'\(face.postScriptName)', '\(face.family)'", fonts.metrics(postScriptName: face.postScriptName), synthetic)
+        return ("'\(face.postScriptName)', '\(face.family)'", fonts.metrics(postScriptName: face.postScriptName), synthetic, face.classic)
     }
 
     func effectiveSize(_ look: CharLook) -> Double {
@@ -145,9 +150,14 @@ extension Canvas {
 
     func vertical(_ look: CharLook) -> (ascent: Double, descent: Double, leading: Double) {
         let size = effectiveSize(look)
-        if let m = face(look).metrics {
+        let f = face(look)
+        if let m = f.metrics {
             let upem = Double(m.unitsPerEm)
-            return (Double(m.ascender) / upem * size, -Double(m.descender) / upem * size, Double(m.lineGap) / upem * size)
+            let ascent = Double(m.ascender) / upem * size, descent = -Double(m.descender) / upem * size
+            // A classic font (no OS/2 table) is set with a fifth of its size, rounded up to a
+            // whole point, above each line (Courier 28 pt: 34 pt lines, the first 6 pt down).
+            if f.classic && m.lineGap == 0 { return (ascent + (0.2 * size).rounded(.up), descent, 0) }
+            return (ascent, descent, Double(m.lineGap) / upem * size)
         }
         return (0.8 * size, 0.2 * size, 0)
     }
@@ -532,7 +542,20 @@ extension Canvas {
 
     mutating func textElement(_ spans: [Span], x: Double, baseline: Double, anchor: String?, justifyWidth: Double?,
                               gradientBox: (x: Double, y: Double, w: Double, h: Double)? = nil) -> String {
-        var s = "<text x=\"\(SVG.n(x))\" y=\"\(SVG.n(baseline))\" xml:space=\"preserve\""
+        // Highlights first, behind the glyphs: each run's measured width, ascent to descent.
+        var highlights = ""
+        if justifyWidth == nil, spans.contains(where: { $0.look.background != nil }) {
+            let total = spans.reduce(0) { $0 + $1.width }
+            var left = anchor == "end" ? x - total : anchor == "middle" ? x - total / 2 : x
+            for span in spans {
+                if let background = span.look.background, span.width > 0 {
+                    let v = vertical(span.look)
+                    highlights += "<rect x=\"\(SVG.n(left))\" y=\"\(SVG.n(baseline - v.ascent))\" width=\"\(SVG.n(span.width))\" height=\"\(SVG.n(v.ascent + v.descent))\"" + SVG.paint("fill", background) + "/>"
+                }
+                left += span.width
+            }
+        }
+        var s = highlights + "<text x=\"\(SVG.n(x))\" y=\"\(SVG.n(baseline))\" xml:space=\"preserve\""
         if let anchor { s += " text-anchor=\"\(anchor)\"" }
         if let justifyWidth { s += " textLength=\"\(SVG.n(justifyWidth))\" lengthAdjust=\"spacing\"" }
         s += ">"

@@ -14,6 +14,9 @@ public final class RenderFonts: @unchecked Sendable {
         public var style: String
         public var bold: Bool
         public var italic: Bool
+        /// No `OS/2` table (Courier, AppleGothic): a classic Mac font, which Keynote sets with
+        /// extra leading its `hhea` metrics do not carry.
+        public var classic = false
     }
 
     private struct Source { var url: URL?; var data: Data?; var index: Int; var face: Face }
@@ -163,6 +166,6 @@ enum SFNTNames {
             bold = selection & 0x20 != 0
             italic = selection & 0x01 != 0 || selection & 0x200 != 0
         }
-        return RenderFonts.Face(postScriptName: ps, family: family, style: style, bold: bold, italic: italic)
+        return RenderFonts.Face(postScriptName: ps, family: family, style: style, bold: bold, italic: italic, classic: os2 == nil)
     }
 }

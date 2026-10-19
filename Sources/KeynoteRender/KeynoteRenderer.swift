@@ -21,7 +21,7 @@ public struct RenderedSlide: Sendable, Equatable {
 public struct KeynoteRenderer {
     /// Changes whenever the SVG drawn for the same file changes, so hosts that cache rendered
     /// slides (Duo's thumbnails) can key on it. AT-28 checks it against the corpus's output.
-    public static let revision = 4
+    public static let revision = 5
 
     public let document: KeynoteDocument
     public let fonts: RenderFonts?
@@ -326,6 +326,12 @@ struct Canvas {
     func dataFile(_ id: UInt64) -> (name: String, bytes: Data)? {
         guard let info = document.packageMetadata?.datas.first(where: { $0.identifier == id }),
               let bytes = document.package.data("Data/" + info.fileName) else { return nil }
+        // A browser cannot draw an Apple icon file: its largest PNG rendition stands in, or, with
+        // none, nothing (a picture then falls back to Keynote's small copy).
+        if info.fileName.lowercased().hasSuffix(".icns") {
+            guard let png = Self.largestPNG(inIcon: bytes) else { return nil }
+            return ((info.fileName as NSString).deletingPathExtension + ".png", png)
+        }
         return (info.fileName, bytes)
     }
 
@@ -349,7 +355,18 @@ struct Canvas {
         let look = styles.mediaLook(image.hasStyle ? image.style.identifier : nil)
         // The stroke follows what shows: the mask's outline, or the image's frame.
         var edge = (transform: "", d: Outline(commands: Paths.rect(w, h, radius: 0), width: w, height: h).d())
-        var element = "<image href=\"\(SVG.escape(imageHref(file.name, file.bytes)))\" width=\"\(SVG.n(w))\" height=\"\(SVG.n(h))\" preserveAspectRatio=\"none\""
+        var placement = "width=\"\(SVG.n(w))\" height=\"\(SVG.n(h))\""
+        var cropToFrame = false
+        // Keynote draws a PDF's art (the box its natural size names), not its whole page, which
+        // is what a browser draws: the page is sized and moved so that box fills the frame.
+        if file.name.lowercased().hasSuffix(".pdf"), image.hasNaturalSize,
+           let boxes = Self.pdfBoxes(file.bytes, natural: (Double(image.naturalSize.width), Double(image.naturalSize.height))) {
+            let (page, art) = boxes
+            let sx = w / art.w, sy = h / art.h
+            placement = "x=\"\(SVG.n(-(art.x - page.x) * sx))\" y=\"\(SVG.n(-((page.y + page.h) - (art.y + art.h)) * sy))\" width=\"\(SVG.n(page.w * sx))\" height=\"\(SVG.n(page.h * sy))\""
+            cropToFrame = true
+        }
+        var element = "<image href=\"\(SVG.escape(imageHref(file.name, file.bytes)))\" \(placement) preserveAspectRatio=\"none\""
         // A mask crops the image: its frame sits in the image's frame coordinates.
         if image.hasMask, let mask = document.decoded(TSD_MaskArchive.self, image.mask.identifier), mask.super.hasGeometry {
             let mg = mask.super.geometry
@@ -364,6 +381,11 @@ struct Canvas {
             let maskTransform = transform(mg)
             edge = (maskTransform, pathD)
             let clip = defs.add { "<clipPath id=\"\($0)\"><path transform=\"\(maskTransform)\" d=\"\(pathD)\"/></clipPath>" }
+            element += " clip-path=\"url(#\(clip))\""
+            cropToFrame = false
+        }
+        if cropToFrame {
+            let clip = defs.add { "<clipPath id=\"\($0)\"><rect width=\"\(SVG.n(w))\" height=\"\(SVG.n(h))\"/></clipPath>" }
             element += " clip-path=\"url(#\(clip))\""
         }
         element += "/>"
@@ -569,6 +591,52 @@ struct Canvas {
             return out + "</g>"
         }
         return ""
+    }
+
+    /// The largest PNG among an `.icns` file's renditions (`ic07`…`ic14` hold PNG or JPEG 2000).
+    static func largestPNG(inIcon bytes: Data) -> Data? {
+        let b = [UInt8](bytes.prefix(64 << 20))
+        func u32(_ o: Int) -> Int { Int(b[o]) << 24 | Int(b[o + 1]) << 16 | Int(b[o + 2]) << 8 | Int(b[o + 3]) }
+        guard b.count >= 8, b[0...3] == [0x69, 0x63, 0x6E, 0x73] else { return nil }  // 'icns'
+        let end = min(b.count, u32(4))
+        var offset = 8, best: Range<Int>?
+        for _ in 0..<512 where offset + 8 <= end {
+            let length = u32(offset + 4)
+            guard length >= 8, offset + length <= end else { break }
+            let data = (offset + 8)..<(offset + length)
+            if data.count > 8, b[data.lowerBound..<data.lowerBound + 8].elementsEqual([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),
+               data.count > (best?.count ?? 0) {
+                best = data
+            }
+            offset += length
+        }
+        return best.map { Data(b[$0]) }
+    }
+
+    typealias Box = (x: Double, y: Double, w: Double, h: Double)
+
+    /// A PDF's first page box and the box Keynote shows (Art, Trim or Crop, whichever matches
+    /// the picture's natural size within a point), read from the file's text; nil when they are
+    /// not found as plain text (an object stream), match nothing, or are the page itself.
+    static func pdfBoxes(_ bytes: Data, natural: (Double, Double)) -> (page: Box, art: Box)? {
+        func box(_ key: String) -> Box? {
+            guard let range = bytes.range(of: Data(("/" + key).utf8)) else { return nil }
+            let tail = bytes[range.upperBound..<min(bytes.endIndex, range.upperBound + 200)]
+            guard let open = tail.firstIndex(of: UInt8(ascii: "[")), let close = tail[open...].firstIndex(of: UInt8(ascii: "]")) else { return nil }
+            let numbers = String(decoding: tail[(open + 1)..<close], as: UTF8.self).split(whereSeparator: { $0 == " " || $0 == "\n" || $0 == "\r" || $0 == "\t" }).compactMap { Double($0) }
+            guard numbers.count == 4, numbers.allSatisfy(\.isFinite) else { return nil }
+            let x0 = min(numbers[0], numbers[2]), y0 = min(numbers[1], numbers[3])
+            let b = (x: x0, y: y0, w: abs(numbers[2] - numbers[0]), h: abs(numbers[3] - numbers[1]))
+            return b.w > 0 && b.h > 0 ? b : nil
+        }
+        guard let page = box("MediaBox"), natural.0 > 0, natural.1 > 0 else { return nil }
+        for key in ["ArtBox", "TrimBox", "CropBox"] {
+            if let art = box(key), abs(art.w - natural.0) < 1, abs(art.h - natural.1) < 1 {
+                if abs(art.w - page.w) < 1 && abs(art.h - page.h) < 1 { return nil }
+                return (page, art)
+            }
+        }
+        return nil
     }
 
     static let placeholderType: UInt32 = 7

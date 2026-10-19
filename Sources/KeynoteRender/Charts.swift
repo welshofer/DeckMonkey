@@ -83,6 +83,22 @@ extension Canvas {
         let chartStyle = document.decoded(TSCH_ChartStyleArchive.self, chart.chartStyle.identifier)
             .flatMap { $0.hasTSCH_Generated_ChartStyleArchive_current ? $0.TSCH_Generated_ChartStyleArchive_current : nil }
 
+        let valueAxisNonStyle = chart.valueAxisNonstyles.first.flatMap { document.decoded(TSCH_ChartAxisNonStyleArchive.self, $0.identifier) }
+            .flatMap { $0.hasTSCH_Generated_ChartAxisNonStyleArchive_current ? $0.TSCH_Generated_ChartAxisNonStyleArchive_current : nil }
+        var valueAxisSettings = AxisSettings()
+        if let a = valueAxisNonStyle {
+            if a.hasTschchartaxisdefaultusermin, a.tschchartaxisdefaultusermin.hasNumberArchive { valueAxisSettings.userMin = a.tschchartaxisdefaultusermin.numberArchive }
+            if a.hasTschchartaxisdefaultusermax, a.tschchartaxisdefaultusermax.hasNumberArchive { valueAxisSettings.userMax = a.tschchartaxisdefaultusermax.numberArchive }
+            if a.hasTschchartaxisvaluenumberofmajorgridlines, a.tschchartaxisvaluenumberofmajorgridlines > 0 {
+                valueAxisSettings.intervals = Int(a.tschchartaxisvaluenumberofmajorgridlines)
+            }
+            // A decimal format with fixed places (253 is "automatic").
+            let format = a.tschchartaxisdefaultnumberformat
+            if a.hasTschchartaxisdefaultnumberformat, format.formatType == 256, format.decimalPlaces < 253 {
+                valueAxisSettings.decimals = Int(format.decimalPlaces)
+            }
+        }
+
         var out = "<g transform=\"\(transform(g))\">"
         let type = chart.chartType
         switch type {
@@ -137,7 +153,8 @@ extension Canvas {
                              interBar: Double(chartStyle?.tschchartinfodefaultinterbargap ?? 10) / 100,
                              interSet: Double(chartStyle?.tschchartinfodefaultintersetgap ?? 40) / 100,
                              valueLabel: paragraph(valueAxis.map { $0.hasTschchartaxisvaluelabelparagraphstyleindex ? $0.tschchartaxisvaluelabelparagraphstyleindex : $0.tschchartaxisdefaultlabelparagraphstyleindex }),
-                             categoryLabel: paragraph(categoryAxis.map { $0.hasTschchartaxiscategorylabelparagraphstyleindex ? $0.tschchartaxiscategorylabelparagraphstyleindex : $0.tschchartaxisdefaultlabelparagraphstyleindex }))
+                             categoryLabel: paragraph(categoryAxis.map { $0.hasTschchartaxiscategorylabelparagraphstyleindex ? $0.tschchartaxiscategorylabelparagraphstyleindex : $0.tschchartaxisdefaultlabelparagraphstyleindex }),
+                             settings: valueAxisSettings)
         case .scatterChartType2D:
             // Shared X: the first series holds the X values, each later one a series' Y values;
             // separate X: the series come in pairs, X then Y.
@@ -187,6 +204,44 @@ extension Canvas {
         return (lo, hi, (hi - lo) / 4)
     }
 
+    /// What a value axis's non-style decides: a range the user set, how many intervals the
+    /// gridlines make, and the labels' decimal places.
+    struct AxisSettings {
+        var userMin: Double?, userMax: Double?
+        var intervals = 4
+        var decimals: Int?
+    }
+
+    /// A value axis's range. Data that includes zero, or spreads over more than a sixth of its
+    /// largest value, runs from zero to a round maximum (`scale`). Data bunched far from zero
+    /// starts below its minimum by half its spread, rounded down at the spread's leading digit,
+    /// as Keynote's automatic axis does (24.46…24.72 runs 24.3…24.8). A user range wins.
+    static func axisRange(dataMin: Double, dataMax: Double, settings: AxisSettings) -> (min: Double, max: Double, step: Double) {
+        let intervals = Double(min(max(settings.intervals, 1), 100))
+        var range: (min: Double, max: Double)
+        if dataMin > 0, dataMax > 0, (dataMax - dataMin) / dataMax < 1.0 / 6 {
+            let start = dataMin - (dataMax - dataMin) / 2
+            let magnitude = pow(10, floor(log10(max(dataMax - start, 1e-300))))
+            range = (floor(start / magnitude) * magnitude, ceil(dataMax / magnitude * (1 - 1e-12)) * magnitude)
+        } else if dataMax < 0, dataMin < 0, (dataMax - dataMin) / -dataMin < 1.0 / 6 {
+            let mirrored = axisRange(dataMin: -dataMax, dataMax: -dataMin, settings: AxisSettings(intervals: settings.intervals))
+            range = (-mirrored.max, -mirrored.min)
+        } else {
+            let s = scale(min(0, dataMin), max(0, dataMax))
+            range = (s.min, s.max)
+        }
+        if let lo = settings.userMin, lo.isFinite { range.min = lo }
+        if let hi = settings.userMax, hi.isFinite { range.max = hi }
+        guard range.max > range.min, (range.max - range.min).isFinite else { return (0, 1, 1 / intervals) }
+        return (range.min, range.max, (range.max - range.min) / intervals)
+    }
+
+    static func label(_ v: Double, decimals: Int?) -> String {
+        guard let decimals, (0...10).contains(decimals) else { return label(v) }
+        let s = String(format: "%.\(decimals)f", v)
+        return s.hasPrefix("-") && Double(s) == 0 ? String(s.dropFirst()) : s
+    }
+
     static func label(_ v: Double) -> String {
         var s = String(format: "%.6f", v)
         while s.hasSuffix("0") { s.removeLast() }
@@ -197,20 +252,21 @@ extension Canvas {
     mutating func axisChart(values: [[Double]], categories: [String], w: Double, h: Double, horizontal: Bool, stacked: Bool, kind: AxisKind,
                             series: (Int) -> TSCH_Generated_ChartSeriesStyleArchive?, valueAxis: TSCH_Generated_ChartAxisStyleArchive?,
                             categoryAxis: TSCH_Generated_ChartAxisStyleArchive?, interBar: Double, interSet: Double,
-                            valueLabel: CharLook, categoryLabel: CharLook) -> String {
+                            valueLabel: CharLook, categoryLabel: CharLook, settings: AxisSettings = AxisSettings()) -> String {
         let n = values.count, m = values.map(\.count).max() ?? 0
         func v(_ s: Int, _ c: Int) -> Double { c < values[s].count && values[s][c].isFinite ? values[s][c] : 0 }
-        var low = 0.0, high = 0.0
+        var low = Double.infinity, high = -Double.infinity
         for c in 0..<m {
             if stacked {
                 var pos = 0.0, neg = 0.0
                 for s in 0..<n { let x = v(s, c); if x >= 0 { pos += x } else { neg += x } }
-                high = max(high, pos); low = min(low, neg)
+                high = max(high, pos); low = min(low, neg == 0 ? pos : neg)
             } else {
                 for s in 0..<n { high = max(high, v(s, c)); low = min(low, v(s, c)) }
             }
         }
-        let axis = Self.scale(low, high)
+        if !low.isFinite || !high.isFinite { low = 0; high = 0 }
+        let axis = Self.axisRange(dataMin: low, dataMax: high, settings: settings)
         let valueLength = horizontal ? w : h
         func position(_ x: Double) -> Double { (x - axis.min) / (axis.max - axis.min) * valueLength }
         var out = ""
@@ -226,7 +282,7 @@ extension Canvas {
             if showGrid, let gridStroke, visible(gridStroke), value != 0 {
                 out += stroked(gridStroke, d: horizontal ? "M\(SVG.n(p)) 0V\(SVG.n(h))" : "M0 \(SVG.n(h - p))H\(SVG.n(w))")
             }
-            let text = Self.label(value)
+            let text = Self.label(value, decimals: settings.decimals)
             let size = effectiveSize(valueLabel)
             if horizontal {
                 out += textElement([Span(text: text, look: valueLabel, width: 0)], x: p, baseline: h + 10 + vertical(valueLabel).ascent, anchor: "middle", justifyWidth: nil)
@@ -239,7 +295,8 @@ extension Canvas {
         let band = (horizontal ? h : w) / Double(max(m, 1))
         let perSet = stacked || kind != .bars ? 1 : n
         let barWidth = band / (Double(perSet) + Double(perSet - 1) * interBar + interSet)
-        let zero = position(0)
+        // Lines and areas meet the axis at zero, or at its edge when zero is off it.
+        let zero = position(min(max(0, axis.min), axis.max))
         var stackPos = [Double](repeating: 0, count: m), stackNeg = [Double](repeating: 0, count: m)
         // Areas are drawn last series first, so the first is in front: unstacked ones overlap,
         // and each stacked one runs from zero to its running total, the lower bands over it.
@@ -261,7 +318,10 @@ extension Canvas {
                     if stacked {
                         if x >= 0 { from = stackPos[c]; stackPos[c] += x; to = stackPos[c] } else { from = stackNeg[c]; stackNeg[c] += x; to = stackNeg[c] }
                     }
-                    let a = position(from), b = position(to)
+                    // A bar shows only the part of it on the axis (one that starts at zero below
+                    // an axis beginning at 24.3 grows from the axis's edge).
+                    func clamped(_ v: Double) -> Double { min(max(v, axis.min), axis.max) }
+                    let a = position(clamped(from)), b = position(clamped(to))
                     let slot = stacked ? 0 : s
                     let start = Double(c) * band + (band - (Double(perSet) * barWidth + Double(perSet - 1) * interBar * barWidth)) / 2
                         + Double(slot) * barWidth * (1 + interBar)
