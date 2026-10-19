@@ -231,15 +231,16 @@ at the leading digit in four steps. A built-in theme's photos and textures are n
 judged. AT-29 over the corpus: 796 judged pages at a 0.76% median (all 1,876 at 1.84%); AT-28 also over
 the private corpus (28 decks, 335 slides: reading uses `slideOrder()`, which walks Keynote 6.5's root
 node and nested slides; `slideList()` stays the flat edit view). Geometry flags: 1 width valid, 2 height
-valid, 4 flipped horizontally (pictures). A text shape without a valid width or height grows to its
+valid, 4 flipped horizontally (pictures, shapes' outlines and fills, groups). A text shape without a valid width or height grows to its
 text (the stored size, often 0 × 0, is only a cache), and its position is the edge it grows from: left,
 centre or right by its text alignment, top, centre or bottom by its vertical alignment. A line (open
 path) holding text is not a text box. A picture with Keynote adjustments draws `adjustedImageData`;
 Instant Alpha clips it to `instantAlphaPath` (natural-size coordinates). A chart series' private
 style is a variation over its theme style (fills replace, not merge); value labels follow the series
 non-style. Numbered lists count only numbered paragraphs. A list style variation inherits the per-level
-arrays it leaves empty (label types) from its parent. Gradient angles are radians in the page's frame
-(a shape turns them back by its own rotation); a text gradient spans the whole text block, cap height
+arrays it leaves empty (label types) from its parent. Gradient angles are radians in the shape's own frame,
+turning and flipping with it; geometry flag 4 flips shapes too (Octopus' 180° background is also
+flipped, which is why it once looked like a page-frame angle); a text gradient spans the whole text block, cap height
 to last baseline. An empty `shadow {}` (no colour) draws nothing. A group flips by flag 4; a freehand
 drawing group keeps its children at their own size and its opacity in the freehand extension. Text
 pushed down to keep the first line's ascent counts in its height before vertical alignment. Shape

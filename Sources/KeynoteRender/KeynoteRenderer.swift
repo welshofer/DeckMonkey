@@ -21,7 +21,7 @@ public struct RenderedSlide: Sendable, Equatable {
 public struct KeynoteRenderer {
     /// Changes whenever the SVG drawn for the same file changes, so hosts that cache rendered
     /// slides (Duo's thumbnails) can key on it. AT-28 checks it against the corpus's output.
-    public static let revision = 6
+    public static let revision = 7
 
     public let document: KeynoteDocument
     public let fonts: RenderFonts?
@@ -252,13 +252,17 @@ struct Canvas {
                 if storage != nil, let span = outline.textSpan, span.x1 - span.x0 < outline.width - 0.5 {
                     textSpan = (span.x0 * sx, span.x1 * sx)
                 }
+                var art = ""
                 if outline.closed, let fill = look.fill {
-                    inner += paintedPath(fill, d: pathD, w: w, h: h, rotation: Double(g.angle))
+                    art += paintedPath(fill, d: pathD, w: w, h: h)
                 }
-                inner += stroked(look.stroke, d: pathD)
+                art += stroked(look.stroke, d: pathD)
                 if let stroke = look.stroke, visible(stroke), let ends = outline.ends {
-                    inner += lineEnds(look, stroke: stroke, ends: ends, sx: sx, sy: sy)
+                    art += lineEnds(look, stroke: stroke, ends: ends, sx: sx, sy: sy)
                 }
+                // Geometry flag 4 mirrors the shape left to right, its fill with it (a gradient
+                // turns and flips with its shape); its text is not mirrored.
+                inner += g.flags & 4 != 0 && !art.isEmpty ? "<g transform=\"translate(\(SVG.n(w)) 0) scale(-1 1)\">" + art + "</g>" : art
             } else {
                 problems.insert("path kind")
             }
@@ -509,7 +513,7 @@ struct Canvas {
     }
 
     /// A gradient as a `<linearGradient>`/`<radialGradient>` over the box, or nil for none.
-    mutating func gradient(_ g: TSD_GradientArchive, w: Double, h: Double, origin: (x: Double, y: Double) = (0, 0), rotation: Double = 0) -> String? {
+    mutating func gradient(_ g: TSD_GradientArchive, w: Double, h: Double, origin: (x: Double, y: Double) = (0, 0)) -> String? {
         let stops = g.stops.map { stop -> String in
             let c = SVG.RGBA(stop.color)
             var s = "<stop offset=\"\(SVG.n(stop.fraction))\" stop-color=\"\(c.hex)\""
@@ -530,9 +534,9 @@ struct Canvas {
             start = (Double(t.start.x) * w / bw, Double(t.start.y) * h / bh)
             end = (Double(t.end.x) * w / bw, Double(t.end.y) * h / bh)
         } else {
-            // The angle is in radians, counterclockwise from +x (5.50, 315°, runs top left to
-            // bottom right).
-            let a = Double(g.hasAnglegradient ? g.anglegradient.gradientangle : 0) - rotation * .pi / 180
+            // The angle is in radians, counterclockwise from +x in the shape's own frame (5.50,
+            // 315°, runs top left to bottom right), turning and flipping with the shape.
+            let a = Double(g.hasAnglegradient ? g.anglegradient.gradientangle : 0)
             let dx = cos(a), dy = -sin(a)
             let half = abs(w * dx) / 2 + abs(h * dy) / 2
             start = (w / 2 - dx * half, h / 2 - dy * half)
@@ -548,13 +552,11 @@ struct Canvas {
     }
 
     /// A closed outline filled with `fill`: a colour, a gradient, or an image clipped to it.
-    /// `rotation` is the shape's own angle in degrees: a gradient's angle is the page's, so it
-    /// turns back by it inside the shape (a 180° shape with a 180° gradient runs left to right).
-    mutating func paintedPath(_ fill: TSD_FillArchive, d: String, w: Double, h: Double, rotation: Double = 0) -> String {
+    mutating func paintedPath(_ fill: TSD_FillArchive, d: String, w: Double, h: Double) -> String {
         if fill.hasColor {
             return "<path d=\"\(d)\"" + SVG.paint("fill", SVG.RGBA(fill.color)) + "/>"
         }
-        if fill.hasGradient, let id = gradient(fill.gradient, w: w, h: h, rotation: rotation) {
+        if fill.hasGradient, let id = gradient(fill.gradient, w: w, h: h) {
             return "<path d=\"\(d)\" fill=\"url(#\(id))\"/>"
         }
         if fill.hasImage {
