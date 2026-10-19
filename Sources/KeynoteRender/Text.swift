@@ -142,7 +142,9 @@ extension Canvas {
         let size = effectiveSize(look)
         let tracked = Double(text.count) * look.tracking * size
         if let m = face(look).metrics {
-            return m.width(of: text, pointSize: size) + tracked
+            // Kerned, as Keynote sets text and the browser draws it: plain advances run wide
+            // enough to break a line a word early.
+            return TextShaper(m).shape(text, pointSize: size).width + tracked
         }
         problems.insert("font \(look.fontName)")
         return text.unicodeScalars.reduce(0.0) { $0 + ($1.value >= 0x2E80 ? 1.0 : 0.55) } * size + tracked
@@ -271,9 +273,9 @@ extension Canvas {
         var lookCache = [UInt64: CharLook]()
         var paraCache = [UInt64: ParaLook]()
 
-        func layout(scale: Double) -> (lines: [Line], height: Double, fitHeight: Double) {
+        func layout(scale: Double) -> (lines: [Line], height: Double, fitHeight: Double, alignHeight: Double) {
             var out = [Line]()
-            var y = 0.0, lastShortfall = 0.0
+            var y = 0.0, lastShortfall = 0.0, lastExtra = 0.0
             for (pi, range) in paragraphs.enumerated() {
                 let paraID = paraStyle(at: range.lowerBound)
                 var para: ParaLook
@@ -456,18 +458,22 @@ extension Canvas {
                     case .kSpaceBetweenLineSpacing: height = natural + para.lineSpacing * scale
                     }
                     // Spacing below 1 takes its share from above the baseline (a 0.8 title's
-                    // baseline sits 0.8 of an ascent below the line's top).
-                    let ascent = para.lineSpacingMode == .kRelativeLineSpacing ? line.ascent * min(para.lineSpacing, 1) + max(0, height - natural) : line.ascent - (natural - height) * (line.ascent / max(natural, 0.001))
+                    // baseline sits 0.8 of an ascent below the line's top); spacing above 1 adds
+                    // its share below the line (a 1.2 title's first baseline is a plain ascent down).
+                    let ascent = para.lineSpacingMode == .kRelativeLineSpacing ? line.ascent * min(para.lineSpacing, 1) : line.ascent - (natural - height) * (line.ascent / max(natural, 0.001))
                     line.baseline = y + ascent
                     y += height
                     lastShortfall = max(0, natural - height)
+                    lastExtra = para.lineSpacingMode == .kRelativeLineSpacing ? max(0, height - natural) : 0
                     out.append(line)
                 }
                 y += para.spaceAfter * scale
             }
             // Whether text fits is judged with the last line at its full natural height: a Big
             // Fact at 0.8 spacing that would fit three lines that way shrinks to two, as Keynote's does.
-            return (out, y, y + lastShortfall)
+            // Aligning to the middle or bottom leaves out the space spacing above 1 adds below the
+            // last line.
+            return (out, y, y + lastShortfall, y - lastExtra)
         }
 
         var result = layout(scale: 1)
@@ -491,9 +497,10 @@ extension Canvas {
         lastTextAlignment = lines.first(where: { !$0.spans.isEmpty })?.alignment ?? .tatvalue0
 
         var top = shape.padding.top + raised
+        let alignedHeight = result.alignHeight + raised
         switch shape.verticalAlignment {
-        case .kFrameAlignMiddle: top += (availableHeight - textHeight) / 2
-        case .kFrameAlignBottom: top += availableHeight - textHeight
+        case .kFrameAlignMiddle: top += (availableHeight - alignedHeight) / 2
+        case .kFrameAlignBottom: top += availableHeight - alignedHeight
         default: break
         }
         if let first = lines.first, top + first.baseline - first.ascent < shape.padding.top {

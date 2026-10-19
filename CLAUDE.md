@@ -223,7 +223,9 @@ Track R (2026-10-16, OQ-9, Jay): `KeynoteRender` draws a slide as SVG so Duo can
 golden page; `Scripts/render/gate.py` is AT-29). Read-only, portable, bounded against hostile input
 (drawable, text, table and chart budgets). Facts learned: a bezier outline maps its own bounds (of the curves, not
 their control points: a circle drawn from its 45° points) onto the frame (masks store 100×100); an image's stroke follows its mask; spacing below 1 comes off above the
-baseline, but fit is judged with the last line at full height; a list's text indent is in ems of the
+baseline, but fit is judged with the last line at full height; spacing above 1 adds its share below
+each line, and middle or bottom alignment leaves out the last line's share; widths are kerned
+(Rostrum's `TextShaper`), as Keynote sets and WebKit draws; a list's text indent is in ems of the
 text size; table cells are version-5 packed buffers (Keynote 6–7 wrote
 version 4 in the `_pre_bnc` fields: a 12-byte header, then 4-byte fields 0x400 conditional set, 0x800
 matched rule (15 none), 0x4, 0x8, 0x10 string, then the 0x20 double; a matched rule's cell and text
