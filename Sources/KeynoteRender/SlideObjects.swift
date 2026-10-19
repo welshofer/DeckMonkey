@@ -78,6 +78,7 @@ extension Canvas {
             case Self.movieType: drawable = document.decoded(TSD_MovieArchive.self, ref)?.super; kind = .movie; name = "Movie"
             case Self.groupType: drawable = document.decoded(TSD_GroupArchive.self, ref)?.super; kind = .group; name = "Group"
             case Self.tableType: drawable = document.decoded(TST_TableInfoArchive.self, ref)?.super; kind = .table; name = "Table"
+            case Self.wpTableType: drawable = document.decoded(TST_WPTableInfoArchive.self, ref)?.super.super; kind = .table; name = "Table"
             case Self.chartType: drawable = document.decoded(TSCH_ChartDrawableArchive.self, ref)?.super; kind = .chart; name = "Chart"
             default: continue
             }

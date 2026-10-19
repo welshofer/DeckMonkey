@@ -21,7 +21,7 @@ public struct RenderedSlide: Sendable, Equatable {
 public struct KeynoteRenderer {
     /// Changes whenever the SVG drawn for the same file changes, so hosts that cache rendered
     /// slides (Duo's thumbnails) can key on it. AT-28 checks it against the corpus's output.
-    public static let revision = 5
+    public static let revision = 6
 
     public let document: KeynoteDocument
     public let fonts: RenderFonts?
@@ -196,6 +196,10 @@ struct Canvas {
             if let g = document.decoded(TSD_GroupArchive.self, id) { drawGroup(g) }
         case Self.tableType:
             if let t = document.decoded(TST_TableInfoArchive.self, id) { drawTable(t) } else { problems.insert("table") }
+        case Self.wpTableType:
+            // A table that came from a word-processing document (pasted from Pages): an ordinary
+            // table under a wrapper.
+            if let t = document.decoded(TST_WPTableInfoArchive.self, id), t.hasSuper { drawTable(t.super) } else { problems.insert("table") }
         case Self.chartType:
             if let c = document.decoded(TSCH_ChartDrawableArchive.self, id) { drawChart(c) } else { problems.insert("chart") }
         case Self.equationType: problems.insert("equation")
@@ -649,4 +653,5 @@ struct Canvas {
     static let connectionLineType: UInt32 = 3009
     static let chartType: UInt32 = 5021
     static let tableType: UInt32 = 6000
+    static let wpTableType: UInt32 = 6007
 }

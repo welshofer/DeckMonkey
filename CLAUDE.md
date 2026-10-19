@@ -254,7 +254,9 @@ A PDF picture draws its Art/Trim/Crop box (whichever matches its natural size), 
 character's `background_color` is a highlight behind the run. A font without an OS/2 table (Courier)
 is set with a fifth of its size, rounded up, of leading above each line. An `.icns` picture draws its
 largest PNG rendition. A 3D chart's series colours live in textures Keynote supplies; drawn flat, the
-2D fills stand in. Duo uses it on PR #28 (DuoCore `KeynoteDeck`, pinned by revision). Any change to rendered output bumps
+2D fills stand in. A `TST.WPTableInfoArchive` (6007, a table pasted from Pages) is an ordinary table
+under a wrapper. Old built-in themes' textures (Harmony_2, the Keynote 6 paper tiles) are neither in
+the file nor in Keynote 15's bundle under their names: those fills stay empty. Duo uses it on PR #28 (DuoCore `KeynoteDeck`, pinned by revision). Any change to rendered output bumps
 `KeynoteRenderer.revision` (Duo keys cached thumbnails on it); AT-28 fails when the corpus's SVG digest
 changes under the same revision (the digest is kept in the git-ignored `Corpus/.render-revision.json`).
 
