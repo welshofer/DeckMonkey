@@ -71,9 +71,19 @@ public struct KeynoteRenderer {
         canvas.slideNumber = document.pageOfSlide[slide]
         canvas.drawSlide(slide)
         if let fontFace {
-            let faces = canvas.usedFaces.sorted().compactMap { name in fontFace(name).map { (name, $0) } }
+            // A PostScript name is letters, digits, '.', '_' and '-'; a face named otherwise (only
+            // a crafted file's) is not declared, so no name reaches the CSS that could break out of
+            // it. The URL is quoted and escaped for CSS, then for XML.
+            func safe(_ name: String) -> Bool {
+                !name.isEmpty && name.count <= 127 && name.unicodeScalars.allSatisfy { $0.isASCII && (CharacterSet.alphanumerics.contains($0) || "._-".unicodeScalars.contains($0)) }
+            }
+            func css(_ url: String) -> String {
+                url.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'")
+                    .replacingOccurrences(of: "\n", with: "").replacingOccurrences(of: "\r", with: "")
+            }
+            let faces = canvas.usedFaces.sorted().filter(safe).compactMap { name in fontFace(name).map { (name, $0) } }
             if !faces.isEmpty {
-                _ = canvas.defs.add { _ in "<style>" + faces.map { "@font-face{font-family:'\($0.0)';src:url(\(SVG.escape($0.1)))}" }.joined() + "</style>" }
+                _ = canvas.defs.add { _ in "<style>" + faces.map { SVG.escape("@font-face{font-family:'\($0.0)';src:url('\(css($0.1))')}") }.joined() + "</style>" }
             }
         }
         return canvas.finish()

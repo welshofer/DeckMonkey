@@ -192,6 +192,12 @@ struct KeynoteRenderOutlineTests {
         #expect(Array(face[20..<24]) == [0, 0, 0, 44] && Array(face[36..<40]) == [0, 0, 0, 48])
         #expect(Array(face[44..<47]) == [1, 2, 3] && Array(face[48..<53]) == [4, 5, 6, 7, 8] && face.count == 56)
         #expect(SFNTNames.singleFace(Data(b), index: 1) == nil)
+        // A face whose directory runs past the data, or whose tables add up past it, is refused.
+        var short = b; short[21] = 200                                       // 200 tables in 68 bytes
+        #expect(SFNTNames.singleFace(Data(short), index: 0) == nil)
+        var repeated = b                                                     // both tables: the whole file
+        repeated[36...43] = [0, 0, 0, 0, 0, 0, 0, 68]; repeated[52...59] = [0, 0, 0, 0, 0, 0, 0, 68]
+        #expect(SFNTNames.singleFace(Data(repeated), index: 0) == nil)
     }
 
     @Test("a host's font-face hook declares every face a slide sets text in",
@@ -203,7 +209,11 @@ struct KeynoteRenderOutlineTests {
         #expect(!renderer.render(slide: slide).svg.contains("@font-face"))
         renderer.fontFace = { "data:font/otf;base64,\($0)" }
         let svg = renderer.render(slide: slide).svg
-        #expect(svg.contains("@font-face{font-family:'HelveticaNeue"))
+        #expect(svg.contains("@font-face{font-family:&apos;HelveticaNeue") || svg.contains("@font-face{font-family:&#39;HelveticaNeue") || svg.contains("@font-face{font-family:'HelveticaNeue"))
+        // A URL cannot close the declaration it sits in.
+        renderer.fontFace = { _ in "x');}</style><script>alert(1)</script>" }
+        let hostile = renderer.render(slide: slide).svg
+        #expect(!hostile.contains("<script>") && !hostile.contains("x');}"))
     }
 }
 

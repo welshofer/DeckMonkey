@@ -121,11 +121,17 @@ extension SFNTNames {
         func u32(_ o: Int) -> Int? { o >= 0 && o + 4 <= b.count ? Int(b[o]) << 24 | Int(b[o + 1]) << 16 | Int(b[o + 2]) << 8 | Int(b[o + 3]) : nil }
         guard b.count >= 12 else { return nil }
         guard b[0...3] == [0x74, 0x74, 0x63, 0x66] else { return index == 0 ? data : nil }  // 'ttcf'
-        guard let count = u32(8), index < count, let start = u32(12 + 4 * index), let tables = u16(start + 4), tables < 512 else { return nil }
+        guard let count = u32(8), index < count, let start = u32(12 + 4 * index), let tables = u16(start + 4), tables < 512,
+              start + 12 + 16 * tables <= b.count else { return nil }
+        // A hostile collection could list one region many times over: the copy never grows past
+        // the input.
         var records = [(tag: [UInt8], checksum: [UInt8], offset: Int, length: Int)]()
+        var total = 0
         for t in 0..<tables {
             let r = start + 12 + 16 * t
             guard let offset = u32(r + 8), let length = u32(r + 12), offset + length <= b.count else { return nil }
+            total += length
+            guard total <= b.count else { return nil }
             records.append((Array(b[r..<(r + 4)]), Array(b[(r + 4)..<(r + 8)]), offset, length))
         }
         var out = Array(b[start..<(start + 12)])   // sfnt version and the search fields, unchanged
