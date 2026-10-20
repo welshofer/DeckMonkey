@@ -227,7 +227,7 @@ plus descent, the font's line gap added as it is; spacing below 1 comes off enti
 baseline (each line keeps its full descent below it, its line gap above; at 1 and above the gap is
 below), but fit is judged with the last line at
 full height; spacing above 1 adds its share below each line, and middle or bottom alignment leaves
-out the last line's share; widths are kerned
+out the last line's share and the last paragraph's space after; widths are kerned
 (Rostrum's `TextShaper`), as Keynote sets and WebKit draws; a list's text indent is in ems of the
 text size; table cells are version-5 packed buffers (Keynote 6–7 wrote
 version 4 in the `_pre_bnc` fields: a 12-byte header, then 4-byte fields 0x400 conditional set, 0x800

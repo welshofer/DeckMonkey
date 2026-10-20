@@ -279,7 +279,7 @@ extension Canvas {
 
         func layout(scale: Double) -> (lines: [Line], height: Double, fitHeight: Double, alignHeight: Double) {
             var out = [Line]()
-            var y = 0.0, lastShortfall = 0.0, lastExtra = 0.0
+            var y = 0.0, lastShortfall = 0.0, lastExtra = 0.0, lastAfter = 0.0
             for (pi, range) in paragraphs.enumerated() {
                 let paraID = paraStyle(at: range.lowerBound)
                 var para: ParaLook
@@ -476,12 +476,13 @@ extension Canvas {
                     out.append(line)
                 }
                 y += para.spaceAfter * scale
+                lastAfter = para.spaceAfter * scale
             }
             // Whether text fits is judged with the last line at its full natural height: a Big
             // Fact at 0.8 spacing that would fit three lines that way shrinks to two, as Keynote's does.
             // Aligning to the middle or bottom leaves out the space spacing above 1 adds below the
-            // last line.
-            return (out, y, y + lastShortfall, y - lastExtra)
+            // last line, and the last paragraph's space after.
+            return (out, y, y + lastShortfall, y - lastExtra - lastAfter)
         }
 
         var result = layout(scale: 1)
