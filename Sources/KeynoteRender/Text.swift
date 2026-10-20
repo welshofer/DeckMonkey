@@ -156,9 +156,13 @@ extension Canvas {
         if let m = f.metrics {
             let upem = Double(m.unitsPerEm)
             let ascent = Double(m.ascender) / upem * size, descent = -Double(m.descender) / upem * size
-            // A classic font (no OS/2 table) is set with a fifth of its size, rounded up to a
-            // whole point, above each line (Courier 28 pt: 34 pt lines, the first 6 pt down).
-            if f.classic && m.lineGap == 0 { return (ascent + (0.2 * size).rounded(.up), descent, 0) }
+            // Some faces with no line gap (Palatino, Times, Helvetica, Courier, Proxima Nova: those
+            // macOS pads, listed in ExtraLeadingFaces.swift; or any without an OS/2 table) are set
+            // with a fifth of their ascent plus descent, rounded, above each line (Courier 28 pt:
+            // 34 pt lines, the first 6 pt down).
+            if (f.classic || (f.postScriptName.map { Self.extraLeadingFaces.contains($0) } ?? false)) && m.lineGap == 0 {
+                return (ascent + (0.2 * (ascent + descent)).rounded(), descent, 0)
+            }
             return (ascent, descent, Double(m.lineGap) / upem * size)
         }
         return (0.8 * size, 0.2 * size, 0)
@@ -451,7 +455,9 @@ extension Canvas {
                     let natural = line.ascent + line.descent + line.leading
                     var height: Double
                     switch para.lineSpacingMode {
-                    case .kRelativeLineSpacing: height = natural * para.lineSpacing
+                    // Relative spacing scales the ascent and descent; the font's line gap is
+                    // added as it is (a 250 pt Big Fact at 0.8 runs 246 pt lines, not 244).
+                    case .kRelativeLineSpacing: height = (line.ascent + line.descent) * para.lineSpacing + line.leading
                     case .kMinimumLineSpacing: height = max(natural, para.lineSpacing * scale)
                     case .kExactLineSpacing: height = para.lineSpacing * scale
                     case .kMaximumLineSpacing: height = min(natural, para.lineSpacing * scale)
@@ -460,7 +466,9 @@ extension Canvas {
                     // Spacing below 1 takes its share from above the baseline (a 0.8 title's
                     // baseline sits 0.8 of an ascent below the line's top); spacing above 1 adds
                     // its share below the line (a 1.2 title's first baseline is a plain ascent down).
-                    let ascent = para.lineSpacingMode == .kRelativeLineSpacing ? line.ascent * min(para.lineSpacing, 1) : line.ascent - (natural - height) * (line.ascent / max(natural, 0.001))
+                    let ascent = para.lineSpacingMode == .kRelativeLineSpacing
+                        ? (para.lineSpacing < 1 ? height - line.descent : line.ascent)
+                        : line.ascent - (natural - height) * (line.ascent / max(natural, 0.001))
                     line.baseline = y + ascent
                     y += height
                     lastShortfall = max(0, natural - height)

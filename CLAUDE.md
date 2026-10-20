@@ -222,9 +222,12 @@ Track R (2026-10-16, OQ-9, Jay): `KeynoteRender` draws a slide as SVG so Duo can
 (`deckmonkey render`; `Scripts/render/compare.swift` draws it through WebKit as Duo does and diffs the
 golden page; `Scripts/render/gate.py` is AT-29). Read-only, portable, bounded against hostile input
 (drawable, text, table and chart budgets). Facts learned: a bezier outline maps its own bounds (of the curves, not
-their control points: a circle drawn from its 45° points) onto the frame (masks store 100×100); an image's stroke follows its mask; spacing below 1 comes off above the
-baseline, but fit is judged with the last line at full height; spacing above 1 adds its share below
-each line, and middle or bottom alignment leaves out the last line's share; widths are kerned
+their control points: a circle drawn from its 45° points) onto the frame (masks store 100×100); an image's stroke follows its mask; relative spacing scales a line's ascent
+plus descent, the font's line gap added as it is; spacing below 1 comes off entirely above the
+baseline (each line keeps its full descent below it, its line gap above; at 1 and above the gap is
+below), but fit is judged with the last line at
+full height; spacing above 1 adds its share below each line, and middle or bottom alignment leaves
+out the last line's share; widths are kerned
 (Rostrum's `TextShaper`), as Keynote sets and WebKit draws; a list's text indent is in ems of the
 text size; table cells are version-5 packed buffers (Keynote 6–7 wrote
 version 4 in the `_pre_bnc` fields: a 12-byte header, then 4-byte fields 0x400 conditional set, 0x800
@@ -257,8 +260,12 @@ geometry is fitted to one Keynote export (Octopus). A value axis over data bunch
 under a sixth of the maximum) starts at the minimum less half the spread, rounded down at the spread's
 leading digit, in the axis's `numberofmajorgridlines` intervals; bars show only their part on the axis.
 A PDF picture draws its Art/Trim/Crop box (whichever matches its natural size), not its page. A
-character's `background_color` is a highlight behind the run. A font without an OS/2 table (Courier)
-is set with a fifth of its size, rounded up, of leading above each line. An `.icns` picture draws its
+character's `background_color` is a highlight behind the run. Faces macOS pads (no line gap; Palatino,
+Times, Helvetica, Courier, Proxima Nova and ~300 more, by no table rule: AppKit's
+`defaultLineHeight` names them, `Scripts/render/extra-leading.swift` regenerates
+`ExtraLeadingFaces.swift`) get a fifth of their ascent plus descent, rounded, as leading above each
+line. With these, template text boxes off by 4 pt or more went from 296 to 68 of 2,239 and those
+placed exactly from 1,240 to 1,575 (AT-29 median 0.58% to 0.43%). An `.icns` picture draws its
 largest PNG rendition. A 3D chart's series colours live in textures Keynote supplies; drawn flat, the
 2D fills stand in. A `TST.WPTableInfoArchive` (6007, a table pasted from Pages) is an ordinary table
 under a wrapper. Old built-in themes' textures (Harmony_2, the Keynote 6 paper tiles) are neither in
