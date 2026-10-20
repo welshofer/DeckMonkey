@@ -115,6 +115,19 @@ struct KeynoteRenderTableTests {
         #expect(StoredCell(bytes, at: bytes.count - 4) == nil)
     }
 
+    @Test("a version-4 cell (Keynote 6–7) decodes its string, number and conditional rule")
+    func cellVersion4() {
+        // As a Keynote 7.2 table stores them: a text cell, and a number with a matched rule.
+        let text: [UInt8] = [4, 3, 0, 0, 0x14, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0x19, 0, 0, 0]
+        #expect(StoredCell(text, at: 0)?.kind == .text && StoredCell(text, at: 0)?.stringID == 0x19)
+        var number: [UInt8] = [4, 2, 0, 0, 0x24, 0x0C, 0, 0, 0, 0, 1, 0, 4, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0]
+        number += withUnsafeBytes(of: (149.88).bitPattern.littleEndian, Array.init) + [2, 0, 0, 0]
+        let cell = StoredCell(number, at: 0)
+        #expect(cell?.double == 149.88 && cell?.conditionalStyleID == 4 && cell?.appliedRule == 0)
+        // An unseen flag leaves the cell undecoded rather than misread.
+        #expect(StoredCell([4, 2, 0, 0, 0x01, 0, 0, 0] + [UInt8](repeating: 0, count: 28), at: 0) == nil)
+    }
+
     @Test("formats bound what a file asks for")
     func formats() {
         var f = TSK_FormatStructArchive()
@@ -137,6 +150,60 @@ struct KeynoteRenderChartTests {
         let huge = Canvas.scale(0, 1e308)
         #expect(huge.step.isFinite && huge.max.isFinite)
         #expect(Canvas.scale(0, 0) == (0, 1, 0.25))
+    }
+
+    @Test("data bunched far from zero gets an axis near it, in the axis's own intervals")
+    func axisRange() {
+        // Phoenix Lander's velocities: Keynote's axis runs 24.3 to 24.8 in four steps.
+        let a = Canvas.axisRange(dataMin: 24.46, dataMax: 24.721, settings: Canvas.AxisSettings())
+        #expect(abs(a.min - 24.3) < 1e-9 && abs(a.max - 24.8) < 1e-9 && abs(a.step - 0.125) < 1e-9)
+        // Data spread past a sixth of its maximum still starts at zero.
+        #expect(Canvas.axisRange(dataMin: 3, dataMax: 9, settings: Canvas.AxisSettings()) == (0, 9, 2.25))
+        // A user range wins.
+        var settings = Canvas.AxisSettings(); settings.userMin = 10; settings.userMax = 20; settings.intervals = 5
+        #expect(Canvas.axisRange(dataMin: 12, dataMax: 13, settings: settings) == (10, 20, 2))
+    }
+}
+
+@Suite("Keynote render outlines and fonts")
+struct KeynoteRenderOutlineTests {
+    @Test("an outline's bounds are its curves', not its control points'")
+    func curveBounds() {
+        // A quarter circle from (1, 0) to (0, 1) about the origin: control points reach (1, 0.552)
+        // and (0.552, 1), the curve itself no further than its ends.
+        let k = 0.5522847498
+        let outline = Paths.fitted([.move(1, 0), .cubic(1, k, k, 1, 0, 1)], fallback: (1, 1))
+        #expect(abs(outline.width - 1) < 1e-9 && abs(outline.height - 1) < 1e-9)
+        // An arc that bulges past its ends is bounded by the bulge.
+        let bulge = Paths.fitted([.move(0, 0), .cubic(0, 1, 1, 1, 1, 0)], fallback: (1, 1))
+        #expect(abs(bulge.height - 0.75) < 1e-9)
+    }
+
+    @Test("a collection's face is copied out with its own table directory")
+    func singleFace() {
+        // 'ttcf' with one face of two tables ('aaaa' 3 bytes, 'bbbb' 5 bytes).
+        var b: [UInt8] = Array("ttcf".utf8) + [0, 1, 0, 0] + [0, 0, 0, 1] + [0, 0, 0, 16]
+        b += [0, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0]                                // the face's offset table
+        b += Array("aaaa".utf8) + [0, 0, 0, 9] + [0, 0, 0, 60] + [0, 0, 0, 3]  // records: tag, checksum, offset, length
+        b += Array("bbbb".utf8) + [0, 0, 0, 8] + [0, 0, 0, 63] + [0, 0, 0, 5]
+        b += [1, 2, 3, 4, 5, 6, 7, 8]
+        guard let face = SFNTNames.singleFace(Data(b), index: 0).map(Array.init) else { Issue.record("no face"); return }
+        #expect(Array(face[0..<12]) == [0, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0])
+        #expect(Array(face[20..<24]) == [0, 0, 0, 44] && Array(face[36..<40]) == [0, 0, 0, 48])
+        #expect(Array(face[44..<47]) == [1, 2, 3] && Array(face[48..<53]) == [4, 5, 6, 7, 8] && face.count == 56)
+        #expect(SFNTNames.singleFace(Data(b), index: 1) == nil)
+    }
+
+    @Test("a host's font-face hook declares every face a slide sets text in",
+          .enabled(if: FileManager.default.fileExists(atPath: KeynoteRenderHostTests.deck.path) && FileManager.default.fileExists(atPath: "/System/Library/Fonts/HelveticaNeue.ttc"), "no templates or no Helvetica Neue"))
+    func fontFaceHook() throws {
+        let document = try KeynoteDocument.open(KeynoteRenderHostTests.deck)
+        var renderer = KeynoteRenderer(document: document, fonts: RenderFonts.library(directories: [URL(fileURLWithPath: "/System/Library/Fonts")]))
+        let slide = try document.slideList()[0].slide
+        #expect(!renderer.render(slide: slide).svg.contains("@font-face"))
+        renderer.fontFace = { "data:font/otf;base64,\($0)" }
+        let svg = renderer.render(slide: slide).svg
+        #expect(svg.contains("@font-face{font-family:'HelveticaNeue"))
     }
 }
 

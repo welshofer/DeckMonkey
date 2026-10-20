@@ -121,16 +121,16 @@ struct Line {
 extension Canvas {
     /// The face to measure and draw a look in: Keynote's named face, or its family's face with the
     /// requested traits when a bold or italic flag asks for one the name lacks.
-    func face(_ look: CharLook) -> (family: String, metrics: FontMetrics?, synthetic: (bold: Bool, italic: Bool), classic: Bool) {
+    func face(_ look: CharLook) -> (family: String, metrics: FontMetrics?, synthetic: (bold: Bool, italic: Bool), classic: Bool, postScriptName: String?) {
         guard let fonts, let named = fonts.face(postScriptName: look.fontName) else {
-            return ("'\(look.fontName)'", nil, (look.bold, look.italic), false)
+            return ("'\(look.fontName)'", nil, (look.bold, look.italic), false, nil)
         }
         var face = named
         if (look.bold && !named.bold) || (look.italic && !named.italic) {
             if let other = fonts.face(family: named.family, bold: look.bold || named.bold, italic: look.italic || named.italic) { face = other }
         }
         let synthetic = (look.bold && !face.bold, look.italic && !face.italic)
-        return ("'\(face.postScriptName)', '\(face.family)'", fonts.metrics(postScriptName: face.postScriptName), synthetic, face.classic)
+        return ("'\(face.postScriptName)', '\(face.family)'", fonts.metrics(postScriptName: face.postScriptName), synthetic, face.classic, face.postScriptName)
     }
 
     func effectiveSize(_ look: CharLook) -> Double {
@@ -569,6 +569,7 @@ extension Canvas {
         for span in spans where !span.text.isEmpty {
             let look = span.look
             let f = face(look)
+            if let name = f.postScriptName { usedFaces.insert(name) }
             s += "<tspan font-family=\"\(SVG.escape(f.family)), sans-serif\" font-size=\"\(SVG.n(effectiveSize(look)))\""
             if f.synthetic.bold { s += " font-weight=\"bold\"" }
             if f.synthetic.italic { s += " font-style=\"italic\"" }

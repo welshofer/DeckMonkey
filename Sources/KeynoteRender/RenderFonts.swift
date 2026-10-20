@@ -89,6 +89,16 @@ public final class RenderFonts: @unchecked Sendable {
         return plain ?? candidates.sorted { $0.postScriptName < $1.postScriptName }.first
     }
 
+    /// The face's font file on its own, for a page to embed: a face in a collection (`.ttc`) is
+    /// copied out into a single-face file with its tables; nil when the face is unknown.
+    public func faceData(postScriptName name: String) -> Data? {
+        lock.lock()
+        let source = sources[name]
+        lock.unlock()
+        guard let source, let data = source.data ?? source.url.flatMap({ try? Data(contentsOf: $0, options: .mappedIfSafe) }) else { return nil }
+        return SFNTNames.singleFace(data, index: source.index)
+    }
+
     public func metrics(postScriptName name: String) -> FontMetrics? {
         lock.lock()
         if let m = loaded[name] { lock.unlock(); return m }
@@ -99,6 +109,37 @@ public final class RenderFonts: @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         if let metrics { loaded[name] = metrics } else { failed.insert(name) }
         return metrics
+    }
+}
+
+extension SFNTNames {
+    /// Face `index` of `data` as a single-face font: a lone face is returned as is; a collection's
+    /// face gets its own table directory, its tables copied after it on 4-byte boundaries.
+    static func singleFace(_ data: Data, index: Int) -> Data? {
+        let b = [UInt8](data)
+        func u16(_ o: Int) -> Int? { o >= 0 && o + 2 <= b.count ? Int(b[o]) << 8 | Int(b[o + 1]) : nil }
+        func u32(_ o: Int) -> Int? { o >= 0 && o + 4 <= b.count ? Int(b[o]) << 24 | Int(b[o + 1]) << 16 | Int(b[o + 2]) << 8 | Int(b[o + 3]) : nil }
+        guard b.count >= 12 else { return nil }
+        guard b[0...3] == [0x74, 0x74, 0x63, 0x66] else { return index == 0 ? data : nil }  // 'ttcf'
+        guard let count = u32(8), index < count, let start = u32(12 + 4 * index), let tables = u16(start + 4), tables < 512 else { return nil }
+        var records = [(tag: [UInt8], checksum: [UInt8], offset: Int, length: Int)]()
+        for t in 0..<tables {
+            let r = start + 12 + 16 * t
+            guard let offset = u32(r + 8), let length = u32(r + 12), offset + length <= b.count else { return nil }
+            records.append((Array(b[r..<(r + 4)]), Array(b[(r + 4)..<(r + 8)]), offset, length))
+        }
+        var out = Array(b[start..<(start + 12)])   // sfnt version and the search fields, unchanged
+        var position = 12 + 16 * tables
+        var body = [UInt8]()
+        for record in records {
+            out += record.tag + record.checksum
+            out += withUnsafeBytes(of: UInt32(position).bigEndian, Array.init) + withUnsafeBytes(of: UInt32(record.length).bigEndian, Array.init)
+            body += b[record.offset..<(record.offset + record.length)]
+            let pad = (4 - record.length % 4) % 4
+            body += [UInt8](repeating: 0, count: pad)
+            position += record.length + pad
+        }
+        return Data(out + body)
     }
 }
 

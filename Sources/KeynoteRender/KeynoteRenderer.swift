@@ -27,6 +27,10 @@ public struct KeynoteRenderer {
     public let fonts: RenderFonts?
     /// How an image file becomes an `href`: by default a `data:` URI of the file's bytes.
     public var imageHref: (_ fileName: String, _ bytes: Data) -> String = KeynoteRenderer.dataURI
+    /// Where a face the slide uses can be loaded from (a `data:` URL of its font file), to be
+    /// declared with `@font-face` in the SVG: a host whose drawing process cannot see the fonts
+    /// it measured with (a downloaded font on iOS) embeds them. Nil (the default) embeds none.
+    public var fontFace: ((_ postScriptName: String) -> String?)?
 
     public init(document: KeynoteDocument, fonts: RenderFonts? = nil) {
         self.document = document
@@ -66,6 +70,12 @@ public struct KeynoteRenderer {
         var canvas = Canvas(document: document, fonts: fonts, imageHref: imageHref, size: size)
         canvas.slideNumber = document.pageOfSlide[slide]
         canvas.drawSlide(slide)
+        if let fontFace {
+            let faces = canvas.usedFaces.sorted().compactMap { name in fontFace(name).map { (name, $0) } }
+            if !faces.isEmpty {
+                _ = canvas.defs.add { _ in "<style>" + faces.map { "@font-face{font-family:'\($0.0)';src:url(\(SVG.escape($0.1)))}" }.joined() + "</style>" }
+            }
+        }
         return canvas.finish()
     }
 
@@ -97,6 +107,8 @@ struct Canvas {
     var defs = Definitions()
     var body = ""
     var problems = Set<String>()
+    /// The PostScript names of the faces text was set in, for a host to embed.
+    var usedFaces = Set<String>()
     var depth = 0
     /// Drawables still allowed on this slide: groups may list a child many times over, so nesting
     /// alone does not bound the work.

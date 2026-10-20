@@ -286,5 +286,10 @@ Memory (2026-10-18): `IWAPackage.open` maps the file, and a zip's stored entries
 pictures and movies uncompressed) are CRC-checked views into it, not copies; compressed entries still
 decode through Rostrum. Opening Octopus (135 MB) went from a 418 MB to a 12 MB peak footprint, a full
 render from 500 MB to 82 MB, with identical output. Hosts should pass mapped data to `openZip`.
+Fonts on iOS (2026-10-19): a deck's theme faces (Graphik, Canela, Produkt, Proxima Nova, Founders
+Grotesk, Publico) are not on a device until CoreText downloads them (`CTFontDescriptorMatchFontDescriptors
+WithProgressHandler`, the iOS 27.1 simulator fetched all of them); Apple's internal Myriad Set and SF
+Hello are not offered. A WKWebView draws in its own process, so `KeynoteRenderer.fontFace` lets a host
+embed the faces a slide uses (`RenderFonts.faceData` copies a face out of a collection) as `@font-face`.
 Private goldens: `<deck>.golden.pdf` beside 25 of the 27 modern private decks (oracle exports, never
 in the repo); `Scripts/render/gate.py <decks>` judges them.
