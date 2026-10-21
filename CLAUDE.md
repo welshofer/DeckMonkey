@@ -21,6 +21,7 @@ acceptance oracle. The full spec is `docs/spec.md`; sections 5 (invariants), 9 (
   a theme photo's small copy, a fill's reference colour, and plain fallbacks sized from the file's
   data. Fonts are not assets in this sense: Apple serves them to apps through CoreText's download
   API, which Duo uses.
+- **3D charts are drawn flat, for good** (Jay, 2026-10-21): no 3D chart rendering, ever.
 - **Private corpus:** Jay's test decks never enter the repo. They live in
   `~/Developer/DeckMonkey-corpus` (a sibling of the repo). Point `DECKMONKEY_CORPUS` at it, or
   write the path into the git-ignored `.deckmonkey-corpus` file at the repo root; the test suite
