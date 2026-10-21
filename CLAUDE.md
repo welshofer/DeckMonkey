@@ -14,6 +14,13 @@ acceptance oracle. The full spec is `docs/spec.md`; sections 5 (invariants), 9 (
   Phase 4, the Deck IR (`DeckOutline`). SwiftProtobuf is the only other dependency.
 - **License:** MIT. WorkKit (AGPL-3.0) and keynote-parser are design references only — read them,
   never copy code or protos from them. Our protos come from our own extraction (Scripts/schema).
+- **No Apple assets, ever, not even derived** (Jay, 2026-10-21): Keynote's own theme artwork
+  (built-in photos and textures, picture frames, image bullets, 3D chart textures) is Apple's,
+  licensed for use with Keynote. DeckMonkey and Duo never bundle it, and never read Keynote's app
+  bundle to rebuild it (no extracted colours, sizes or shapes either). Draw from what the file holds:
+  a theme photo's small copy, a fill's reference colour, and plain fallbacks sized from the file's
+  data. Fonts are not assets in this sense: Apple serves them to apps through CoreText's download
+  API, which Duo uses.
 - **Private corpus:** Jay's test decks never enter the repo. They live in
   `~/Developer/DeckMonkey-corpus` (a sibling of the repo). Point `DECKMONKEY_CORPUS` at it, or
   write the path into the git-ignored `.deckmonkey-corpus` file at the repo root; the test suite
