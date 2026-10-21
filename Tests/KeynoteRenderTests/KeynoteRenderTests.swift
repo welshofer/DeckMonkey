@@ -165,6 +165,25 @@ struct KeynoteRenderChartTests {
     }
 }
 
+@Suite("Keynote movies")
+struct KeynoteRenderMovieTests {
+    static let deck = KeynoteRenderTests.root.appendingPathComponent("Corpus/features/media.key")
+
+    @Test("a slide's movie and sound come with their files, timing and how they start",
+          .enabled(if: FileManager.default.fileExists(atPath: deck.path), "no Corpus/features"))
+    func movies() throws {
+        let document = try KeynoteDocument.open(Self.deck)
+        let renderer = KeynoteRenderer(document: document)
+        let slides = document.slideOrder().map(\.slide)
+        let movie = try #require(renderer.movies(onSlide: slides[0]).first)
+        #expect(movie.fileName.hasSuffix(".m4v") && !movie.audioOnly && movie.startsOnBuild)
+        #expect(movie.width == 480 && movie.height == 360 && movie.end.map { $0 > 85 && $0 < 86 } == true)
+        #expect(renderer.movieData(movie)?.isEmpty == false)
+        let sound = try #require(renderer.movies(onSlide: slides[1]).first)
+        #expect(sound.fileName.hasSuffix(".m4a") && sound.audioOnly)
+    }
+}
+
 @Suite("Keynote render outlines and fonts")
 struct KeynoteRenderOutlineTests {
     @Test("an outline's bounds are its curves', not its control points'")

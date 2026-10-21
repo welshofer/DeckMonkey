@@ -287,6 +287,13 @@ the file nor in Keynote 15's bundle under their names: those fills stay empty. D
 `KeynoteRenderer.revision` (Duo keys cached thumbnails on it); AT-28 fails when the corpus's SVG digest
 changes under the same revision (the digest is kept in the git-ignored `Corpus/.render-revision.json`).
 
+Playback (2026-10-21): `KeynoteRenderer.movies(onSlide:)` gives each movie and sound on a slide
+(frame, file in `Data/`, start/end/poster times, loop, volume, autoplay, audio-only, and whether a
+"Start Movie" build, `apple:movie-start`, starts it); `movieData` its bytes. Hosts play it over the
+slide's picture, which shows the poster. Corpus (28 private decks): 72 of 335 slides have builds
+(267: dissolve 119, zoom 47, move in 13, wipe 12, pop 8, appear 7; 253 all at once), 143 slides a
+transition (Magic Move 25, revolve 17, cube 16, reveal 14, dissolve 14), 4 movies.
+
 Geometry (2026-10-17): `setDrawableFrame`/`moveDrawable` (`deckmonkey object`) move and resize an
 unrotated shape, text box, placeholder, image or movie; a cropped image is placed by its mask's frame,
 as Keynote's AppleScript gives it. `Scripts/gate1/geometry.py` has Keynote make the same edit: 10/10
