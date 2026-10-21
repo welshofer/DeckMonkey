@@ -15,6 +15,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 DECKMONKEY = os.path.join(ROOT, ".build/debug/deckmonkey")
 COMPARE = os.path.join(ROOT, ".build/compare")
 MEDIAN_BAR, WORST_BAR = 0.03, 0.15
+COMPARE_TIMEOUT = 600
 # A page that needs what the file does not hold (a built-in theme's photo or texture, which Keynote
 # downloads; a font this machine lacks) cannot be judged from the file: it is counted, not barred.
 UNJUDGED = ("theme image", "theme photo", "font ", "picture frame")
@@ -27,7 +28,12 @@ def run(deck, out):
     r = subprocess.run([DECKMONKEY, "render", deck, "-o", svg], capture_output=True, text=True)
     if r.returncode != 0:
         return name, None, r.stderr.strip()
-    r = subprocess.run([COMPARE, svg, golden, cmp], capture_output=True, text=True)
+    # WebKit occasionally never finishes loading a page: a deck that takes this long is reported,
+    # not waited on forever.
+    try:
+        r = subprocess.run([COMPARE, svg, golden, cmp], capture_output=True, text=True, timeout=COMPARE_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        return name, None, f"compare did not finish in {COMPARE_TIMEOUT} s (rerun the deck)"
     try:
         result = json.load(open(os.path.join(cmp, "compare.json")))
     except (OSError, ValueError):
