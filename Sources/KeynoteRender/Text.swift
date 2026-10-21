@@ -343,14 +343,17 @@ extension Canvas {
                     case .kImage:
                         // The image the level names, as large as the text times its scale; a
                         // theme's bullet image the file does not carry becomes a bullet character.
+                        // A theme's bullet image the file does not carry (Keynote supplies it)
+                        // becomes our own bullet, a dot of the image's size in the text's colour.
                         let image = list.images.indices.contains(l) && list.images[l].hasImage ? list.images[l].image.identifier : nil
+                        let size = (runs.first?.1.size ?? para.char.size) * (list.geometries.indices.contains(l) && list.geometries[l].hasScale ? Double(list.geometries[l].scale) : 1)
                         if let image, let file = dataFile(image) {
-                            let size = (runs.first?.1.size ?? para.char.size) * (list.geometries.indices.contains(l) && list.geometries[l].hasScale ? Double(list.geometries[l].scale) : 1)
                             labelImage = (imageHref(file.name, file.bytes), size * 0.6)
-                            text = ""
                         } else {
-                            text = "•"; problems.insert("image bullet (drawn as •)")
+                            labelImage = ("", size * 0.6)
+                            problems.insert("image bullet (our bullet)")
                         }
+                        text = ""
                     case .kNone: text = nil
                     }
                     if let text, !runs.allSatisfy({ $0.0.isEmpty }) {
@@ -540,7 +543,11 @@ extension Canvas {
         var out = ""
         for line in lines {
             let baseline = top + line.baseline
-            if let image = line.labelImage, let label = line.label {
+            if let image = line.labelImage, let label = line.label, image.href.isEmpty {
+                // Our own bullet: a dot, a little under half the image's box, centred in it.
+                let size = image.size, centre = (label.x + size / 2, baseline - size * 0.9 + size / 2)
+                out += "<circle cx=\"\(SVG.n(centre.0))\" cy=\"\(SVG.n(centre.1))\" r=\"\(SVG.n(size * 0.22))\"" + SVG.paint("fill", label.look.color) + "/>"
+            } else if let image = line.labelImage, let label = line.label {
                 let size = image.size
                 out += "<image href=\"\(SVG.escape(image.href))\" x=\"\(SVG.n(label.x))\" y=\"\(SVG.n(baseline - size * 0.9))\" width=\"\(SVG.n(size))\" height=\"\(SVG.n(size))\" preserveAspectRatio=\"xMidYMid meet\"/>"
             } else if let label = line.label {
@@ -584,8 +591,8 @@ extension Canvas {
             s += "<tspan font-family=\"\(SVG.escape(f.family)), sans-serif\" font-size=\"\(SVG.n(effectiveSize(look)))\""
             if f.synthetic.bold { s += " font-weight=\"bold\"" }
             if f.synthetic.italic { s += " font-style=\"italic\"" }
-            if let g = look.gradient, let box = gradientBox, let id = gradient(g, w: box.w, h: box.h, origin: (box.x, box.y)) {
-                s += " fill=\"url(#\(id))\""
+            if let g = look.gradient, let box = gradientBox, let paint = gradient(g, w: box.w, h: box.h, origin: (box.x, box.y), masked: false) {
+                s += " fill=\"url(#\(paint.fill))\""
             } else {
                 s += SVG.paint("fill", look.color)
             }

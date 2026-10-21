@@ -21,7 +21,7 @@ public struct RenderedSlide: Sendable, Equatable {
 public struct KeynoteRenderer {
     /// Changes whenever the SVG drawn for the same file changes, so hosts that cache rendered
     /// slides (Duo's thumbnails) can key on it. AT-28 checks it against the corpus's output.
-    public static let revision = 12
+    public static let revision = 13
 
     public let document: KeynoteDocument
     public let fonts: RenderFonts?
@@ -438,11 +438,15 @@ struct Canvas {
         if let stroke = look.stroke {
             let open = edge.transform.isEmpty ? "" : "<g transform=\"\(edge.transform)\">"
             if stroke.hasFrame {
-                // A picture frame is artwork in Keynote's bundle, not in the file: a light mat
-                // of the frame's usual width stands in for it.
-                problems.insert("picture frame (approximated)")
-                let width = 24 * (stroke.frame.hasAssetScale ? Double(stroke.frame.assetScale) : 1)
-                body += open + "<path d=\"\(edge.d)\" fill=\"none\" stroke=\"#f7f5ef\" stroke-width=\"\(SVG.n(width))\"/>" + (open.isEmpty ? "" : "</g>")
+                // A picture frame is artwork Keynote supplies, not in the file: our own frame
+                // stands in, a light mat of the frame's width that lifts off the slide with a
+                // soft shadow, a fine keyline where it meets the picture.
+                problems.insert("picture frame (our frame)")
+                let scale = stroke.frame.hasAssetScale ? Double(stroke.frame.assetScale) : 1
+                let width = 24 * scale
+                let lift = defs.add { "<filter id=\"\($0)\" x=\"-20%\" y=\"-20%\" width=\"140%\" height=\"140%\"><feDropShadow dx=\"0\" dy=\"\(SVG.n(2 * scale))\" stdDeviation=\"\(SVG.n(3 * scale))\" flood-color=\"#000000\" flood-opacity=\"0.28\"/></filter>" }
+                body += open + "<path d=\"\(edge.d)\" fill=\"none\" stroke=\"#f7f5ef\" stroke-width=\"\(SVG.n(width))\" stroke-linejoin=\"miter\" filter=\"url(#\(lift))\"/>"
+                    + "<path d=\"\(edge.d)\" fill=\"none\" stroke=\"#d8d2c4\" stroke-width=\"\(SVG.n(max(0.75, scale)))\"/>" + (open.isEmpty ? "" : "</g>")
             } else if visible(stroke) {
                 body += open + stroked(stroke, d: edge.d) + (open.isEmpty ? "" : "</g>")
             }
@@ -534,38 +538,59 @@ struct Canvas {
         return out
     }
 
-    /// A gradient as a `<linearGradient>`/`<radialGradient>` over the box, or nil for none.
-    mutating func gradient(_ g: TSD_GradientArchive, w: Double, h: Double, origin: (x: Double, y: Double) = (0, 0)) -> String? {
-        let stops = g.stops.map { stop -> String in
-            let c = SVG.RGBA(stop.color)
-            var s = "<stop offset=\"\(SVG.n(stop.fraction))\" stop-color=\"\(c.hex)\""
-            let a = c.a * (g.hasOpacity ? Double(g.opacity) : 1)
-            if a < 0.9995 { s += " stop-opacity=\"\(SVG.n(a))\"" }
-            return s + "/>"
-        }.joined()
+    /// A gradient as a `<linearGradient>`/`<radialGradient>` over the box, or nil for none. Its
+    /// stops' transparency is returned as a luminance mask over the box rather than as
+    /// `stop-opacity`: WebKit's PDF capture (Duo's previews) paints `stop-opacity` stops opaque, and
+    /// keeps masks. Text, which cannot take a mask per run, asks for `stop-opacity` instead.
+    mutating func gradient(_ g: TSD_GradientArchive, w: Double, h: Double, origin: (x: Double, y: Double) = (0, 0),
+                           masked: Bool = true) -> (fill: String, mask: String?)? {
         guard !g.stops.isEmpty else { return nil }
+        let opacity = g.hasOpacity ? Double(g.opacity) : 1
+        let alphas = g.stops.map { max(0, min(1, SVG.RGBA($0.color).a * opacity)) }
+        let translucent = alphas.contains { $0 < 0.9995 }
+        func stops(alpha: Bool) -> String {
+            zip(g.stops, alphas).map { stop, a in
+                var s = "<stop offset=\"\(SVG.n(stop.fraction))\" stop-color=\""
+                if alpha {
+                    s += SVG.RGBA(r: a, g: a, b: a, a: 1).hex + "\""
+                } else {
+                    s += SVG.RGBA(stop.color).hex + "\""
+                    if !masked && a < 0.9995 { s += " stop-opacity=\"\(SVG.n(a))\"" }
+                }
+                return s + "/>"
+            }.joined()
+        }
+        let element: (String, String) -> String
         if g.type == .radial {
             let r = sqrt(w * w + h * h) / 2
-            return defs.add { "<radialGradient id=\"\($0)\" gradientUnits=\"userSpaceOnUse\" cx=\"\(SVG.n(origin.x + w / 2))\" cy=\"\(SVG.n(origin.y + h / 2))\" r=\"\(SVG.n(r))\">\(stops)</radialGradient>" }
-        }
-        var start = (0.0, h / 2), end = (w, h / 2)
-        if g.hasTransformgradient {
-            let t = g.transformgradient
-            let bw = t.hasBaseNaturalSize && t.baseNaturalSize.width > 0 ? Double(t.baseNaturalSize.width) : w
-            let bh = t.hasBaseNaturalSize && t.baseNaturalSize.height > 0 ? Double(t.baseNaturalSize.height) : h
-            start = (Double(t.start.x) * w / bw, Double(t.start.y) * h / bh)
-            end = (Double(t.end.x) * w / bw, Double(t.end.y) * h / bh)
+            element = { id, stops in "<radialGradient id=\"\(id)\" gradientUnits=\"userSpaceOnUse\" cx=\"\(SVG.n(origin.x + w / 2))\" cy=\"\(SVG.n(origin.y + h / 2))\" r=\"\(SVG.n(r))\">\(stops)</radialGradient>" }
         } else {
-            // The angle is in radians, counterclockwise from +x in the shape's own frame (5.50,
-            // 315°, runs top left to bottom right), turning and flipping with the shape.
-            let a = Double(g.hasAnglegradient ? g.anglegradient.gradientangle : 0)
-            let dx = cos(a), dy = -sin(a)
-            let half = abs(w * dx) / 2 + abs(h * dy) / 2
-            start = (w / 2 - dx * half, h / 2 - dy * half)
-            end = (w / 2 + dx * half, h / 2 + dy * half)
+            var start = (0.0, h / 2), end = (w, h / 2)
+            if g.hasTransformgradient {
+                let t = g.transformgradient
+                let bw = t.hasBaseNaturalSize && t.baseNaturalSize.width > 0 ? Double(t.baseNaturalSize.width) : w
+                let bh = t.hasBaseNaturalSize && t.baseNaturalSize.height > 0 ? Double(t.baseNaturalSize.height) : h
+                start = (Double(t.start.x) * w / bw, Double(t.start.y) * h / bh)
+                end = (Double(t.end.x) * w / bw, Double(t.end.y) * h / bh)
+            } else {
+                // The angle is in radians, counterclockwise from +x in the shape's own frame (5.50,
+                // 315°, runs top left to bottom right), turning and flipping with the shape.
+                let a = Double(g.hasAnglegradient ? g.anglegradient.gradientangle : 0)
+                let dx = cos(a), dy = -sin(a)
+                let half = abs(w * dx) / 2 + abs(h * dy) / 2
+                start = (w / 2 - dx * half, h / 2 - dy * half)
+                end = (w / 2 + dx * half, h / 2 + dy * half)
+            }
+            start = (start.0 + origin.x, start.1 + origin.y); end = (end.0 + origin.x, end.1 + origin.y)
+            element = { id, stops in "<linearGradient id=\"\(id)\" gradientUnits=\"userSpaceOnUse\" x1=\"\(SVG.n(start.0))\" y1=\"\(SVG.n(start.1))\" x2=\"\(SVG.n(end.0))\" y2=\"\(SVG.n(end.1))\">\(stops)</linearGradient>" }
         }
-        start = (start.0 + origin.x, start.1 + origin.y); end = (end.0 + origin.x, end.1 + origin.y)
-        return defs.add { "<linearGradient id=\"\($0)\" gradientUnits=\"userSpaceOnUse\" x1=\"\(SVG.n(start.0))\" y1=\"\(SVG.n(start.1))\" x2=\"\(SVG.n(end.0))\" y2=\"\(SVG.n(end.1))\">\(stops)</linearGradient>" }
+        let fill = defs.add { element($0, stops(alpha: false)) }
+        guard masked, translucent else { return (fill, nil) }
+        let alpha = defs.add { element($0, stops(alpha: true)) }
+        // Over the box and well past it, so a stroke or an outline beyond the box is covered.
+        let (mx, my, mw, mh) = (SVG.n(origin.x - w), SVG.n(origin.y - h), SVG.n(3 * w), SVG.n(3 * h))
+        let mask = defs.add { "<mask id=\"\($0)\" maskUnits=\"userSpaceOnUse\" x=\"\(mx)\" y=\"\(my)\" width=\"\(mw)\" height=\"\(mh)\"><rect x=\"\(mx)\" y=\"\(my)\" width=\"\(mw)\" height=\"\(mh)\" fill=\"url(#\(alpha))\"/></mask>" }
+        return (fill, mask)
     }
 
     mutating func paintedRect(_ fill: TSD_FillArchive, x: Double, y: Double, w: Double, h: Double) -> String {
@@ -578,21 +603,19 @@ struct Canvas {
         if fill.hasColor {
             return "<path d=\"\(d)\"" + SVG.paint("fill", SVG.RGBA(fill.color)) + "/>"
         }
-        if fill.hasGradient, let id = gradient(fill.gradient, w: w, h: h) {
-            return "<path d=\"\(d)\" fill=\"url(#\(id))\"/>"
+        if fill.hasGradient, let paint = gradient(fill.gradient, w: w, h: h) {
+            return "<path d=\"\(d)\" fill=\"url(#\(paint.fill))\"" + (paint.mask.map { " mask=\"url(#\($0))\"" } ?? "") + "/>"
         }
         if fill.hasImage {
             let image = fill.image
             let dataID = image.hasImagedata ? image.imagedata.identifier : image.hasOriginalimagedata ? image.originalimagedata.identifier : nil
             guard let dataID, let file = dataFile(dataID) else {
-                // A built-in theme's texture or photo is not in the file: Keynote downloads it.
-                // The fill's reference colour (its image's average) stands in for it.
-                if image.hasReferencecolor {
-                    problems.insert("theme image (reference colour)")
-                    return "<path d=\"\(d)\"" + SVG.paint("fill", SVG.RGBA(image.referencecolor)) + "/>"
-                }
-                problems.insert("image fill data")
-                return ""
+                // A built-in theme's texture or photo is not in the file: Keynote supplies it. Our
+                // own texture stands in, in the fill's reference colour (its image's average) or
+                // the colour its name gives.
+                problems.insert(image.hasReferencecolor ? "theme image (reference colour)" : "theme image (placeholder)")
+                return placeholderTexture(name: dataID.flatMap(dataName), reference: image.hasReferencecolor ? SVG.RGBA(image.referencecolor) : nil,
+                                          tint: image.hasTint ? SVG.RGBA(image.tint) : nil, d: d, w: w, h: h)
             }
             let clip = defs.add { "<clipPath id=\"\($0)\"><path d=\"\(d)\"/></clipPath>" }
             let href = SVG.escape(imageHref(file.name, file.bytes))

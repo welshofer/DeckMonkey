@@ -243,7 +243,11 @@ matched rule (15 none), 0x4, 0x8, 0x10 string, then the 0x20 double; a matched r
 styles apply over the cell's) and merges live in the merge owner's colon-tract
 formulas; a number shows in its number format; a chart's frame is its plot area and its axis rounds up
 at the leading digit in four steps. A built-in theme's photos and textures are never in the file
-(Keynote downloads them): the small copy or the fill's reference colour stands in and the page is not
+(Keynote supplies them): the small copy stands in for a photo, and our own texture (Placeholders.swift:
+a soft light and a fine grain over the fill's reference colour, its tint, or the colour its file name
+gives, `tile_paper_blue`) for a texture; our own frame and bullet dot stand in for picture frames and
+image bullets. WebKit's PDF capture (Duo's previews, compare.swift) paints `stop-opacity` stops opaque
+but keeps masks, so a translucent gradient is drawn as opaque colours under a luminance mask. The page is not
 judged. AT-29 over the corpus: 796 judged pages at a 0.76% median (all 1,876 at 1.84%); AT-28 also over
 the private corpus (28 decks, 335 slides: reading uses `slideOrder()`, which walks Keynote 6.5's root
 node and nested slides; `slideList()` stays the flat edit view). Geometry flags: 1 width valid, 2 height
