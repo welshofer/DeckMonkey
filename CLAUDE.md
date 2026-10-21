@@ -227,7 +227,8 @@ plus descent, the font's line gap added as it is; spacing below 1 comes off enti
 baseline (each line keeps its full descent below it, its line gap above; at 1 and above the gap is
 below), but fit is judged with the last line at
 full height; spacing above 1 adds its share below each line, and middle or bottom alignment leaves
-out the last line's share and the last paragraph's space after; widths are kerned
+out the last line's share and the last paragraph's space after; paragraphs are spaced by the larger
+of the space after the one above and the space before the next, not their sum; widths are kerned
 (Rostrum's `TextShaper`), as Keynote sets and WebKit draws; a list's text indent is in ems of the
 text size; table cells are version-5 packed buffers (Keynote 6–7 wrote
 version 4 in the `_pre_bnc` fields: a 12-byte header, then 4-byte fields 0x400 conditional set, 0x800
@@ -243,7 +244,8 @@ valid, 4 flipped horizontally (pictures, shapes' outlines and fills, groups). A 
 text (the stored size, often 0 × 0, is only a cache), and its position is the edge it grows from: left,
 centre or right by its text alignment, top, centre or bottom by its vertical alignment. A line (open
 path) holding text is not a text box. A picture with Keynote adjustments draws `adjustedImageData`;
-Instant Alpha clips it to `instantAlphaPath` (natural-size coordinates). A chart series' private
+Instant Alpha clips it to `instantAlphaPath` (natural-size coordinates). A chart's style is a variation too: unset
+fields (the gaps between bars and sets) come from its parents. A chart series' private
 style is a variation over its theme style (fills replace, not merge); value labels follow the series
 non-style. Numbered lists count only numbered paragraphs. A list style variation inherits the per-level
 arrays it leaves empty (label types) from its parent. Gradient angles are radians in the shape's own frame,

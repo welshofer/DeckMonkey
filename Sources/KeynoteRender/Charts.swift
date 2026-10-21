@@ -80,8 +80,10 @@ extension Canvas {
             .flatMap { $0.hasTSCH_Generated_ChartAxisStyleArchive_current ? $0.TSCH_Generated_ChartAxisStyleArchive_current : nil }
         let categoryAxis = chart.categoryAxisStyles.first.flatMap { document.decoded(TSCH_ChartAxisStyleArchive.self, $0.identifier) }
             .flatMap { $0.hasTSCH_Generated_ChartAxisStyleArchive_current ? $0.TSCH_Generated_ChartAxisStyleArchive_current : nil }
-        let chartStyle = document.decoded(TSCH_ChartStyleArchive.self, chart.chartStyle.identifier)
-            .flatMap { $0.hasTSCH_Generated_ChartStyleArchive_current ? $0.TSCH_Generated_ChartStyleArchive_current : nil }
+        // A chart's style is a variation: what it leaves unset comes from its parents (a gap of
+        // 100% between sets, not zero).
+        let chartStyleChain = styles.chain(TSCH_ChartStyleArchive.self, from: chart.chartStyle.identifier) { $0.super }
+            .compactMap { $0.hasTSCH_Generated_ChartStyleArchive_current ? $0.TSCH_Generated_ChartStyleArchive_current : nil }
 
         let valueAxisNonStyle = chart.valueAxisNonstyles.first.flatMap { document.decoded(TSCH_ChartAxisNonStyleArchive.self, $0.identifier) }
             .flatMap { $0.hasTSCH_Generated_ChartAxisNonStyleArchive_current ? $0.TSCH_Generated_ChartAxisNonStyleArchive_current : nil }
@@ -113,7 +115,7 @@ extension Canvas {
                 layout.innerFraction = Double(info.tschchartinfodefaultinnerradius)
             }
             if donut, let info, info.tschchartinfodefaultshowtitle, info.tschchartinfodefaultdonutplacetitleatcenter, !info.tschchartinfodefaulttitle.isEmpty {
-                let index = chartStyle?.tschchartinfodefaulttitleparagraphstyleindex ?? -1
+                let index = chartStyleChain.first(where: \.hasTschchartinfodefaulttitleparagraphstyleindex)?.tschchartinfodefaulttitleparagraphstyleindex ?? -1
                 if index >= 0, Int(index) < chart.paragraphStyles.count {
                     layout.title = (info.tschchartinfodefaulttitle, chart.paragraphStyles[Int(index)].identifier)
                 }
@@ -150,8 +152,8 @@ extension Canvas {
             if type == .mixedChartType2D || type == .twoAxisChartType2D { problems.insert("mixed chart (drawn as columns)") }
             out += axisChart(values: values, categories: categories, w: w, h: h, horizontal: horizontal, stacked: stacked, kind: kind,
                              series: series, valueAxis: valueAxis, categoryAxis: categoryAxis,
-                             interBar: Double(chartStyle?.tschchartinfodefaultinterbargap ?? 10) / 100,
-                             interSet: Double(chartStyle?.tschchartinfodefaultintersetgap ?? 40) / 100,
+                             interBar: Double(chartStyleChain.first(where: \.hasTschchartinfodefaultinterbargap)?.tschchartinfodefaultinterbargap ?? 10) / 100,
+                             interSet: Double(chartStyleChain.first(where: \.hasTschchartinfodefaultintersetgap)?.tschchartinfodefaultintersetgap ?? 40) / 100,
                              valueLabel: paragraph(valueAxis.map { $0.hasTschchartaxisvaluelabelparagraphstyleindex ? $0.tschchartaxisvaluelabelparagraphstyleindex : $0.tschchartaxisdefaultlabelparagraphstyleindex }),
                              categoryLabel: paragraph(categoryAxis.map { $0.hasTschchartaxiscategorylabelparagraphstyleindex ? $0.tschchartaxiscategorylabelparagraphstyleindex : $0.tschchartaxisdefaultlabelparagraphstyleindex }),
                              settings: valueAxisSettings)

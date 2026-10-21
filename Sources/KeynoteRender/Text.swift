@@ -450,7 +450,9 @@ extension Canvas {
                 }
 
                 // Vertical placement.
-                if pi > 0 { y += para.spaceBefore * scale }
+                // Paragraphs are spaced by the larger of the space after the one above and the
+                // space before this one, not their sum.
+                if pi > 0 { y += max(0, para.spaceBefore * scale - lastAfter) }
                 for var line in paraLines {
                     let natural = line.ascent + line.descent + line.leading
                     var height: Double
