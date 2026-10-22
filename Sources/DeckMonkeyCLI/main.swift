@@ -12,6 +12,15 @@ enum CLI {
 
       inspect <file>                 components, object counts, type histogram, versions
       dump <file> [component]        every record: identifier, types, versions, lengths, references
+      scene export <file> -o <scene.json>
+                                     the deck as a scene: per slide, its master's and its own
+                                     shapes and text boxes as outlines with their fills, strokes and
+                                     text (JSON; pictures, tables, charts and groups are listed as
+                                     skipped)
+      scene build <scene.json> --template <t.key> -o <out.key> [--master <name>]
+                                     a deck from a scene: the template's slides replaced by the
+                                     scene's, each drawable a copy of a Keynote-made part with its
+                                     look as style variations over the theme's
       render <file> -o <dir> [--slide <index>] [--fonts <dir>]...
                                      track R: each slide as SVG (<dir>/page-<n>.svg in PDF page
                                      order, skipped slides as skipped-<index>.svg) and a JSON report
@@ -165,6 +174,26 @@ func runDump(_ args: [String]) throws {
             }
         }
     }
+}
+
+func runScene(_ args: [String]) throws {
+    if args.first == "build", args.count >= 2, let template = option("--template", in: args), let out = option("-o", in: args) {
+        let scene = try JSONDecoder().decode(Scene.self, from: Data(contentsOf: url(args[1])))
+        var document = try DeckMonkey.open(url(template))
+        let start = Date()
+        let report = try document.build(scene, master: option("--master", in: args) ?? "Blank")
+        try document.save(to: url(out))
+        print("scene build: \(report.slides.count) slide(s), \(report.drawables) drawable(s), \(report.styles) style variation(s) in \(String(format: "%.1f", Date().timeIntervalSince(start)))s -> \(out)")
+        return
+    }
+    guard args.first == "export", args.count >= 2, let out = option("-o", in: args) else { fail(CLI.usage, code: 2) }
+    let document = try DeckMonkey.open(url(args[1]))
+    let (scene, skipped) = KeynoteRenderer(document: document).scene()
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    try encoder.encode(scene).write(to: url(out))
+    let count = scene.slides.reduce(0) { $0 + $1.drawables.count }
+    print("scene: \(scene.slides.count) slide(s), \(count) drawable(s), \(Int(scene.width))x\(Int(scene.height))" + (skipped.isEmpty ? "" : "; skipped \(skipped.count): " + skipped.prefix(5).joined(separator: ", ")))
 }
 
 func runRender(_ args: [String]) throws {
@@ -703,6 +732,7 @@ do {
     case "insert": try runInsert(rest)
     case "object": try runObject(rest)
     case "render": try runRender(rest)
+    case "scene": try runScene(rest)
     case "roundtrip": try runRoundtrip(rest)
     case "verify": try runVerify(rest)
     case "snappy-check": try runSnappyCheck(rest)

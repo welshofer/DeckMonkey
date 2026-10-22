@@ -64,7 +64,7 @@ let package = Package(
             name: "KeynoteGraphTests",
             dependencies: ["KeynoteGraph", "IWAArchive", "IWASnappy", "IWAContainer", "IWASchema", .product(name: "SwiftProtobuf", package: "swift-protobuf")]),
         // Fixtures are read through #filePath, not Bundle.module, so they are excluded, not copied.
-        .testTarget(name: "DeckMonkeyTests", dependencies: ["DeckMonkey", "IWASnappy"], exclude: ["Fixtures"]),
+        .testTarget(name: "DeckMonkeyTests", dependencies: ["DeckMonkey", "KeynoteGraph", "KeynoteRender", "IWASnappy"], exclude: ["Fixtures"]),
     ],
     swiftLanguageModes: [.v6]
 )

@@ -13,6 +13,8 @@ struct CharLook: Equatable {
     var size = 12.0
     var bold = false, italic = false
     var color = SVG.RGBA(r: 0, g: 0, b: 0, a: 1)
+    /// `color` as the style holds it (its colour space and full precision), when a style sets one.
+    var archivedColor: TSP_Color?
     var tracking = 0.0
     var baselineShift = 0.0
     var superscript: TSWP_CharacterStylePropertiesArchive.SuperscriptType = .kNoScript
@@ -60,7 +62,7 @@ extension StyleResolver {
             }
             return p.hasFontColor ? p.fontColor : nil
         }
-        if let fill, let fill { c.color = SVG.RGBA(fill) }
+        if let fill, let fill { c.color = SVG.RGBA(fill); c.archivedColor = fill }
         if let p = props.first(where: { $0.hasTsdFill || $0.hasTsdFillNull || $0.hasFontColor || $0.hasFontColorNull }),
            p.hasTsdFill, p.tsdFill.hasGradient, p.tsdFill.gradient.stops.count > 1 {
             c.gradient = p.tsdFill.gradient

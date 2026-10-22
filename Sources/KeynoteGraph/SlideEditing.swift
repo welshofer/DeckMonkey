@@ -49,7 +49,7 @@ extension KeynoteDocument {
         public var removedFiles: [String] = []
     }
 
-    var showIdentifier: UInt64? {
+    public var showIdentifier: UInt64? {
         store.identifiers.first { store.record(for: $0)?.info.messageInfos.first?.type == Self.showType }
     }
 

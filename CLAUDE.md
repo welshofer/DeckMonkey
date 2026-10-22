@@ -41,7 +41,8 @@ acceptance oracle. The full spec is `docs/spec.md`; sections 5 (invariants), 9 (
    `object_references` = strong references only, per `reference-strength-<version>.json`
    (`make reference-strength`); mixed fields keep stored membership; unknown fields are refused.
 5. Versions are inherited from the template; the library never bumps one.
-6. Styles by reference; no style-creating API through Phase 4.
+6. Styles by reference; no style-creating API through Phase 4. Relaxed for scene building (Jay,
+   2026-10-21): style variations over theme styles, as Keynote writes them; never named styles.
 7. Keynote is the oracle: correct means no sheet on open and the expected PDF.
 8. Fail loud: the validator raises a typed error before any byte is written.
 
@@ -321,3 +322,22 @@ Hello are not offered. A WKWebView draws in its own process, so `KeynoteRenderer
 embed the faces a slide uses (`RenderFonts.faceData` copies a face out of a collection) as `@font-face`.
 Private goldens: `<deck>.golden.pdf` beside 25 of the 27 modern private decks (oracle exports, never
 in the repo); `Scripts/render/gate.py <decks>` judges them.
+
+Scene build (2026-10-21, Jay: "recreate this deck … with DeckMonkey", generated from code): a
+`Scene` (KeynoteGraph, Codable JSON) is a deck as data: slide size, and per slide drawables as
+outlines in their frames with fill (colour or gradient), stroke, text, `textBox`, `flipped`,
+`autoWidth`/`autoHeight`. `deckmonkey scene export` writes one from a deck (masters' drawables
+first); `scene build <scene.json> --template t.key -o out.key` (`KeynoteDocument.build`) replaces
+the template's slides with one Blank-master slide per scene slide and copies a Keynote-made part
+per drawable (text box, `shape.keyparts` rectangle, `line.keyparts` open line), with its look as
+style variations, identical looks sharing one. Colours are exact: `color(srgb|display-p3 r g b[ /
+a])` at Keynote's Float precision (`#rrggbb` also accepted); Keynote stores most colours as P3, and
+writing them as sRGB shifts every hue. A grow-to-fit text box stores size 0 × 0 with flags 0 and
+keeps its laid-out size as the path's natural size; a 0-size path is "invalid" to Keynote.
+`beginInserts`/`insertDrawable(…, batch:)`/`finishInserts` write each slide and the package
+metadata once (2,888 drawables: 357 s → 3.5 s); the pinned `FieldIndex` and `ReferenceStrength`
+are read once per process. The private 4K Test Pattern (3840 × 2160, 2,888 drawables, 41
+variations) rebuilt from its exported scene onto `black_wide`: Keynote opens it with no sheet and
+no log hits, its PDF at 0 mismatched pixels against the original's export, and Keynote's re-save
+still at 0. Open: the renderer draws P3 components as sRGB; pictures, tables, charts and groups are
+not scene drawables yet; the parametric test-pattern generator.

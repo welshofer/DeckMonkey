@@ -1,11 +1,11 @@
 import Foundation
 
-/// The parts DeckMonkey copies new text boxes and pictures from: Keynote-made drawables (a plain
-/// text item and a plain picture AppleScript made in Basic White, `Corpus/features`), extracted with
-/// `deckmonkey parts` into two packages of about 10 KB each that hold only those drawables, what
-/// only they use, and the styles they point at. No slide, master, theme or picture data.
+/// The parts DeckMonkey copies new drawables from: Keynote-made drawables (a plain text item, a
+/// picture, a rectangle and a line AppleScript made, `Corpus/features`), extracted with `deckmonkey
+/// parts` into packages of about 10 KB each that hold only that drawable, what only it uses, and
+/// the styles it points at. No slide, master, theme or picture data.
 public enum Parts {
-    public enum Kind: String, Sendable { case textBox = "textbox", picture }
+    public enum Kind: String, Sendable { case textBox = "textbox", picture, shape, line }
 
     public enum Failure: Error, Equatable, Sendable { case missing(String) }
 
