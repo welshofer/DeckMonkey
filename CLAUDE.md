@@ -382,3 +382,15 @@ the 15 private decks with builds: every deck's stage count equals Keynote's (153
 judged stage pages at a 1.02% median, worst 9.29% (Phoenix Lander's moved panel 17.8% → 5.8%); 33
 unjudged (flat 3D charts, theme assets).
 
+Playing builds and transitions (2026-10-22, for hosts): `renderStep(slide:to:of:)` draws a step as a
+backdrop (the stage reached less what it animates) and one layer per animated chunk on nothing (its
+object, or just its paragraphs, after an in-build and before an out-build or action), split around
+the slide's lowest movie (`backdropAboveMovies`, `Layer.aboveMovies`); chunks carry Keynote's direction
+code (11 left to right, 12 right to left, 13 top to bottom, 14 bottom to top; zoom 43/44; read from
+usage, not verified frame by frame) and, for actions, the sampled motion path, turn, opacity and scale.
+`transition(onSlide:)` reads a slide's transition (the one leaving it); `magicMovePairs(from:to:)`
+pairs what both slides show (same picture or movie by data identifier, same text in the same kind of
+object, shapes by style and kind of outline at any size): 25 Magic Moves in the private corpus, 1–23
+pairs each. Movies report flip and `playsAcrossSlides`; a movie archive has no mask. Duo plays all of
+it (docs/VERIFICATION.md there), checked with real simulator screen captures.
+
