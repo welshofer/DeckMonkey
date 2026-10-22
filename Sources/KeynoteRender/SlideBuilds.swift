@@ -343,6 +343,17 @@ extension KeynoteRenderer {
         }
         let endActions = actions(onSlide: slide, played: sequence.groups.prefix(stage).flatMap { $0 }.map { sequence.chunks[$0] }).transforms
         let backdrop = render(slide: slide, hiding: (hidden, paragraphs), actions: endActions)
+        // With a movie on the slide, what lies above it is drawn again over the playing movie.
+        let movies = self.movies(onSlide: slide).filter { !$0.audioOnly }
+        var backdropAboveMovies: RenderedSlide?
+        var aboveMovie = Set<UInt64>()
+        if let lowest = movies.first, let archive = document.decoded(KN_SlideArchive.self, slide) {
+            let order = (archive.drawablesZOrder.isEmpty ? archive.ownedDrawables : archive.drawablesZOrder).map(\.identifier)
+            if let index = order.firstIndex(of: lowest.id) {
+                aboveMovie = Set(order[(index + 1)...]).subtracting(movies.map(\.id))
+                backdropAboveMovies = render(slide: slide, hiding: (hidden.union(movies.map(\.id)), paragraphs), above: lowest.id, actions: endActions)
+            }
+        }
         var layers = [SlideBuildStep.Layer]()
         let earlier = sequence.groups.prefix(stage - 1).flatMap { $0 }
         for i in animated {
@@ -359,9 +370,9 @@ extension KeynoteRenderer {
             var hiddenHere = state.0
             hiddenHere.remove(c.drawable)
             let rendered = render(slide: slide, hiding: (hiddenHere, layerParagraphs), actions: moved, only: [c.drawable])
-            layers.append(.init(chunk: i, rendered: rendered))
+            layers.append(.init(chunk: i, rendered: rendered, aboveMovies: aboveMovie.contains(c.drawable)))
         }
-        return SlideBuildStep(backdrop: backdrop, layers: layers)
+        return SlideBuildStep(backdrop: backdrop, backdropAboveMovies: backdropAboveMovies, layers: layers)
     }
 }
 
@@ -371,7 +382,11 @@ public struct SlideBuildStep: Sendable {
         /// The chunk (an index in the sequence's `chunks`) the layer belongs to.
         public var chunk: Int
         public var rendered: RenderedSlide
+        /// The object lies above the slide's movie: a host playing the movie draws it over it.
+        public var aboveMovies = false
     }
     public var backdrop: RenderedSlide
+    /// With a movie on the slide: the backdrop's objects above the movie, on nothing.
+    public var backdropAboveMovies: RenderedSlide?
     public var layers: [Layer]
 }
