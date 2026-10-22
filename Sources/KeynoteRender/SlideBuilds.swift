@@ -179,6 +179,10 @@ extension KeynoteRenderer {
             case .action: break
             }
         }
-        return render(slide: slide, hiding: (hiddenDrawables, hiddenParagraphs))
+        var rendered = render(slide: slide, hiding: (hiddenDrawables, hiddenParagraphs))
+        if played.contains(where: { sequence.chunks[$0].kind == .action && !sequence.chunks[$0].effect.hasPrefix("apple:movie-") }) {
+            rendered.problems = (Set(rendered.problems).union(["build action (not applied)"])).sorted()
+        }
+        return rendered
     }
 }

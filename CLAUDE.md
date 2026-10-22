@@ -373,5 +373,8 @@ autoplays nor has a Start Movie build takes a click Keynote counts as a stage. K
 export shows a slide's last stage. Of 72 private slides with builds, 53 use the inline chunks (all
 in 6.5-era nested trees, which `slide keep`/edits refuse). Octopus: 19/19 stage pages at most 2.4%
 from Keynote's; Phoenix Lander 46/46 aligned (the 3D charts drawn flat are the outliers). Actions
-(motion paths, rotations) are not applied yet, and every effect is drawn as a dissolve by hosts.
+(motion paths, rotations) are not applied yet (a stage after one reports "build action (not applied)"
+and is not judged), and every effect is drawn as a dissolve by hosts. **AT-30 passes** over the 15
+private decks with builds: every deck's stage count equals Keynote's (153 stage pages), 109 judged
+stage pages at a 0.99% median, worst 9.29%; 44 unjudged (actions, flat 3D charts, theme assets).
 

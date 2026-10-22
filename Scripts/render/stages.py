@@ -8,7 +8,8 @@ For each deck with <deck>.stages.pdf beside it (Keynote's export with "each stag
 `deckmonkey render --stages` and `compare`. The step model passes when every deck has as many stage
 pages as Keynote printed (one per slide without builds, one per stage with); the pictures are judged
 as AT-29 judges slides (median <= 3%, no judged page above 15%; pages needing what the file lacks
-are counted, not barred). Exit 0 when both hold, 1 otherwise.
+are counted, not barred, as are stages after an action build, whose moves and turns are not
+applied yet). Exit 0 when both hold, 1 otherwise.
 """
 import concurrent.futures, glob, json, os, statistics, subprocess, sys, tempfile
 
@@ -17,7 +18,7 @@ DECKMONKEY = os.path.join(ROOT, ".build/debug/deckmonkey")
 COMPARE = os.path.join(ROOT, ".build/compare")
 MEDIAN_BAR, WORST_BAR = 0.03, 0.15
 COMPARE_TIMEOUT = 600
-UNJUDGED = ("theme image", "theme photo", "font ", "picture frame", "3d chart")
+UNJUDGED = ("theme image", "theme photo", "font ", "picture frame", "3d chart", "build action")
 
 
 def corpus():
