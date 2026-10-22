@@ -84,7 +84,13 @@ public final class RenderFonts: @unchecked Sendable {
     /// The face of `name`'s family with the requested traits, preferring the closest style name.
     public func face(family: String, bold: Bool, italic: Bool, like name: String? = nil) -> Face? {
         lock.lock(); defer { lock.unlock() }
-        let candidates = (families[family.lowercased()] ?? []).filter { $0.bold == bold && $0.italic == italic }
+        // The style name must not contradict the traits (some collections' faces carry no
+        // selection bits: Avenir Next's Bold Italic would pass for a regular face).
+        let candidates = (families[family.lowercased()] ?? []).filter { face in
+            let style = face.style.lowercased()
+            return face.bold == bold && face.italic == italic && (bold || !style.contains("bold"))
+                && (italic || !(style.contains("italic") || style.contains("oblique")))
+        }
         let plain = candidates.first { ["regular", "roman", "book", "medium", "bold", "italic", "bold italic", "bolditalic", "oblique", "bold oblique"].contains($0.style.lowercased()) }
         return plain ?? candidates.sorted { $0.postScriptName < $1.postScriptName }.first
     }

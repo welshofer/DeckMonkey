@@ -12,6 +12,10 @@ struct CharLook: Equatable {
     var fontName = "HelveticaNeue"
     var size = 12.0
     var bold = false, italic = false
+    /// Whether a style sets `bold` (`italic`): a set flag turns the named face's trait on or off
+    /// (Keynote draws `Helvetica-Bold` under `bold: false` as Helvetica, Avenir Heavy as Book, Iowan
+    /// Bold Italic as Italic); unset keeps the face's.
+    var boldSet = false, italicSet = false
     var color = SVG.RGBA(r: 0, g: 0, b: 0, a: 1)
     /// `color` as the style holds it (its colour space and full precision), when a style sets one.
     var archivedColor: TSP_Color?
@@ -52,8 +56,8 @@ extension StyleResolver {
         var c = CharLook()
         if let v = first(props, { $0.hasFontName || $0.hasFontNameNull }, { $0.hasFontName ? $0.fontName : nil }), let v { c.fontName = v }
         if let v = first(props, \.hasFontSize, \.fontSize) { c.size = Double(v) }
-        if let v = first(props, \.hasBold, \.bold) { c.bold = v }
-        if let v = first(props, \.hasItalic, \.italic) { c.italic = v }
+        if let v = first(props, \.hasBold, \.bold) { c.bold = v; c.boldSet = true }
+        if let v = first(props, \.hasItalic, \.italic) { c.italic = v; c.italicSet = true }
         let fill = first(props, { $0.hasTsdFill || $0.hasTsdFillNull || $0.hasFontColor || $0.hasFontColorNull }) { p -> TSP_Color? in
             if p.hasTsdFill {
                 if p.tsdFill.hasColor { return p.tsdFill.color }
@@ -122,16 +126,15 @@ struct Line {
 
 extension Canvas {
     /// The face to measure and draw a look in: Keynote's named face, or its family's face with the
-    /// requested traits when a bold or italic flag asks for one the name lacks.
+    /// traits the bold and italic flags set (on or off) when the name's differ.
     func face(_ look: CharLook) -> (family: String, metrics: FontMetrics?, synthetic: (bold: Bool, italic: Bool), classic: Bool, postScriptName: String?) {
         guard let fonts, let named = fonts.face(postScriptName: look.fontName) else {
             return ("'\(look.fontName)'", nil, (look.bold, look.italic), false, nil)
         }
+        let bold = look.boldSet ? look.bold : named.bold, italic = look.italicSet ? look.italic : named.italic
         var face = named
-        if (look.bold && !named.bold) || (look.italic && !named.italic) {
-            if let other = fonts.face(family: named.family, bold: look.bold || named.bold, italic: look.italic || named.italic) { face = other }
-        }
-        let synthetic = (look.bold && !face.bold, look.italic && !face.italic)
+        if bold != named.bold || italic != named.italic, let other = fonts.face(family: named.family, bold: bold, italic: italic) { face = other }
+        let synthetic = (bold && !face.bold, italic && !face.italic)
         return ("'\(face.postScriptName)', '\(face.family)'", fonts.metrics(postScriptName: face.postScriptName), synthetic, face.classic, face.postScriptName)
     }
 
