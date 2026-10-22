@@ -139,16 +139,8 @@ extension KeynoteRenderer {
         return groups
     }
 
-    /// Slide `slide` at build stage `stage` (0: before any build; `stageCount - 1`: all played).
-    /// Actions (moves, rotations) are not applied: their drawables stay where the slide puts them.
-    public func render(slide: UInt64, stage: Int) -> RenderedSlide {
-        render(slide: slide, stage: stage, of: builds(onSlide: slide))
-    }
-
-    /// As `render(slide:stage:)`, with the slide's `builds(onSlide:)` already worked out (a host
-    /// drawing every stage computes it once).
-    public func render(slide: UInt64, stage: Int, of sequence: SlideBuildSequence) -> RenderedSlide {
-        guard !sequence.chunks.isEmpty else { return render(slide: slide) }
+    /// What is not drawn at `stage`, and which chunks have played to reach it.
+    func hiding(slide: UInt64, stage: Int, of sequence: SlideBuildSequence) -> (Set<UInt64>, [UInt64: Set<Int>], [Int]) {
         var hiddenDrawables = Set<UInt64>()
         var hiddenParagraphs = [UInt64: Set<Int>]()
         var storages = [UInt64: UInt64]()
@@ -179,6 +171,39 @@ extension KeynoteRenderer {
             case .action: break
             }
         }
+        return (hiddenDrawables, hiddenParagraphs, played)
+    }
+
+    /// The slide's drawables above its lowest movie, at build stage `stage`, on nothing: the layer
+    /// a host puts over the playing movie so what Keynote layers above it stays above it. Nil when
+    /// the slide has no movie with a picture, or nothing above it.
+    public func renderAboveMovies(slide: UInt64, stage: Int? = nil, of sequence: SlideBuildSequence? = nil) -> RenderedSlide? {
+        let movies = self.movies(onSlide: slide).filter { !$0.audioOnly }
+        guard let lowest = movies.first, let archive = document.decoded(KN_SlideArchive.self, slide) else { return nil }
+        let order = (archive.drawablesZOrder.isEmpty ? archive.ownedDrawables : archive.drawablesZOrder).map(\.identifier)
+        guard let index = order.firstIndex(of: lowest.id) else { return nil }
+        let movieIDs = Set(movies.map(\.id))
+        var hidden = Set<UInt64>(), paragraphs = [UInt64: Set<Int>]()
+        if let stage {
+            let sequence = sequence ?? builds(onSlide: slide)
+            if !sequence.chunks.isEmpty { (hidden, paragraphs, _) = hiding(slide: slide, stage: stage, of: sequence) }
+        }
+        hidden.formUnion(movieIDs)
+        guard order[(index + 1)...].contains(where: { !hidden.contains($0) }) else { return nil }
+        return render(slide: slide, hiding: (hidden, paragraphs), above: lowest.id)
+    }
+
+    /// Slide `slide` at build stage `stage` (0: before any build; `stageCount - 1`: all played).
+    /// Actions (moves, rotations) are not applied: their drawables stay where the slide puts them.
+    public func render(slide: UInt64, stage: Int) -> RenderedSlide {
+        render(slide: slide, stage: stage, of: builds(onSlide: slide))
+    }
+
+    /// As `render(slide:stage:)`, with the slide's `builds(onSlide:)` already worked out (a host
+    /// drawing every stage computes it once).
+    public func render(slide: UInt64, stage: Int, of sequence: SlideBuildSequence) -> RenderedSlide {
+        guard !sequence.chunks.isEmpty else { return render(slide: slide) }
+        let (hiddenDrawables, hiddenParagraphs, played) = hiding(slide: slide, stage: stage, of: sequence)
         var rendered = render(slide: slide, hiding: (hiddenDrawables, hiddenParagraphs))
         if played.contains(where: { sequence.chunks[$0].kind == .action && !sequence.chunks[$0].effect.hasPrefix("apple:movie-") }) {
             rendered.problems = (Set(rendered.problems).union(["build action (not applied)"])).sorted()
