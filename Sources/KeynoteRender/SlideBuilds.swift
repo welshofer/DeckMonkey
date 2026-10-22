@@ -204,10 +204,63 @@ extension KeynoteRenderer {
     public func render(slide: UInt64, stage: Int, of sequence: SlideBuildSequence) -> RenderedSlide {
         guard !sequence.chunks.isEmpty else { return render(slide: slide) }
         let (hiddenDrawables, hiddenParagraphs, played) = hiding(slide: slide, stage: stage, of: sequence)
-        var rendered = render(slide: slide, hiding: (hiddenDrawables, hiddenParagraphs))
-        if played.contains(where: { sequence.chunks[$0].kind == .action && !sequence.chunks[$0].effect.hasPrefix("apple:movie-") }) {
-            rendered.problems = (Set(rendered.problems).union(["build action (not applied)"])).sorted()
-        }
+        let (actions, unapplied) = self.actions(onSlide: slide, played: played.map { sequence.chunks[$0] })
+        var rendered = render(slide: slide, hiding: (hiddenDrawables, hiddenParagraphs), actions: actions)
+        if unapplied { rendered.problems = (Set(rendered.problems).union(["build action (not applied)"])).sorted() }
         return rendered
+    }
+
+    /// Where the actions played so far leave each drawable, as an SVG transform about its frame's
+    /// centre and an opacity: a motion path moves it by the path's end less its start, a rotation
+    /// turns it (clockwise or not), Opacity and Scale set those; Jiggle, Bounce, Pop and Flip end
+    /// where they began. `unapplied` when an action of another kind has played.
+    func actions(onSlide slide: UInt64, played: [SlideBuildChunk]) -> (transforms: [UInt64: (transform: String, opacity: Double)], unapplied: Bool) {
+        struct State { var dx = 0.0, dy = 0.0, turn = 0.0, scale = 1.0, opacity = 1.0 }
+        var states = [UInt64: State](), order = [UInt64](), unapplied = false
+        for c in played where c.kind == .action && !c.effect.hasPrefix("apple:movie-") {
+            guard let build = document.decoded(KN_BuildArchive.self, c.build) else { continue }
+            let a = build.attributes
+            var state = states[c.drawable] ?? State()
+            switch c.effect {
+            case "apple:action-motion-path":
+                guard a.hasActionMotionPathSource, let outline = Paths.outline(a.actionMotionPathSource),
+                      let start = outline.commands.first.flatMap(Self.endPoint), let end = outline.commands.last(where: { Self.endPoint($0) != nil }).flatMap(Self.endPoint)
+                else { unapplied = true; continue }
+                state.dx += end.0 - start.0; state.dy += end.1 - start.1
+            case "apple:action-rotation":
+                state.turn += a.actionRotationDirection == .kCounterclockwise ? -a.actionRotationAngle : a.actionRotationAngle
+            case "apple:action-opacity":
+                state.opacity = max(0, min(1, a.actionColorAlpha / 100))
+            case "apple:action-scale":
+                if a.actionScaleSize > 0 { state.scale *= a.actionScaleSize / 100 }
+            case "apple:action-jiggle", "apple:action-bounce", "apple:action-pop", "apple:action-flip", "apple:action-pulse", "apple:action-blink":
+                break
+            default:
+                unapplied = true; continue
+            }
+            if states[c.drawable] == nil { order.append(c.drawable) }
+            states[c.drawable] = state
+        }
+        guard !states.isEmpty else { return ([:], unapplied) }
+        let frames = Dictionary(drawables(onSlide: slide).map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        var out = [UInt64: (transform: String, opacity: Double)]()
+        for id in order {
+            guard let state = states[id], let f = frames[id] else { unapplied = true; continue }
+            let cx = f.x + f.width / 2, cy = f.y + f.height / 2
+            var t = "translate(\(SVG.n(state.dx)) \(SVG.n(state.dy)))"
+            if state.turn != 0 { t += " rotate(\(SVG.n(state.turn)) \(SVG.n(cx)) \(SVG.n(cy)))" }
+            if state.scale != 1 { t += " translate(\(SVG.n(cx)) \(SVG.n(cy))) scale(\(SVG.n(state.scale))) translate(\(SVG.n(-cx)) \(SVG.n(-cy)))" }
+            out[id] = (t, state.opacity)
+        }
+        return (out, unapplied)
+    }
+
+    static func endPoint(_ command: Outline.Command) -> (Double, Double)? {
+        switch command {
+        case let .move(x, y), let .line(x, y): return (x, y)
+        case let .quad(_, _, x, y): return (x, y)
+        case let .cubic(_, _, _, _, x, y): return (x, y)
+        case .close: return nil
+        }
     }
 }

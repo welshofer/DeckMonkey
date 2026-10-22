@@ -67,13 +67,15 @@ public struct KeynoteRenderer {
 
     public func render(slide: UInt64) -> RenderedSlide { render(slide: slide, hiding: ([], [:])) }
 
-    func render(slide: UInt64, hiding: (drawables: Set<UInt64>, paragraphs: [UInt64: Set<Int>]), above: UInt64? = nil) -> RenderedSlide {
+    func render(slide: UInt64, hiding: (drawables: Set<UInt64>, paragraphs: [UInt64: Set<Int>]), above: UInt64? = nil,
+                actions: [UInt64: (transform: String, opacity: Double)] = [:]) -> RenderedSlide {
         let size = slideSize
         var canvas = Canvas(document: document, fonts: fonts, imageHref: imageHref, size: size)
         canvas.slideNumber = document.pageOfSlide[slide]
         canvas.hiddenDrawables = hiding.drawables
         canvas.hiddenParagraphs = hiding.paragraphs
         canvas.onlyAbove = above
+        canvas.actions = actions
         canvas.drawSlide(slide)
         if let fontFace {
             // A PostScript name is letters, digits, '.', '_' and '-'; a face named otherwise (only
@@ -134,6 +136,8 @@ struct Canvas {
     var slideNumber: Int?
     /// The width and height the last laid-out text needed, padding included.
     var lastTextExtent = (width: 0.0, height: 0.0)
+    /// Where build actions have taken drawables by a stage: an SVG transform and an opacity.
+    var actions = [UInt64: (transform: String, opacity: Double)]()
     /// Draw only the slide's own drawables above this one in z order, on nothing (a layer for a
     /// host to put over a playing movie).
     var onlyAbove: UInt64?
@@ -222,6 +226,15 @@ struct Canvas {
         depth += 1
         active.insert(id)
         defer { depth -= 1; active.remove(id) }
+        // A drawable an action has moved, turned, scaled or faded is drawn inside that change.
+        let mark = body.utf8.count
+        defer {
+            if let action = actions[id] {
+                let index = body.utf8.index(body.startIndex, offsetBy: mark)
+                body = String(body[..<index]) + "<g transform=\"\(action.transform)\"" + (action.opacity < 1 ? " opacity=\"\(SVG.n(action.opacity))\"" : "") + ">"
+                    + String(body[index...]) + "</g>"
+            }
+        }
         switch type(of: id) {
         case Self.placeholderType:
             if let p = document.decoded(KN_PlaceholderArchive.self, id) { drawShapeInfo(p.super) }
