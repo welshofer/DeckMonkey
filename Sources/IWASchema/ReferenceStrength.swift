@@ -72,6 +72,14 @@ public struct ReferenceStrength: Sendable, Equatable {
 
     /// Loads `reference-strength-<version>.json` from the module bundle.
     public static func load(version: String) throws -> ReferenceStrength {
+        if version == TypeRegistry.pinnedVersion { return try pinned.get() }
+        return try read(version: version)
+    }
+
+    /// The pinned version's table, read once (every payload replacement consults it).
+    private static let pinned = Result { try read(version: TypeRegistry.pinnedVersion) }
+
+    private static func read(version: String) throws -> ReferenceStrength {
         guard let url = Bundle.module.url(forResource: "reference-strength-\(version)", withExtension: "json", subdirectory: "Registry") else {
             throw SchemaError.registryNotFound("reference-strength-\(version)")
         }

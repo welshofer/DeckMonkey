@@ -16,6 +16,14 @@ public struct FieldIndex: Sendable {
     public func subMessage(of message: String, field: Int) -> String? { messageFields[message]?[field] }
 
     public static func load(version: String) throws -> FieldIndex {
+        if version == TypeRegistry.pinnedVersion { return try pinned.get() }
+        return try read(version: version)
+    }
+
+    /// The pinned version's index, read once (every clone, insert and import walks with it).
+    private static let pinned = Result { try read(version: TypeRegistry.pinnedVersion) }
+
+    private static func read(version: String) throws -> FieldIndex {
         guard let url = Bundle.module.url(forResource: "descriptors-\(version)", withExtension: "pb", subdirectory: "Registry") else {
             throw SchemaError.registryNotFound("descriptors-\(version)")
         }

@@ -34,12 +34,59 @@ extension KeynoteDocument {
     @discardableResult
     public mutating func insertDrawable(_ drawable: UInt64, from source: KeynoteDocument, onto slide: UInt64, frame: Frame,
                                         paragraphs: [TextParagraphs.Paragraph]? = nil) throws -> UInt64 {
+        var batch: DrawableBatch?
+        return try insertDrawable(drawable, from: source, onto: slide, frame: frame, paragraphs: paragraphs, batch: &batch)
+    }
+
+    /// Starts a batch of inserts: `insertDrawable(…, batch:)` then queues each new drawable for
+    /// its slide and its UUID-map entries, and `finishInserts` writes every slide and the package
+    /// metadata once, so thousands of inserts cost what one per drawable costs, not one per
+    /// drawable already on the slide.
+    public func beginInserts() throws -> DrawableBatch {
+        DrawableBatch(resolver: try ForeignResolver(target: self), highWaterMark: packageMetadata?.lastObjectIdentifier ?? 0)
+    }
+
+    /// As `insertDrawable(_:from:onto:frame:paragraphs:)`, the slide and metadata updates queued
+    /// in `batch` (until `finishInserts`, the slide does not list the new drawable yet).
+    @discardableResult
+    public mutating func insertDrawable(_ drawable: UInt64, from source: KeynoteDocument, onto slide: UInt64, frame: Frame,
+                                        paragraphs: [TextParagraphs.Paragraph]? = nil, batch: inout DrawableBatch) throws -> UInt64 {
+        var optional: DrawableBatch? = batch
+        defer { batch = optional! }
+        return try insertDrawable(drawable, from: source, onto: slide, frame: frame, paragraphs: paragraphs, batch: &optional)
+    }
+
+    /// Writes what `batch` queued: each slide's new drawables, last in z order in insert order,
+    /// and the UUID-map entries and identifier high-water mark into the package metadata.
+    public mutating func finishInserts(_ batch: DrawableBatch) throws {
+        for slide in batch.slideOrder {
+            guard var archive = decoded(KN_SlideArchive.self, slide) else { throw DrawableInsertFailure.noSlide(slide) }
+            for new in batch.drawables[slide, default: []] {
+                archive.ownedDrawables.append(TSP_Reference.with { $0.identifier = new })
+                archive.drawablesZOrder.append(TSP_Reference.with { $0.identifier = new })
+            }
+            try replacePayload(of: slide, with: try archive.serializedData(partial: true))
+        }
+        guard var metadata = packageMetadata, !batch.slideOrder.isEmpty else { return }
+        for (component, entries) in batch.entries.sorted(by: { $0.key < $1.key }) {
+            let locator = String(component.dropFirst("Index/".count).dropLast(".iwa".count))
+            if let c = metadata.components.firstIndex(where: { ($0.locator.isEmpty ? $0.preferredLocator : $0.locator) == locator }) {
+                metadata.components[c].objectUuidMapEntries += entries
+            }
+        }
+        metadata.lastObjectIdentifier = max(metadata.lastObjectIdentifier, batch.highWaterMark)
+        try replacePayload(of: 2, with: try metadata.serializedData(partial: true))
+    }
+
+    mutating func insertDrawable(_ drawable: UInt64, from source: KeynoteDocument, onto slide: UInt64, frame: Frame,
+                                 paragraphs: [TextParagraphs.Paragraph]?, batch: inout DrawableBatch?) throws -> UInt64 {
         let sourceType = source.store.record(for: drawable)?.info.messageInfos.first?.type
         guard sourceType == Self.shapeInfoType || sourceType == Self.chartDrawableType || sourceType == Self.imageType else {
             throw DrawableInsertFailure.notADrawable(drawable)
         }
-        guard var slideArchive = decoded(KN_SlideArchive.self, slide), let component = store.entry(for: slide)?.component,
-              let metadata = packageMetadata else { throw DrawableInsertFailure.noSlide(slide) }
+        guard store.record(for: slide)?.info.messageInfos.first?.type == ForeignResolver.slideType,
+              let component = store.entry(for: slide)?.component else { throw DrawableInsertFailure.noSlide(slide) }
+        let lastObjectIdentifier = batch?.highWaterMark ?? packageMetadata?.lastObjectIdentifier ?? 0
         let sourceSlide = sourceType == Self.chartDrawableType
             ? source.decoded(TSCH_ChartDrawableArchive.self, drawable)?.super.parent.identifier ?? 0
             : sourceType == Self.imageType
@@ -49,12 +96,12 @@ extension KeynoteDocument {
         if let show = source.showIdentifier { keep.insert(show) }
         let copied = source.heldOnly(by: [drawable], referrers: source.referrerIndex(), keeping: keep)
 
-        var allocator = IDAllocator(seed: max(store.highestIdentifier, metadata.lastObjectIdentifier) + 1)
+        var allocator = IDAllocator(seed: max(store.highestIdentifier, lastObjectIdentifier) + 1)
         var identifiers = [UInt64: UInt64]()
         for id in copied.sorted() { identifiers[id] = allocator.allocate() }
         if sourceSlide != 0 { identifiers[sourceSlide] = slide }
 
-        var resolver = try ForeignResolver(target: self)
+        var resolver = try batch?.resolver ?? ForeignResolver(target: self)
         resolver.learnVariations(from: source)
         resolver.learnPresets(from: source)
         var unmatched = [String]()
@@ -125,7 +172,7 @@ extension KeynoteDocument {
                 chart.super.geometry.flags = 3
             }
             try replacePayload(of: new, with: try chart.serializedData(partial: true))
-            try finishInsert(new, onto: slide, slideArchive: &slideArchive, component: component, entries: entries, allocator: allocator)
+            try finishInsert(new, onto: slide, component: component, entries: entries, allocator: allocator, batch: &batch)
             return new
         }
         if sourceType == Self.imageType {
@@ -138,7 +185,7 @@ extension KeynoteDocument {
                 image.originalSize = .with { $0.width = Float(frame.width); $0.height = Float(frame.height) }
             }
             try replacePayload(of: new, with: try image.serializedData(partial: true))
-            try finishInsert(new, onto: slide, slideArchive: &slideArchive, component: component, entries: entries, allocator: allocator)
+            try finishInsert(new, onto: slide, component: component, entries: entries, allocator: allocator, batch: &batch)
             return new
         }
         guard var shape = decoded(TSWP_ShapeInfoArchive.self, new) else { throw DrawableInsertFailure.notADrawable(drawable) }
@@ -173,14 +220,22 @@ extension KeynoteDocument {
             try setParagraphs(in: shape.ownedStorage.identifier, paragraphs)
         }
 
-        try finishInsert(new, onto: slide, slideArchive: &slideArchive, component: component, entries: entries, allocator: allocator)
+        try finishInsert(new, onto: slide, component: component, entries: entries, allocator: allocator, batch: &batch)
         return new
     }
 
     /// The new drawable joins the slide's drawables, last in z order; its UUID-map entries and the
     /// identifier high-water mark go into the package metadata.
-    mutating func finishInsert(_ new: UInt64, onto slide: UInt64, slideArchive: inout KN_SlideArchive, component: String,
-                               entries: [TSP_ObjectUUIDMapEntry], allocator: IDAllocator) throws {
+    mutating func finishInsert(_ new: UInt64, onto slide: UInt64, component: String, entries: [TSP_ObjectUUIDMapEntry],
+                               allocator: IDAllocator, batch: inout DrawableBatch?) throws {
+        if batch != nil {
+            if batch!.drawables[slide] == nil { batch!.slideOrder.append(slide) }
+            batch!.drawables[slide, default: []].append(new)
+            batch!.entries[component, default: []] += entries
+            batch!.highWaterMark = max(batch!.highWaterMark, allocator.highWaterMark)
+            return
+        }
+        guard var slideArchive = decoded(KN_SlideArchive.self, slide) else { throw DrawableInsertFailure.noSlide(slide) }
         slideArchive.ownedDrawables.append(TSP_Reference.with { $0.identifier = new })
         slideArchive.drawablesZOrder.append(TSP_Reference.with { $0.identifier = new })
         try replacePayload(of: slide, with: try slideArchive.serializedData(partial: true))
@@ -228,4 +283,15 @@ extension KeynoteDocument {
         chart.TSCH_ChartArchive_unity = unity
         try replacePayload(of: drawable, with: try chart.serializedData(partial: true))
     }
+}
+
+/// Inserts queued by `KeynoteDocument.beginInserts()`, written by `finishInserts`.
+public struct DrawableBatch: Sendable {
+    /// The target's styles and masters, indexed once (new style variations are never a copy's
+    /// counterpart, so the index stays right as the batch adds them).
+    let resolver: ForeignResolver
+    var slideOrder = [UInt64]()
+    var drawables = [UInt64: [UInt64]]()
+    var entries = [String: [TSP_ObjectUUIDMapEntry]]()
+    var highWaterMark: UInt64 = 0
 }

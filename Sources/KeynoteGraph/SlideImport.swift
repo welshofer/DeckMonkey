@@ -380,7 +380,7 @@ extension KeynoteDocument {
 }
 
 /// Finds this deck's counterpart of an object another deck's slide refers to (see importSlide).
-struct ForeignResolver {
+struct ForeignResolver: Sendable {
     enum Resolution { case found(UInt64), unmatched(String) }
 
     let target: KeynoteDocument
