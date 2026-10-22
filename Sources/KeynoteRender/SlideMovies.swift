@@ -26,6 +26,10 @@ public struct SlideMovie: Sendable, Equatable {
     public var audioOnly: Bool
     /// A "Start Movie" build starts it (a click, or the build's own timing), not the slide.
     public var startsOnBuild: Bool
+    /// Mirrored left to right (geometry flag 4).
+    public var flipped = false
+    /// Keeps playing when the show moves to the next slide (Keynote's "Play across slides").
+    public var playsAcrossSlides = false
 }
 
 extension KeynoteRenderer {
@@ -53,7 +57,8 @@ extension KeynoteRenderer {
             return SlideMovie(id: d.id, x: d.x, y: d.y, width: d.width, height: d.height, angle: d.angle, fileName: fileName,
                               start: max(0, Double(movie.startTime)), end: end, poster: Double(movie.posterTime), loop: loop,
                               volume: movie.hasVolume ? max(0, min(1, Double(movie.volume))) : 1, autoPlay: movie.autoPlay,
-                              audioOnly: movie.audioOnly, startsOnBuild: started.contains(d.id))
+                              audioOnly: movie.audioOnly, startsOnBuild: started.contains(d.id),
+                              flipped: movie.super.geometry.flags & 4 != 0, playsAcrossSlides: movie.playsAcrossSlides)
         }
     }
 
