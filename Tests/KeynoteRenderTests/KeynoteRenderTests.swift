@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(CoreGraphics)
+import CoreGraphics
+#endif
 #if canImport(FoundationXML)
 import FoundationXML
 #endif
@@ -286,6 +289,25 @@ struct KeynoteRenderPrivateCorpusTests {
         print("AT-28 private: \(rendered) decks, \(slides) slides")
         #expect(rendered > 0)
     }
+
+    #if canImport(CoreGraphics)
+    /// AT-30's step model: as many stages per deck as Keynote prints with "each stage of builds"
+    /// (`<deck>.stages.pdf`, made by `Scripts/oracle.sh <deck> --stages`).
+    @Test("AT-30: build stages count as Keynote prints them", .enabled(if: decks.contains { FileManager.default.fileExists(atPath: $0.deletingPathExtension().path + ".stages.pdf") }, "no stages goldens"))
+    func buildStages() throws {
+        var checked = 0
+        for deck in Self.decks {
+            let golden = URL(fileURLWithPath: deck.deletingPathExtension().path + ".stages.pdf")
+            guard let pdf = CGPDFDocument(golden as CFURL), let document = try? KeynoteDocument.open(deck) else { continue }
+            let renderer = KeynoteRenderer(document: document)
+            let pages = document.pageOfSlide
+            let stages = document.slideOrder().filter { pages[$0.slide] != nil }.reduce(0) { $0 + renderer.builds(onSlide: $1.slide).stageCount }
+            #expect(stages == pdf.numberOfPages, "\(deck.lastPathComponent): \(stages) stages, Keynote printed \(pdf.numberOfPages)")
+            checked += 1
+        }
+        print("AT-30 private: \(checked) decks")
+    }
+    #endif
 }
 
 @Suite("Keynote render colour")

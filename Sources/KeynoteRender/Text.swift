@@ -117,6 +117,8 @@ struct Line {
     var ascent = 0.0, descent = 0.0, leading = 0.0
     var x = 0.0, available = 0.0
     var baseline = 0.0
+    /// The paragraph the line belongs to (its index in the storage), for build stages.
+    var paragraph = 0
     var alignment: TSWP_ParagraphStylePropertiesArchive.TextAlignmentType = .tatvalue4
     var justify = false
     var label: (text: String, look: CharLook, x: Double)?
@@ -210,6 +212,8 @@ extension Canvas {
     /// The text of `storage` laid out in a `width × height` frame, as `<text>` elements.
     mutating func textMarkup(storage: UInt64, width: Double, height: Double, look shape: StyleResolver.ShapeLook) -> String {
         guard let archive = document.decoded(TSWP_StorageArchive.self, storage) else { problems.insert("text storage"); return "" }
+        hiddenLines = hiddenParagraphs[storage] ?? []
+        defer { hiddenLines = [] }
         return textMarkup(archive: archive, width: width, height: height, look: shape)
     }
 
@@ -396,6 +400,7 @@ extension Canvas {
                 var current = Line()
                 func start(_ isFirst: Bool) {
                     current = Line()
+                    current.paragraph = pi
                     current.x = shape.padding.left + left + (isFirst ? first : 0)
                     current.available = max(1, available - left - (isFirst ? first : 0) - para.rightIndent * scale)
                     current.alignment = para.alignment == .tatvalue4 ? (shape.naturalAlignment ?? para.alignment) : para.alignment
@@ -546,7 +551,8 @@ extension Canvas {
             }
         }
         var out = ""
-        for line in lines {
+        // Paragraphs a build has not brought in yet keep their place but are not drawn.
+        for line in lines where !hiddenLines.contains(line.paragraph) {
             let baseline = top + line.baseline
             if let image = line.labelImage, let label = line.label, image.href.isEmpty {
                 // Our own bullet: a dot, a little under half the image's box, centred in it.

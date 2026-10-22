@@ -178,7 +178,7 @@ func run() async {
     let sorted = shares.sorted()
     let median = sorted.isEmpty ? 0 : sorted.count % 2 == 1 ? sorted[sorted.count / 2] : (sorted[sorted.count / 2 - 1] + sorted[sorted.count / 2]) / 2
     let worst = sorted.last ?? 0
-    let summary: [String: Any] = ["golden": o.golden.path, "pages": results, "median": median, "worst": worst, "width": o.width, "tolerance": o.tolerance]
+    let summary: [String: Any] = ["golden": o.golden.path, "goldenPages": golden.numberOfPages, "pages": results, "median": median, "worst": worst, "width": o.width, "tolerance": o.tolerance]
     if let json = try? JSONSerialization.data(withJSONObject: summary, options: [.prettyPrinted, .sortedKeys]) {
         try? json.write(to: o.out.appendingPathComponent("compare.json"))
     }

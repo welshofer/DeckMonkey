@@ -355,3 +355,23 @@ turn the named face's trait on or off: Keynote draws `Helvetica-Bold` under `bol
 Avenir Heavy as Book, Iowan Bold Italic as Italic (all 16 judged pages that change improve, e.g.
 Exhibition's title 1.15% → 0.33%). A family lookup never takes a face whose style name contradicts the
 traits (Avenir Next's Bold Italic carries no selection bits).
+
+Builds (2026-10-21, AT-30): `KeynoteRenderer.builds(onSlide:)` gives a slide's build order as stages
+and `render(slide:stage:)` draws a stage (`deckmonkey render --stages`, one page per stage in the
+order of Keynote's "each stage of builds" export: `Scripts/oracle.sh <deck> --stages`, goldens kept
+as `<deck>.stages.pdf` beside private decks; `Scripts/render/stages.py` is the gate). Facts from the
+bytes and Keynote's stage exports: the order is the slide's build chunks (`build_chunks`), or for
+Keynote 6.5 and before the chunks kept inline (`buildChunkArchives`), which Keynote 15 re-saves as
+they are; `automatic: false` is a click, `automatic` with `referent` after the previous chunk, without
+it with the previous one (`eventTrigger` is not used). Stage 0 is the slide before any build; a click
+starts a group and the automatic chunks after it join it; a first chunk that is automatic plays as the
+slide appears (still a stage). A by-paragraph or by-bullet build's chunk identifiers, sorted, name
+its non-empty paragraphs in order (a bullet group is a top-level paragraph and those under it); 6.5's
+inline chunks of one build share an identifier, so their order names them. Paragraphs not yet built
+keep their place. Movie builds (`apple:movie-*`) are playback, not visibility; a movie that neither
+autoplays nor has a Start Movie build takes a click Keynote counts as a stage. Keynote's slide
+export shows a slide's last stage. Of 72 private slides with builds, 53 use the inline chunks (all
+in 6.5-era nested trees, which `slide keep`/edits refuse). Octopus: 19/19 stage pages at most 2.4%
+from Keynote's; Phoenix Lander 46/46 aligned (the 3D charts drawn flat are the outliers). Actions
+(motion paths, rotations) are not applied yet, and every effect is drawn as a dissolve by hosts.
+

@@ -1,7 +1,7 @@
 #!/bin/bash
 # oracle.sh — Keynote is the acceptance oracle (docs/spec.md §10).
 #
-# usage: Scripts/oracle.sh <file.key> [--golden expected.pdf] [--out dir]
+# usage: Scripts/oracle.sh <file.key> [--golden expected.pdf] [--out dir] [--stages]
 # Prints a JSON verdict and exits 0 on pass, 1 on fail, 2 on usage.
 #   {opens, sheet, pdfMismatch, pdfMismatchBounds, logHits, keynoteVersion, pdf, pass}
 #
@@ -99,7 +99,8 @@ on run argv
 end run
 APPLESCRIPT
 
-# argv: token, pdf path. Refuses to export a copy someone edited while it was open: the oracle
+# argv: token, pdf path, "stages" or "slides" (stages: a page per build stage, Keynote's "Print
+# each stage of builds"). Refuses to export a copy someone edited while it was open: the oracle
 # runs on a live desktop and brings Keynote forward, so a stray paste lands in its document.
 # Prints "modified" instead of exporting in that case.
 read -r -d '' AS_EXPORT <<'APPLESCRIPT' || true
@@ -110,7 +111,11 @@ on run argv
     tell application id "com.apple.Keynote"
       set d to first document whose name contains token
       if modified of d then return "modified"
-      export d to out as PDF
+      if item 3 of argv is "stages" then
+        export d to out as PDF with properties {all stages:true}
+      else
+        export d to out as PDF
+      end if
       if modified of d then return "modified"
     end tell
   end timeout
@@ -180,15 +185,17 @@ json_string() { python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))
 INPUT=""
 GOLDEN=""
 OUTDIR=""
+STAGES=slides
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --golden) [[ $# -ge 2 ]] || { echo "--golden needs a value" >&2; exit 2; }; GOLDEN="$2"; shift 2 ;;
     --out) [[ $# -ge 2 ]] || { echo "--out needs a value" >&2; exit 2; }; OUTDIR="$2"; shift 2 ;;
+    --stages) STAGES=stages; shift ;;
     -*) echo "unknown option $1" >&2; exit 2 ;;
     *) INPUT="$1"; shift ;;
   esac
 done
-[[ -n "$INPUT" && -e "$INPUT" ]] || { echo "usage: $0 <file.key> [--golden expected.pdf] [--out dir]" >&2; exit 2; }
+[[ -n "$INPUT" && -e "$INPUT" ]] || { echo "usage: $0 <file.key> [--golden expected.pdf] [--out dir] [--stages]" >&2; exit 2; }
 [[ -z "$GOLDEN" || -f "$GOLDEN" ]] || { echo "no such golden PDF: $GOLDEN" >&2; exit 2; }
 [[ "$(uname)" == "Darwin" ]] || { echo '{"error":"oracle requires macOS"}'; exit 1; }
 
@@ -253,7 +260,7 @@ esac
 # --- 2. Export PDF (only a clean open is exported; the trap closes the copy without saving) ----
 
 if [[ "$OPENS" == true ]]; then
-  EXPORTED=$(applescript "$AS_EXPORT" "$TOKEN" "$PDF" || true)
+  EXPORTED=$(applescript "$AS_EXPORT" "$TOKEN" "$PDF" "$STAGES" || true)
   if [[ "$EXPORTED" == modified ]]; then
     rm -f "$PDF"
     SHEET=$(printf 'document changed during the oracle run (input reached Keynote); not exported' | json_string)

@@ -65,10 +65,14 @@ public struct KeynoteRenderer {
         return names.filter { !$0.isEmpty }
     }
 
-    public func render(slide: UInt64) -> RenderedSlide {
+    public func render(slide: UInt64) -> RenderedSlide { render(slide: slide, hiding: ([], [:])) }
+
+    func render(slide: UInt64, hiding: (drawables: Set<UInt64>, paragraphs: [UInt64: Set<Int>])) -> RenderedSlide {
         let size = slideSize
         var canvas = Canvas(document: document, fonts: fonts, imageHref: imageHref, size: size)
         canvas.slideNumber = document.pageOfSlide[slide]
+        canvas.hiddenDrawables = hiding.drawables
+        canvas.hiddenParagraphs = hiding.paragraphs
         canvas.drawSlide(slide)
         if let fontFace {
             // A PostScript name is letters, digits, '.', '_' and '-'; a face named otherwise (only
@@ -129,6 +133,11 @@ struct Canvas {
     var slideNumber: Int?
     /// The width and height the last laid-out text needed, padding included.
     var lastTextExtent = (width: 0.0, height: 0.0)
+    /// Build stages: drawables not drawn, and per text storage the paragraphs not drawn.
+    var hiddenDrawables = Set<UInt64>()
+    var hiddenParagraphs = [UInt64: Set<Int>]()
+    /// The paragraphs of the storage being laid out that are not drawn.
+    var hiddenLines = Set<Int>()
     /// The alignment of the last laid-out text's first line.
     var lastTextAlignment = TSWP_ParagraphStylePropertiesArchive.TextAlignmentType.tatvalue0
 
@@ -173,7 +182,7 @@ struct Canvas {
             }
         }
         let hidden = hiddenPlaceholders(slide, look)
-        for ref in order(slide) where !hidden.contains(ref) {
+        for ref in order(slide) where !hidden.contains(ref) && !hiddenDrawables.contains(ref) {
             drawDrawable(ref)
         }
     }

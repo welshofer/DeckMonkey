@@ -25,7 +25,7 @@ enum CLI {
                    [--scene-out <scene.json>]
                                      a display test pattern at any resolution (grid, colour bars,
                                      resolution wedges, grey steps), one slide per title
-      render <file> -o <dir> [--slide <index>] [--fonts <dir>]...
+      render <file> -o <dir> [--slide <index>] [--fonts <dir>]... [--stages]
                                      track R: each slide as SVG (<dir>/page-<n>.svg in PDF page
                                      order, skipped slides as skipped-<index>.svg) and a JSON report
                                      of what could not be drawn; --fonts indexes every .ttf, .otf
@@ -83,6 +83,8 @@ enum CLI {
       slide list <file>              the slides in show order: index, node, slide, component
       slide move <file> --index <n> --to <m> -o <out.key>
       slide delete <file> --index <n> -o <out.key>
+      slide keep <file> --index <n> -o <out.key>
+                                     the deck with only slide <n> (the others deleted)
       slide clone <file> --index <n> [--to <m>] -o <out.key>
       slide masters <file>           the deck's masters: index, identifier, name
       slide new <file> --master <name>[|<name>...] [--to <m>] -o <out.key>
@@ -238,6 +240,24 @@ func runRender(_ args: [String]) throws {
     let renderer = KeynoteRenderer(document: document, fonts: fonts)
     let directory = url(out)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    if args.contains("--stages") {
+        // Every build stage as its own page, in the order Keynote prints "each stage of builds".
+        var page = 0
+        var report = [[String: Any]]()
+        let pages = document.pageOfSlide
+        for entry in document.slideOrder() where pages[entry.slide] != nil {
+            let stages = renderer.builds(onSlide: entry.slide).stageCount
+            for stage in 0..<stages {
+                page += 1
+                let rendered = stages > 1 ? renderer.render(slide: entry.slide, stage: stage) : renderer.render(slide: entry.slide)
+                try Data(rendered.svg.utf8).write(to: directory.appendingPathComponent("page-\(page).svg"))
+                report.append(["page": page, "slide": entry.slide, "stage": stage, "stages": stages, "problems": rendered.problems])
+            }
+        }
+        try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("render.json"))
+        print("rendered \(page) stage page(s) to \(directory.path)")
+        return
+    }
     var slides = try renderer.renderAll().enumerated().map { ($0.offset, $0.element) }
     if let only = option("--slide", in: args) {
         guard let index = Int(only), slides.indices.contains(index) else { fail("error: no slide \(only)") }
@@ -733,6 +753,12 @@ func runSlide(_ args: [String]) throws {
         let report = try document.importSlide(at: i, from: source, to: option("--to", in: args).flatMap(Int.init))
         print("imported slide \(i) (\(report.source)) of \(from) as \(report.slide) in \(report.component): \(report.copiedObjects) objects, "
             + "\(report.mappedObjects) references mapped to this deck, \(report.copiedData) data copied, \(report.sharedData) shared")
+    case "keep":
+        let count = try document.slideList().count
+        guard i < count else { fail("error: no slide \(i)") }
+        for index in stride(from: count - 1, to: i, by: -1) { try document.deleteSlide(at: index) }
+        for _ in 0..<i { try document.deleteSlide(at: 0) }
+        print("kept slide \(i) of \(count)")
     case "delete":
         let report = try document.deleteSlide(at: i)
         print("deleted slide \(i) (\(report.slide), \(report.component)): \(report.removedObjects) objects"
