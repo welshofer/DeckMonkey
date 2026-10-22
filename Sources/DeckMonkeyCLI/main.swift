@@ -246,10 +246,11 @@ func runRender(_ args: [String]) throws {
         var report = [[String: Any]]()
         let pages = document.pageOfSlide
         for entry in document.slideOrder() where pages[entry.slide] != nil {
-            let stages = renderer.builds(onSlide: entry.slide).stageCount
+            let sequence = renderer.builds(onSlide: entry.slide)
+            let stages = sequence.stageCount
             for stage in 0..<stages {
                 page += 1
-                let rendered = stages > 1 ? renderer.render(slide: entry.slide, stage: stage) : renderer.render(slide: entry.slide)
+                let rendered = stages > 1 ? renderer.render(slide: entry.slide, stage: stage, of: sequence) : renderer.render(slide: entry.slide)
                 try Data(rendered.svg.utf8).write(to: directory.appendingPathComponent("page-\(page).svg"))
                 report.append(["page": page, "slide": entry.slide, "stage": stage, "stages": stages, "problems": rendered.problems])
             }

@@ -55,18 +55,23 @@ extension KeynoteRenderer {
         for c in stored { partIDs[c.build.identifier, default: []].append(c.buildChunkIdentifier.buildChunkID) }
         for (key, ids) in partIDs { partIDs[key] = ids.sorted() }
         var chunks = [SlideBuildChunk]()
+        // Each build's parts, worked out once however many chunks name it.
+        var partsOf = [UInt64: [[Int]]?]()
+        var seen = [UInt64: Int]()
         for c in stored {
             guard let build = builds[c.build.identifier] else { continue }
             let trigger: SlideBuildChunk.Trigger = !c.automatic ? .click : c.referent ? .afterPrevious : .withPrevious
             var paragraphs: [Int]?
-            if let parts = self.parts(of: build) {
+            if partsOf[c.build.identifier] == nil { partsOf[c.build.identifier] = .some(self.parts(of: build)) }
+            if let parts = partsOf[c.build.identifier] ?? nil {
                 // Keynote 6.5's inline chunks of a build all carry the same identifier: their order
                 // names the parts.
                 let ids = partIDs[c.build.identifier] ?? []
                 let rank = Set(ids).count == ids.count ? ids.firstIndex(of: c.buildChunkIdentifier.buildChunkID)
-                    : chunks.filter { $0.build == c.build.identifier }.count
+                    : seen[c.build.identifier, default: 0]
                 if let rank { paragraphs = parts.indices.contains(rank) ? parts[rank] : [] }
             }
+            seen[c.build.identifier, default: 0] += 1
             chunks.append(chunk(build, id: c.build.identifier, trigger: trigger, delay: c.delay, duration: c.duration, paragraphs: paragraphs))
         }
 
@@ -86,8 +91,13 @@ extension KeynoteRenderer {
             start = i
         }
         if let s = start { groups.append(s..<chunks.count) }
+        // Bounded like everything else read from a file: a crafted slide cannot ask for more.
+        groups = Array(groups.prefix(Self.maximumStages))
         return SlideBuildSequence(chunks: chunks, groups: groups, startsAutomatically: chunks.first.map { $0.trigger != .click } ?? false)
     }
+
+    /// At most this many stages per slide (a click each: no real slide comes near).
+    static let maximumStages = 1_000
 
     func chunk(_ build: KN_BuildArchive, id: UInt64, trigger: SlideBuildChunk.Trigger, delay: Double, duration: Double, paragraphs: [Int]?) -> SlideBuildChunk {
         let animation = build.attributes.animationAttributes
@@ -109,9 +119,13 @@ extension KeynoteRenderer {
               info.hasOwnedStorage, let storage = document.decoded(TSWP_StorageArchive.self, info.ownedStorage.identifier) else { return nil }
         let units = Array(storage.text.joined().utf16.prefix(Canvas.maximumTextUnits))
         var paragraphs = [(range: Range<Int>, level: Int)]()
-        let levels = storage.tableParaData.entries.sorted { $0.characterIndex < $1.characterIndex }
-        var start = 0
-        func level(at index: Int) -> Int { Int(levels.last { Int($0.characterIndex) <= index }?.first ?? 0) }
+        let levels = storage.tableParaData.entries.prefix(Canvas.maximumEntries).sorted { $0.characterIndex < $1.characterIndex }
+        var start = 0, next = 0, current = 0
+        // Paragraph starts only increase: one pass over the sorted level entries.
+        func level(at index: Int) -> Int {
+            while next < levels.count, Int(levels[next].characterIndex) <= index { current = Int(levels[next].first); next += 1 }
+            return current
+        }
         for (i, u) in units.enumerated() where u == 0x0A || u == 0x0D || u == 0x2029 {
             paragraphs.append((start..<i, level(at: start))); start = i + 1
         }
@@ -128,7 +142,12 @@ extension KeynoteRenderer {
     /// Slide `slide` at build stage `stage` (0: before any build; `stageCount - 1`: all played).
     /// Actions (moves, rotations) are not applied: their drawables stay where the slide puts them.
     public func render(slide: UInt64, stage: Int) -> RenderedSlide {
-        let sequence = builds(onSlide: slide)
+        render(slide: slide, stage: stage, of: builds(onSlide: slide))
+    }
+
+    /// As `render(slide:stage:)`, with the slide's `builds(onSlide:)` already worked out (a host
+    /// drawing every stage computes it once).
+    public func render(slide: UInt64, stage: Int, of sequence: SlideBuildSequence) -> RenderedSlide {
         guard !sequence.chunks.isEmpty else { return render(slide: slide) }
         var hiddenDrawables = Set<UInt64>()
         var hiddenParagraphs = [UInt64: Set<Int>]()
