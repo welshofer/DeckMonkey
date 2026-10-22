@@ -287,3 +287,23 @@ struct KeynoteRenderPrivateCorpusTests {
         #expect(rendered > 0)
     }
 }
+
+@Suite("Keynote render colour")
+struct KeynoteRenderColourTests {
+    @Test("Display P3 colours are drawn in sRGB")
+    func displayP3() {
+        func p3(_ r: Float, _ g: Float, _ b: Float) -> SVG.RGBA {
+            SVG.RGBA(TSP_Color.with { $0.model = .rgb; $0.r = r; $0.g = g; $0.b = b; $0.a = 1; $0.rgbspace = .p3 })
+        }
+        // Greys are the same in both spaces; P3's red is outside sRGB and clips to its red.
+        let grey = p3(0.5, 0.5, 0.5), red = p3(1, 0, 0)
+        #expect(abs(grey.r - 0.5) < 1e-4 && abs(grey.g - 0.5) < 1e-4 && abs(grey.b - 0.5) < 1e-4)
+        #expect(abs(red.r - 1) < 1e-9 && red.g == 0 && red.b == 0)
+        // The 4K test pattern's magenta bar: in sRGB it is more saturated than its P3 numbers.
+        let magenta = p3(0.7767552, 0.2629833, 0.8118301)
+        #expect(magenta.r > 0.79 && magenta.g < 0.24 && magenta.b > 0.82)
+        // sRGB colours are drawn as they are.
+        let srgb = SVG.RGBA(TSP_Color.with { $0.model = .rgb; $0.r = 0.25; $0.g = 0.5; $0.b = 0.75; $0.a = 1; $0.rgbspace = .srgb })
+        #expect(srgb.r == 0.25 && srgb.g == 0.5 && srgb.b == 0.75)
+    }
+}

@@ -51,8 +51,28 @@ enum SVG {
                 let w = Double(color.w)
                 self.init(r: w, g: w, b: w, a: a)
             default:
-                self.init(r: Double(color.r), g: Double(color.g), b: Double(color.b), a: a)
+                let r = Double(color.r), g = Double(color.g), b = Double(color.b)
+                if color.hasRgbspace, color.rgbspace == .p3 {
+                    let s = Self.sRGB(fromDisplayP3: (r, g, b))
+                    self.init(r: s.r, g: s.g, b: s.b, a: a)
+                } else {
+                    self.init(r: r, g: g, b: b, a: a)
+                }
             }
+        }
+
+        /// Display P3 to sRGB: both use the sRGB transfer curve, so linearise, change primaries
+        /// (P3 D65 to sRGB D65), re-encode; colours outside sRGB are clipped.
+        static func sRGB(fromDisplayP3 c: (Double, Double, Double)) -> (r: Double, g: Double, b: Double) {
+            func linear(_ v: Double) -> Double { v <= 0.04045 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4) }
+            func encoded(_ v: Double) -> Double {
+                let v = min(1, max(0, v))
+                return v <= 0.0031308 ? v * 12.92 : 1.055 * pow(v, 1 / 2.4) - 0.055
+            }
+            let (r, g, b) = (linear(c.0), linear(c.1), linear(c.2))
+            return (encoded(1.2249401 * r - 0.2249404 * g),
+                    encoded(-0.0420569 * r + 1.0420571 * g),
+                    encoded(-0.0196376 * r - 0.0786361 * g + 1.0982735 * b))
         }
 
         /// `#rrggbb`; the alpha goes in a separate opacity attribute.
