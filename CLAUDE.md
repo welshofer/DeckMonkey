@@ -339,5 +339,19 @@ metadata once (2,888 drawables: 357 s → 3.5 s); the pinned `FieldIndex` and `R
 are read once per process. The private 4K Test Pattern (3840 × 2160, 2,888 drawables, 41
 variations) rebuilt from its exported scene onto `black_wide`: Keynote opens it with no sheet and
 no log hits, its PDF at 0 mismatched pixels against the original's export, and Keynote's re-save
-still at 0. Open: the renderer draws P3 components as sRGB; pictures, tables, charts and groups are
-not scene drawables yet; the parametric test-pattern generator.
+still at 0. A scene drawable without a stroke gets Keynote's "No Border" (empty pattern), not the
+theme's default. Open: pictures, tables, charts and groups are not scene drawables yet.
+
+Test pattern (2026-10-21): `TestPattern` (`deckmonkey test-pattern --size WxH --template t.key -o
+out.key [--title …]… [--credit …]`) generates the 4K pattern at any resolution, one slide per title:
+unit u = round(H/27) (80 at 2160, where every element is the original's within its hand placement),
+grid columns out from the centre and rows down from the top, far edges one point in; wedges are
+1-point lines at a 3-point pitch at any size. 3840×2160, 1920×1080, 1280×720 and 1024×768 (on
+`black_standard`) open in Keynote with no sheet or log hits; our render of them is 0%, 0.03% and 0.12%
+from Keynote's export. Two renderer fixes it exposed (revision 14): Display P3 colours (Keynote's
+usual) are converted to sRGB (they were drawn as sRGB numbers: 4.7% → 0.03% on the 1080p pattern;
+templates unchanged, private judged median 1.66% → 1.64%); and a style's `bold`/`italic`, when set,
+turn the named face's trait on or off: Keynote draws `Helvetica-Bold` under `bold: false` as Helvetica,
+Avenir Heavy as Book, Iowan Bold Italic as Italic (all 16 judged pages that change improve, e.g.
+Exhibition's title 1.15% → 0.33%). A family lookup never takes a face whose style name contradicts the
+traits (Avenir Next's Bold Italic carries no selection bits).

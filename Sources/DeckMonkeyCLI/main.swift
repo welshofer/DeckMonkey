@@ -21,6 +21,10 @@ enum CLI {
                                      a deck from a scene: the template's slides replaced by the
                                      scene's, each drawable a copy of a Keynote-made part with its
                                      look as style variations over the theme's
+      test-pattern --size <W>x<H> --template <t.key> -o <out.key> [--title <text>]... [--credit <text>]
+                   [--scene-out <scene.json>]
+                                     a display test pattern at any resolution (grid, colour bars,
+                                     resolution wedges, grey steps), one slide per title
       render <file> -o <dir> [--slide <index>] [--fonts <dir>]...
                                      track R: each slide as SVG (<dir>/page-<n>.svg in PDF page
                                      order, skipped slides as skipped-<index>.svg) and a JSON report
@@ -174,6 +178,28 @@ func runDump(_ args: [String]) throws {
             }
         }
     }
+}
+
+func runTestPattern(_ args: [String]) throws {
+    guard let size = option("--size", in: args), let template = option("--template", in: args), let out = option("-o", in: args) else {
+        fail(CLI.usage, code: 2)
+    }
+    let parts = size.lowercased().split(separator: "x").compactMap { Int($0) }
+    guard parts.count == 2 else { fail("error: --size takes <width>x<height>, e.g. 1920x1080", code: 2) }
+    var titles = [String]()
+    var i = 0
+    while i < args.count { if args[i] == "--title", i + 1 < args.count { titles.append(args[i + 1]); i += 1 }; i += 1 }
+    let pattern = TestPattern(width: parts[0], height: parts[1], titles: titles.isEmpty ? ["Keynote"] : titles, credit: option("--credit", in: args))
+    let scene = try pattern.scene()
+    if let sceneOut = option("--scene-out", in: args) {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try encoder.encode(scene).write(to: url(sceneOut))
+    }
+    var document = try DeckMonkey.open(url(template))
+    let report = try document.build(scene)
+    try document.save(to: url(out))
+    print("test pattern \(parts[0])x\(parts[1]): \(report.slides.count) slide(s), \(report.drawables) drawable(s) -> \(out)")
 }
 
 func runScene(_ args: [String]) throws {
@@ -733,6 +759,7 @@ do {
     case "object": try runObject(rest)
     case "render": try runRender(rest)
     case "scene": try runScene(rest)
+    case "test-pattern": try runTestPattern(rest)
     case "roundtrip": try runRoundtrip(rest)
     case "verify": try runVerify(rest)
     case "snappy-check": try runSnappyCheck(rest)

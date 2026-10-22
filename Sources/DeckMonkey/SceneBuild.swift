@@ -74,14 +74,15 @@ extension KeynoteDocument {
                 // Its look: one shape style variation per distinct fill, stroke and text frame.
                 let parent = shape.super.style.identifier
                 let fill: TSD_FillArchive?? = .some(try d.fill.map(Self.sceneFill))
-                let stroke = try d.stroke.map(Self.sceneStroke)
+                // No stroke in the scene is none on the page, whatever the theme's default.
+                let stroke = try d.stroke.map(Self.sceneStroke) ?? Self.noStroke
                 var valign: TSWP_ShapeStylePropertiesArchive.VerticalAlignmentType?
                 var padding: TSWP_PaddingArchive?
                 if let t = d.text {
                     valign = t.verticalAlignment == .middle ? .kFrameAlignMiddle : t.verticalAlignment == .bottom ? .kFrameAlignBottom : .kFrameAlignTop
                     padding = .with { $0.left = Float(t.padding[0]); $0.top = Float(t.padding[1]); $0.right = Float(t.padding[2]); $0.bottom = Float(t.padding[3]) }
                 }
-                let key = "\(parent)|\(try fill.flatMap { $0 }?.serializedData(partial: true).base64EncodedString() ?? "none")|\(try stroke?.serializedData(partial: true).base64EncodedString() ?? "-")|\(valign.map { "\($0.rawValue)" } ?? "-")|\(padding.map { "\($0.left),\($0.top),\($0.right),\($0.bottom)" } ?? "-")"
+                let key = "\(parent)|\(try fill.flatMap { $0 }?.serializedData(partial: true).base64EncodedString() ?? "none")|\(try stroke.serializedData(partial: true).base64EncodedString())|\(valign.map { "\($0.rawValue)" } ?? "-")|\(padding.map { "\($0.left),\($0.top),\($0.right),\($0.bottom)" } ?? "-")"
                 let style: UInt64
                 if let known = shapeStyles[key] { style = known } else {
                     style = try shapeStyleVariation(over: parent, fill: fill, stroke: stroke, verticalAlignment: valign, padding: padding)
@@ -183,6 +184,16 @@ extension KeynoteDocument {
         }
         if let c = fill.color { return try .with { $0.color = try sceneColor(c) } }
         return TSD_FillArchive()
+    }
+
+    /// Keynote's "No Border": a stroke with the empty pattern.
+    static let noStroke = TSD_StrokeArchive.with {
+        $0.color = .with { $0.model = .rgb; $0.r = 0; $0.g = 0; $0.b = 0; $0.a = 1 }
+        $0.width = 1
+        $0.cap = .buttCap
+        $0.join = .miterJoin
+        $0.miterLimit = 4
+        $0.pattern = .with { $0.type = .tsdemptyPattern }
     }
 
     static func sceneStroke(_ stroke: SceneStroke) throws -> TSD_StrokeArchive {
