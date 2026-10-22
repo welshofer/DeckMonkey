@@ -68,7 +68,7 @@ public struct KeynoteRenderer {
     public func render(slide: UInt64) -> RenderedSlide { render(slide: slide, hiding: ([], [:])) }
 
     func render(slide: UInt64, hiding: (drawables: Set<UInt64>, paragraphs: [UInt64: Set<Int>]), above: UInt64? = nil,
-                actions: [UInt64: (transform: String, opacity: Double)] = [:]) -> RenderedSlide {
+                actions: [UInt64: (transform: String, opacity: Double)] = [:], only: Set<UInt64>? = nil) -> RenderedSlide {
         let size = slideSize
         var canvas = Canvas(document: document, fonts: fonts, imageHref: imageHref, size: size)
         canvas.slideNumber = document.pageOfSlide[slide]
@@ -76,6 +76,7 @@ public struct KeynoteRenderer {
         canvas.hiddenParagraphs = hiding.paragraphs
         canvas.onlyAbove = above
         canvas.actions = actions
+        canvas.onlyDrawables = only
         canvas.drawSlide(slide)
         if let fontFace {
             // A PostScript name is letters, digits, '.', '_' and '-'; a face named otherwise (only
@@ -136,6 +137,8 @@ struct Canvas {
     var slideNumber: Int?
     /// The width and height the last laid-out text needed, padding included.
     var lastTextExtent = (width: 0.0, height: 0.0)
+    /// Draw only these of the slide's own drawables, on nothing (one build's layer).
+    var onlyDrawables: Set<UInt64>?
     /// Where build actions have taken drawables by a stage: an SVG transform and an opacity.
     var actions = [UInt64: (transform: String, opacity: Double)]()
     /// Draw only the slide's own drawables above this one in z order, on nothing (a layer for a
@@ -174,6 +177,10 @@ struct Canvas {
         let master = slide.hasTemplateSlide ? document.decoded(KN_SlideArchive.self, slide.templateSlide.identifier) : nil
         let look = styles.slideLook(slide.hasStyle ? slide.style.identifier : nil)
 
+        if let only = onlyDrawables {
+            for ref in order(slide) where only.contains(ref) { drawDrawable(ref) }
+            return
+        }
         if let above = onlyAbove {
             var reached = false
             for ref in order(slide) {

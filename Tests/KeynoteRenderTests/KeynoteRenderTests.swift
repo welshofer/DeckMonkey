@@ -308,6 +308,28 @@ struct KeynoteRenderPrivateCorpusTests {
         print("AT-30 private: \(checked) decks")
     }
     #endif
+
+    @Test("every build step draws a backdrop and a layer per animated chunk", .enabled(if: !decks.isEmpty, "no private corpus configured"))
+    func buildStepLayers() throws {
+        var steps = 0, layers = 0
+        for deck in Self.decks {
+            guard let document = try? KeynoteDocument.open(deck) else { continue }
+            let renderer = KeynoteRenderer(document: document)
+            for entry in document.slideOrder() {
+                let sequence = renderer.builds(onSlide: entry.slide)
+                for stage in 1..<sequence.stageCount {
+                    let step = try #require(renderer.renderStep(slide: entry.slide, to: stage, of: sequence))
+                    let animated = sequence.groups[stage - 1].filter { !sequence.chunks[$0].effect.hasPrefix("apple:movie-") }
+                    #expect(step.layers.map(\.chunk) == animated, "\(deck.lastPathComponent) slide \(entry.slide) stage \(stage)")
+                    for svg in [step.backdrop.svg] + step.layers.map(\.rendered.svg) {
+                        #expect(XMLParser(data: Data(svg.utf8)).parse(), "\(deck.lastPathComponent) slide \(entry.slide) stage \(stage)")
+                    }
+                    steps += 1; layers += step.layers.count
+                }
+            }
+        }
+        print("build steps: \(steps) steps, \(layers) layers")
+    }
 }
 
 @Suite("Keynote render colour")

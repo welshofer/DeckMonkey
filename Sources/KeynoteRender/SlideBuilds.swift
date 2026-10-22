@@ -20,6 +20,13 @@ public struct SlideBuildChunk: Sendable, Equatable {
     /// The paragraphs (indices in the drawable's text) this chunk brings in or takes out; nil for
     /// the whole drawable.
     public var paragraphs: [Int]?
+    /// Keynote's direction code: 11 left to right, 12 right to left, 13 top to bottom, 14 bottom
+    /// to top (moves, wipes, pushes); 43 and 44 zoom up and down.
+    public var direction: Int?
+    /// An action's motion: x, y pairs along its path in points from where it starts.
+    public var path: [Double]?
+    /// An action's turn in degrees, clockwise positive; its end opacity (0…1) and scale.
+    public var rotation: Double?, opacity: Double?, scale: Double?
 }
 
 /// A slide's builds as stages: stage 0 is the slide before any build, and each click (or, for a
@@ -104,8 +111,53 @@ extension KeynoteRenderer {
         // Movie builds (start, pause, stop) control playback: the movie is on the slide throughout.
         let movie = animation.effect.hasPrefix("apple:movie-")
         let kind: SlideBuildChunk.Kind = movie || animation.animationType == "Action" ? .action : animation.animationType == "Out" ? .buildOut : .buildIn
-        return SlideBuildChunk(build: id, drawable: build.drawable.identifier, kind: kind, effect: animation.effect, trigger: trigger,
-                               delay: delay, duration: duration, paragraphs: paragraphs)
+        var chunk = SlideBuildChunk(build: id, drawable: build.drawable.identifier, kind: kind, effect: animation.effect, trigger: trigger,
+                                    delay: delay, duration: duration, paragraphs: paragraphs)
+        if animation.hasDirection { chunk.direction = Int(animation.direction) }
+        let a = build.attributes
+        switch animation.effect {
+        case "apple:action-motion-path":
+            if a.hasActionMotionPathSource, let outline = Paths.outline(a.actionMotionPathSource) { chunk.path = Self.sampled(outline) }
+        case "apple:action-rotation":
+            chunk.rotation = a.actionRotationDirection == .kCounterclockwise ? -a.actionRotationAngle : a.actionRotationAngle
+        case "apple:action-opacity":
+            chunk.opacity = max(0, min(1, a.actionColorAlpha / 100))
+        case "apple:action-scale":
+            if a.actionScaleSize > 0 { chunk.scale = a.actionScaleSize / 100 }
+        default: break
+        }
+        return chunk
+    }
+
+    /// Points along an outline, from its first point (curves in 16 steps), at most 4,096 numbers.
+    static func sampled(_ outline: Outline) -> [Double]? {
+        var points = [Double](), last: (Double, Double)?
+        for command in outline.commands {
+            switch command {
+            case let .move(x, y), let .line(x, y):
+                points += [x, y]; last = (x, y)
+            case let .quad(cx, cy, x, y):
+                let p = last ?? (x, y)
+                for i in 1...16 {
+                    let t = Double(i) / 16, u = 1 - t
+                    points += [u * u * p.0 + 2 * u * t * cx + t * t * x, u * u * p.1 + 2 * u * t * cy + t * t * y]
+                }
+                last = (x, y)
+            case let .cubic(c1x, c1y, c2x, c2y, x, y):
+                let p = last ?? (x, y)
+                for i in 1...16 {
+                    let t = Double(i) / 16, u = 1 - t
+                    points += [u * u * u * p.0 + 3 * u * u * t * c1x + 3 * u * t * t * c2x + t * t * t * x,
+                               u * u * u * p.1 + 3 * u * u * t * c1y + 3 * u * t * t * c2y + t * t * t * y]
+                }
+                last = (x, y)
+            case .close: break
+            }
+            if points.count >= 4_096 { break }
+        }
+        guard points.count >= 4 else { return nil }
+        let x0 = points[0], y0 = points[1]
+        return points.prefix(4_096).enumerated().map { $0.offset % 2 == 0 ? $0.element - x0 : $0.element - y0 }
     }
 
     /// The paragraphs each part of a build delivered by paragraph or bullet holds (empty
@@ -263,4 +315,63 @@ extension KeynoteRenderer {
         case .close: return nil
         }
     }
+
+    /// One step's pictures for a host to animate (fade first is a dissolve of the whole stage): a
+    /// backdrop, stage `stage` without what the step's chunks animate, and for each chunk a layer
+    /// on nothing holding just its object (or its paragraphs) as it is when the chunk is seen:
+    /// after an in-build, before an out-build or an action. Movie chunks have no layer.
+    public func renderStep(slide: UInt64, to stage: Int, of sequence: SlideBuildSequence) -> SlideBuildStep? {
+        guard stage >= 1, stage <= sequence.groups.count else { return nil }
+        let group = sequence.groups[stage - 1]
+        let animated = group.filter { !sequence.chunks[$0].effect.hasPrefix("apple:movie-") }
+        let after = hiding(slide: slide, stage: stage, of: sequence), before = hiding(slide: slide, stage: stage - 1, of: sequence)
+        var storages = [UInt64: (id: UInt64, count: Int)]()
+        func storage(_ drawable: UInt64) -> (id: UInt64, count: Int)? {
+            if let known = storages[drawable] { return known }
+            let info = document.decoded(TSWP_ShapeInfoArchive.self, drawable) ?? document.decoded(KN_PlaceholderArchive.self, drawable)?.super
+            guard let info, info.hasOwnedStorage, let text = document.decoded(TSWP_StorageArchive.self, info.ownedStorage.identifier) else { return nil }
+            let units = text.text.joined().utf16.prefix(Canvas.maximumTextUnits)
+            let entry = (info.ownedStorage.identifier, units.filter { $0 == 0x0A || $0 == 0x0D || $0 == 0x2029 }.count + 1)
+            storages[drawable] = entry
+            return entry
+        }
+        // The backdrop: the stage reached, less what is animated into or out of it.
+        var hidden = after.0, paragraphs = after.1
+        for i in animated {
+            let c = sequence.chunks[i]
+            if let parts = c.paragraphs, let s = storage(c.drawable) { paragraphs[s.id, default: []].formUnion(parts) } else { hidden.insert(c.drawable) }
+        }
+        let endActions = actions(onSlide: slide, played: sequence.groups.prefix(stage).flatMap { $0 }.map { sequence.chunks[$0] }).transforms
+        let backdrop = render(slide: slide, hiding: (hidden, paragraphs), actions: endActions)
+        var layers = [SlideBuildStep.Layer]()
+        let earlier = sequence.groups.prefix(stage - 1).flatMap { $0 }
+        for i in animated {
+            let c = sequence.chunks[i]
+            // Seen after an in-build; before an out-build or an action (an action's own change is
+            // the host's to animate).
+            let state = c.kind == .buildIn ? after : before
+            let playedBefore = earlier + group.filter { $0 < i && !(sequence.chunks[$0].drawable == c.drawable && sequence.chunks[$0].kind == .action) }
+            let moved = actions(onSlide: slide, played: playedBefore.map { sequence.chunks[$0] }).transforms
+            var layerParagraphs = state.1
+            if let parts = c.paragraphs, let s = storage(c.drawable) {
+                layerParagraphs[s.id] = Set(0..<min(s.count, Canvas.maximumEntries)).subtracting(parts)
+            }
+            var hiddenHere = state.0
+            hiddenHere.remove(c.drawable)
+            let rendered = render(slide: slide, hiding: (hiddenHere, layerParagraphs), actions: moved, only: [c.drawable])
+            layers.append(.init(chunk: i, rendered: rendered))
+        }
+        return SlideBuildStep(backdrop: backdrop, layers: layers)
+    }
+}
+
+/// What `renderStep` draws for one step.
+public struct SlideBuildStep: Sendable {
+    public struct Layer: Sendable {
+        /// The chunk (an index in the sequence's `chunks`) the layer belongs to.
+        public var chunk: Int
+        public var rendered: RenderedSlide
+    }
+    public var backdrop: RenderedSlide
+    public var layers: [Layer]
 }
