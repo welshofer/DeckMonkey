@@ -6,6 +6,12 @@ Keynote binary; writing is graph surgery on a Keynote-authored template; Keynote
 acceptance oracle. The full spec is `docs/spec.md`; sections 5 (invariants), 9 (writer), 12
 (phases and gates) and 14 (acceptance tests) are the contract. This file is the session brief.
 
+The separate `.keyx` backend consumes Rostrum's `KeynoteInterchange` product directly:
+no duplicate model/writer, no imported-document projection through DeckIR, and no
+native `.key`/PPTX conversion. Native invariants below remain unchanged; interchange
+authoring is the explicit exception to native template-only synthesis. See
+`docs/KEYNOTE-INTERCHANGE.md` for the public API, CLI and unpublished dependency gate.
+
 ## Pinned facts
 
 - **Keynote 15.4 (7051.0.79)** is the pinned build (OQ-2). Schema and registry directories are

@@ -10,9 +10,17 @@ only when Keynote opens it with no repair sheet and exports the expected PDF. It
 slides as SVG, build stage by build stage, with what a host needs to play builds, transitions and
 movies (the [Duo](https://github.com/welshofer/duo) presenter uses it).
 
+The separate `deckmonkey keyx` path reads, inspects, edits presenter notes, authors
+and previews Apple's ZIP/JSON `.keyx` format through Rostrum's shared
+`KeynoteInterchange` product. It never converts native `.key` or PPTX files.
+**Development integration:** a compatible Rostrum release is not published yet;
+local validation requires an isolated editable dependency. See
+[interchange setup, API and limitations](docs/KEYNOTE-INTERCHANGE.md).
+
 ## Status
 
-Pinned to Keynote 15.4 (7051.0.79). Every gate below is checked against Keynote itself.
+The native `.key` backend is pinned to Keynote 15.4 (7051.0.79).
+Every gate below is checked against Keynote itself, not the new interchange backend.
 
 | Phase | What works | Gate |
 | --- | --- | --- |
@@ -51,9 +59,10 @@ swift run deckmonkey scene     build scene.json --template theme.key -o out.key
 swift run deckmonkey test-pattern --size 1920x1080 --template theme.key -o pattern.key
 swift run deckmonkey roundtrip deck.key                      # open, save, compare
 swift run deckmonkey verify    deck.key                      # the validator
+swift run deckmonkey keyx --help                              # separate .keyx commands and limits
 ```
 
-Exit codes: 0 pass, 1 fail, 2 usage, 3 refused by design (a Keynote '09 file). Edits refuse what
+Exit codes: 0 pass, 1 fail, 2 usage, 3 refused by design (legacy or unsupported format/operation). Edits refuse what
 they cannot do faithfully (a paragraph break inside a replacement, a Keynote-edited image, a slide
 with builds to clone) instead of guessing; every save runs the validator first and writes nothing
 if it fails.
@@ -83,6 +92,7 @@ let movies = renderer.movies(onSlide: slide)            // frames, files, trims,
 
 ```sh
 swift test                          # unit tests; corpus tests run when a corpus is configured
+make keyx-check                     # synthetic .keyx CLI checks, no Keynote or private corpus
 make gate                           # swift test + round-trip every corpus deck + the Snappy cross-check
 make corpus                         # macOS + Keynote: generate the template and feature decks locally
 make gates                          # macOS + Keynote: Gates 1, 2 and 3 through the oracle (leave the machine alone)
@@ -104,7 +114,7 @@ is rebuilt with `make corpus`.
 | `IWASchema` | generated SwiftProtobuf sources, type registry, reference-strength table, descriptors (Keynote 15.4) |
 | `KeynoteGraph` | `KeynoteDocument`, validator, reference derivation, text/image/media/slide surgery, style variations, scenes |
 | `KeynoteRender` | read-only, portable SVG renderer; builds, transitions, Magic Move and movies for hosts |
-| `DeckMonkey` | public API; Deck IR bridge to Rostrum's `DeckOutline`; scene builder and test pattern |
+| `DeckMonkey` | public API; native Deck IR bridge, scene builder and test pattern; shared `KeynoteInterchange` API |
 | `DeckMonkeyCLI` | the `deckmonkey` executable — the acceptance surface |
 
 `docs/spec.md` is the full design; `CLAUDE.md` the working conventions and current state. License: MIT.

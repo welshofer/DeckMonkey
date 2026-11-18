@@ -6,13 +6,18 @@ CORPUS ?= $(shell if [ -n "$$DECKMONKEY_CORPUS" ]; then echo "$$DECKMONKEY_CORPU
 
 PYTHON ?= .venv/bin/python
 
-.PHONY: gates gate2 gate3 gate1 corpus goldens reference-strength build test gate roundtrip-corpus oracle-corpus snappy-reference snappy-check snappy-vectors schema schema-tools schema-diff clean
+.PHONY: gates gate2 gate3 gate1 corpus goldens reference-strength build test gate keyx-check roundtrip-corpus oracle-corpus snappy-reference snappy-check snappy-vectors schema schema-tools schema-diff clean
 
 build:
 	$(SWIFT) build
 
 test:
 	$(SWIFT) test
+
+## Portable .keyx CLI checks with synthetic data; no Keynote, corpus or extra Python packages.
+keyx-check:
+	@$(SWIFT) build --product deckmonkey >/dev/null
+	python3 -I Scripts/keyx-check.py
 
 ## Merge gate: tests green, every corpus deck round-trips CLEAN, and AT-01 holds on the corpus.
 gate: test roundtrip-corpus snappy-check snappy-vectors
