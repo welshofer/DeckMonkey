@@ -6,21 +6,24 @@ import Foundation
 @_exported import KeynoteGraph
 @_exported import KeynoteRender
 
-/// DeckMonkey — read and write native Keynote files from Swift.
-///
-/// Phase 0 surface: open a `.key`, inspect it, validate it, save it (lossless round-trip).
-/// The Deck IR bridge to Rostrum's `DeckOutline` lands in Phase 4 (docs/spec.md §12).
+/// Read and write native Keynote files; `openInterchange` is the separate `.keyx` backend.
 public enum DeckMonkey {
     public static let version = "0.1.0"
 
     /// Opens a Keynote file or package directory.
     public static func open(_ url: URL) throws -> KeynoteDocument {
-        try KeynoteDocument.open(url)
+        guard url.pathExtension.lowercased() != "keyx" else {
+            throw KeynoteFormatError.nativeOperationOnInterchange(path: url.path)
+        }
+        return try KeynoteDocument.open(url)
     }
 
     /// Opens, saves to `output`, re-opens, and reports whether every component survived unchanged.
     public static func roundTrip(_ input: URL, to output: URL) throws -> RoundTripReport {
-        let original = try KeynoteDocument.open(input)
+        guard output.pathExtension.lowercased() != "keyx" else {
+            throw KeynoteFormatError.nativeOperationOnInterchange(path: output.path)
+        }
+        let original = try open(input)
         try original.save(to: output)
         let reread = try KeynoteDocument.open(output)
 

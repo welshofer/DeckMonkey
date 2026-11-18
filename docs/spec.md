@@ -12,6 +12,12 @@ Phase 0 ends when the corpus round-trips archive-for-archive and the first mutat
 
 This document is written for Claude Code. Sections 5, 9, 12 and 14 are the contract; everything else is context.
 
+The native `.key` contract here remains intact. The separate ZIP/JSON `.keyx`
+integration is described in [Keynote Interchange](KEYNOTE-INTERCHANGE.md); it
+consumes Rostrum's shared backend and does not apply IWA surgery or the native
+template-only authoring constraint to interchange documents. It is not a conversion
+path between the two formats.
+
 ## 2. Non-goals
 
 Each of these is a scope trap Claude Code must refuse, even when it looks like a shortcut.

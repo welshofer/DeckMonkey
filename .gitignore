@@ -1,5 +1,7 @@
 .build/
 .swiftpm/
+# SwiftPM editable dependency links; never commit machine-local dependency paths.
+/Packages/
 *.xcodeproj/
 xcuserdata/
 DerivedData/

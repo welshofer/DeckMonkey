@@ -9,7 +9,7 @@ import PackageDescription
 //   IWASchema   → SwiftProtobuf (generated per pinned Keynote version)
 //   KeynoteGraph → IWAArchive, IWASchema, IWAContainer
 //   KeynoteRender → KeynoteGraph, Rostrum (font metrics): track R, a slide as SVG (read-only)
-//   DeckMonkey  → KeynoteGraph, KeynoteRender, Rostrum (Deck IR)
+//   DeckMonkey  → KeynoteGraph, KeynoteRender, Rostrum (Deck IR + Keynote Interchange)
 //   DeckMonkeyCLI → DeckMonkey (the `deckmonkey` executable, the acceptance surface). The target
 //                 and its directory avoid the name `deckmonkey`: on a case-insensitive macOS volume
 //                 it collides with the `DeckMonkey` library's source and build directories.
@@ -48,6 +48,7 @@ let package = Package(
             name: "DeckMonkey",
             dependencies: ["KeynoteGraph", "KeynoteRender", "IWAArchive", "IWAContainer", "IWASchema", "IWASnappy", .product(name: "Rostrum", package: "rostrum"),
                            .product(name: "LecternIR", package: "rostrum"), .product(name: "RostrumLayout", package: "rostrum"),
+                           .product(name: "KeynoteInterchange", package: "rostrum"),
                            .product(name: "SwiftProtobuf", package: "swift-protobuf")],
             resources: [.copy("Parts")]),
         .executableTarget(name: "DeckMonkeyCLI", dependencies: ["DeckMonkey", .product(name: "SwiftProtobuf", package: "swift-protobuf")], path: "Sources/DeckMonkeyCLI"),
@@ -64,7 +65,8 @@ let package = Package(
             name: "KeynoteGraphTests",
             dependencies: ["KeynoteGraph", "IWAArchive", "IWASnappy", "IWAContainer", "IWASchema", .product(name: "SwiftProtobuf", package: "swift-protobuf")]),
         // Fixtures are read through #filePath, not Bundle.module, so they are excluded, not copied.
-        .testTarget(name: "DeckMonkeyTests", dependencies: ["DeckMonkey", "KeynoteGraph", "KeynoteRender", "IWASnappy"], exclude: ["Fixtures"]),
+        .testTarget(name: "DeckMonkeyTests", dependencies: ["DeckMonkey", "KeynoteGraph", "KeynoteRender", "IWASnappy",
+                                                         .product(name: "Rostrum", package: "rostrum")], exclude: ["Fixtures"]),
     ],
     swiftLanguageModes: [.v6]
 )

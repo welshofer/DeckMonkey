@@ -4,12 +4,14 @@ import SwiftProtobuf
 
 // deckmonkey — the acceptance surface (docs/spec.md §13). Every gate is one of these subcommands
 // with a machine-readable exit code: 0 pass, 1 fail, 2 usage error, 3 refused by design (a
-// Keynote '09 APXL file: out of scope, docs/spec.md §2, so neither a pass nor a failure).
+// Keynote '09 APXL file or an unsupported interchange operation, never an acceptance pass).
 
 enum CLI {
     static let usage = """
     usage: deckmonkey <command> [options]
 
+      keyx <command>                explicit .keyx ZIP/JSON interchange operations (not native .key);
+                                    see `deckmonkey keyx --help`
       inspect <file>                 components, object counts, type histogram, versions
       dump <file> [component]        every record: identifier, types, versions, lengths, references
       scene export <file> -o <scene.json>
@@ -97,7 +99,7 @@ enum CLI {
                                      clone goes after its source unless --to says where
       version
 
-    Exit codes: 0 pass, 1 fail, 2 usage, 3 refused (Keynote '09 APXL, out of scope).
+    Exit codes: 0 pass, 1 fail, 2 usage, 3 refused (legacy or unsupported format/operation).
     """
 }
 let usage = CLI.usage
@@ -777,7 +779,11 @@ guard let command = arguments.first else { fail(usage, code: 2) }
 let rest = Array(arguments.dropFirst())
 
 do {
+    if command != "keyx", let output = option("-o", in: rest), url(output).pathExtension.lowercased() == "keyx" {
+        throw KeynoteFormatError.nativeOperationOnInterchange(path: output)
+    }
     switch command {
+    case "keyx": try KeyxCLI.run(rest)
     case "inspect": try runInspect(rest)
     case "dump": try runDump(rest)
     case "record": try runRecord(rest)
@@ -811,6 +817,10 @@ do {
     }
 } catch IWAPackageError.unsupportedLegacyFormat(let path) {
     fail("refused: \(IWAPackageError.unsupportedLegacyFormat(path))", code: 3)
+} catch let error as KeynoteFormatError {
+    fail("refused: \(error)", code: 3)
+} catch KeyxError.unsupported(let message) {
+    fail("refused: Keynote Interchange (.keyx): \(message)", code: 3)
 } catch {
     fail("error: \(error)")
 }
